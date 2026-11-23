@@ -6,7 +6,8 @@ namespace CrittersOfCalamity.Model
 {
     /// <summary>
     /// Complete, verbatim database of all 40 Relic Deck cards (19 types), 50 Resource Deck cards,
-    /// and all 11 Factions from Eben's Critters of Calamity rulebook.
+    /// all 3 Faction-Specific Decks (8-card Forage Deck, 14-card Grimoire Deck, 8-card Traded Goods Deck),
+    /// 7 Carnivorous Queen Mutation Cards, and all 11 Factions from Eben's Critters of Calamity rulebook.
     /// </summary>
     public static class RulebookDatabase
     {
@@ -17,6 +18,75 @@ namespace CrittersOfCalamity.Model
             for (int i = 0; i < 20; i++) deck.Add(ResourceType.Wood);
             for (int i = 0; i < 10; i++) deck.Add(ResourceType.Gold);
             return deck;
+        }
+
+        public static List<FactionSubDeckCardDef> BuildMillionsForageDeck8()
+        {
+            // Rulebook Lines 501-502: 8 total cards (3 Plague Cards + 5 Rummage Cards)
+            return new List<FactionSubDeckCardDef>
+            {
+                new FactionSubDeckCardDef { Id = "plague_authority", DeckName = "Forage Deck", Title = "Plague: Authority Drain", Copies = 1, EffectText = "You lose 1 Authority and the Millions' player gains 1 Authority." },
+                new FactionSubDeckCardDef { Id = "plague_infest", DeckName = "Forage Deck", Title = "Plague: Rummaging Swarm", Copies = 1, EffectText = "Place 1 Millions unit on a tile with one of your faction's pieces, then discard 1 resource card from your resource pile." },
+                new FactionSubDeckCardDef { Id = "plague_sickness", DeckName = "Forage Deck", Title = "Plague: Sickness", Copies = 1, EffectText = "If you have a unit or special unit on a tile with a Millions, one of those units loses 1HP." },
+                new FactionSubDeckCardDef { Id = "rummage_stone_1", DeckName = "Forage Deck", Title = "Rummage: 2 Stone", Copies = 1, EffectText = "The Millions' player gains 2 Stone cards from the resource deck." },
+                new FactionSubDeckCardDef { Id = "rummage_stone_2", DeckName = "Forage Deck", Title = "Rummage: 2 Stone", Copies = 1, EffectText = "The Millions' player gains 2 Stone cards from the resource deck." },
+                new FactionSubDeckCardDef { Id = "rummage_wood_1", DeckName = "Forage Deck", Title = "Rummage: 2 Wood", Copies = 1, EffectText = "The Millions' player gains 2 Wood cards from the resource deck." },
+                new FactionSubDeckCardDef { Id = "rummage_wood_2", DeckName = "Forage Deck", Title = "Rummage: 2 Wood", Copies = 1, EffectText = "The Millions' player gains 2 Wood cards from the resource deck." },
+                new FactionSubDeckCardDef { Id = "rummage_gold", DeckName = "Forage Deck", Title = "Rummage: 1 Gold", Copies = 1, EffectText = "The Millions' player gains 1 Gold card from the resource deck." }
+            };
+        }
+
+        public static List<FactionSubDeckCardDef> BuildGoatGrimoireDeck14()
+        {
+            // Rulebook Lines 629-641: 14-card Grimoire Deck
+            return new List<FactionSubDeckCardDef>
+            {
+                new FactionSubDeckCardDef { Id = "grim_1",  DeckName = "Grimoire", Title = "Whisper of the Flock", Copies = 1, EffectText = "When milled: Gain 1 Purged." },
+                new FactionSubDeckCardDef { Id = "grim_2",  DeckName = "Grimoire", Title = "Soul Tithe", Copies = 1, EffectText = "When milled: Lose 1 Purged, gain 1 Authority." },
+                new FactionSubDeckCardDef { Id = "grim_3",  DeckName = "Grimoire", Title = "Dark Martyrdom", Copies = 1, EffectText = "When milled: Lose 2 Authority, gain 2 Purged." },
+                new FactionSubDeckCardDef { Id = "grim_4",  DeckName = "Grimoire", Title = "Burnt Offering", Copies = 1, EffectText = "When milled: Discard 1 card from your hand, gain 2 Authority." },
+                new FactionSubDeckCardDef { Id = "grim_5",  DeckName = "Grimoire", Title = "Forbidden Lore", Copies = 1, EffectText = "When milled: Draw 1 card, lose 2 Authority." },
+                new FactionSubDeckCardDef { Id = "grim_6",  DeckName = "Grimoire", Title = "Blood Harvest", Copies = 1, EffectText = "When milled: Discard 2 resources from your resource pile, gain 2 Purged." },
+                new FactionSubDeckCardDef { Id = "grim_7",  DeckName = "Grimoire", Title = "Alchemical Greed", Copies = 1, EffectText = "When milled: Gain 2 Gold." },
+                new FactionSubDeckCardDef { Id = "grim_8",  DeckName = "Grimoire", Title = "Golden Covenant", Copies = 1, EffectText = "When milled: Lose 1 Gold, gain 2 Authority." },
+                new FactionSubDeckCardDef { Id = "grim_9",  DeckName = "Grimoire", Title = "Ancient Excavation", Copies = 1, EffectText = "When milled: Draw 2 cards from the relic deck, discard 1." },
+                new FactionSubDeckCardDef { Id = "grim_10", DeckName = "Grimoire", Title = "Shadow Coin", Copies = 1, EffectText = "When milled: Gain 1 Gold." },
+                new FactionSubDeckCardDef { Id = "grim_11", DeckName = "Grimoire", Title = "Bartered Crown", Copies = 1, EffectText = "When milled: Lose 2 Authority, gain 1 Gold." },
+                new FactionSubDeckCardDef { Id = "grim_12", DeckName = "Grimoire", Title = "Abyssal Dominion", Copies = 1, EffectText = "When milled: Gain 3 Authority." },
+                new FactionSubDeckCardDef { Id = "grim_13", DeckName = "Grimoire", Title = "Unholy Trinity", Copies = 1, EffectText = "When milled: Gain 1 Authority, 1 Gold, 1 Purged." },
+                new FactionSubDeckCardDef { Id = "grim_14", DeckName = "Grimoire", Title = "Fool's Bargain", Copies = 1, EffectText = "When milled: Gain 3 Gold, lose 1 Authority and 1 Purged." }
+            };
+        }
+
+        public static List<FactionSubDeckCardDef> BuildCapybaraTradedGoodsDeck8()
+        {
+            // Rulebook Lines 1385-1395: 8-card Traded Goods Deck
+            return new List<FactionSubDeckCardDef>
+            {
+                new FactionSubDeckCardDef { Id = "tg_rusty_shovel", DeckName = "Traded Goods", Title = "Rusty Shovel", Copies = 1, Cost = new ResourceCost(any: 3), EffectText = "Cost: 3 Resources. Next time you use Loot, draw 3 cards from the resource deck and end the looting action." },
+                new FactionSubDeckCardDef { Id = "tg_clay_edict", DeckName = "Traded Goods", Title = "Equipment - Clay Edict", Copies = 1, Cost = new ResourceCost(any: 3), EffectText = "Cost: 3 Resources. Equip to 1 of your Special Units; it gains +1 tile movement for the next 3 turns." },
+                new FactionSubDeckCardDef { Id = "tg_prayer_beads", DeckName = "Traded Goods", Title = "Prayer Beads", Copies = 1, Cost = new ResourceCost(any: 3), EffectText = "Cost: 3 Resources. During your Excavation Phase, draw the top 2 cards from the relic deck." },
+                new FactionSubDeckCardDef { Id = "tg_silver_spoon", DeckName = "Traded Goods", Title = "Silver Spoon", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. Add 2 relic cards from the discard pile to your hand, then both you and the Capybara player gain 1 Authority." },
+                new FactionSubDeckCardDef { Id = "tg_copper_figurine", DeckName = "Traded Goods", Title = "Copper Figurine", Copies = 1, Cost = new ResourceCost(any: 3), EffectText = "Cost: 3 Resources. After a die has been rolled, discard to re-roll 1 die (can be used during battle dice roll phase)." },
+                new FactionSubDeckCardDef { Id = "tg_broken_sickle", DeckName = "Traded Goods", Title = "Broken Sickle", Copies = 1, Cost = new ResourceCost(any: 1), EffectText = "Cost: 1 Resource. Add 1 relic card from the discard pile to your hand." },
+                new FactionSubDeckCardDef { Id = "tg_horse_hair_brush", DeckName = "Traded Goods", Title = "Horse Hair Brush", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. Your next Unearth, Assemble, or Disassemble action costs 1 less resource." },
+                new FactionSubDeckCardDef { Id = "tg_old_jug", DeckName = "Traded Goods", Title = "Old Jug", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your Main Phase, heal a Special Unit for 1HP." }
+            };
+        }
+
+        public static List<EquipmentDef> BuildQueenMutations7()
+        {
+            // Rulebook Lines 1056-1079: 7 Mutation Equipment cards
+            return new List<EquipmentDef>
+            {
+                new EquipmentDef { Id = "mut_serrated_claws", Name = "Serrated Claws", Faction = FactionId.CarnivorousQueen, TargetUnitId = "carnivorous_queen", MaxPerUnit = 1, SupplyCount = 1, BonusAttack = 2, EffectText = "When Queen kills an enemy unit, gain +2 Attack until End Phase, 1 free Move action, and +1 Authority." },
+                new EquipmentDef { Id = "mut_membranous_wings", Name = "Membranous Wings", Faction = FactionId.CarnivorousQueen, TargetUnitId = "carnivorous_queen", MaxPerUnit = 1, SupplyCount = 1, BonusMove = 1, EffectText = "After Queen battles or Ensnares, spend 2 Rage to move up to 2 tiles and become Hidden for free." },
+                new EquipmentDef { Id = "mut_mandibles", Name = "Mandibles", Faction = FactionId.CarnivorousQueen, TargetUnitId = "carnivorous_queen", MaxPerUnit = 1, SupplyCount = 1, EffectText = "Once per Main Phase, spend 2 Rage + 2 resources (or 1 Gold) to deal 1HP true damage to an enemy on Queen's tile." },
+                new EquipmentDef { Id = "mut_abdomen", Name = "Abdomen", Faction = FactionId.CarnivorousQueen, TargetUnitId = "carnivorous_queen", MaxPerUnit = 1, SupplyCount = 1, EffectText = "Ensnare becomes a FREE action (no longer costs a Main Phase action; still costs 3 Rage, grants +1 Auth & +1 Feeding)." },
+                new EquipmentDef { Id = "mut_thoracic_hinges", Name = "Thoracic Hinges", Faction = FactionId.CarnivorousQueen, TargetUnitId = "carnivorous_queen", MaxPerUnit = 1, SupplyCount = 1, EffectText = "Place 2 Egg Tokens by discarding 2 relics; enemies adjacent to Larvae/Chrysalis lose 1 Defense and need 2 Move actions to enter Chrysalis tile." },
+                new EquipmentDef { Id = "mut_scaphism", Name = "Scaphism", Faction = FactionId.CarnivorousQueen, TargetUnitId = "carnivorous_queen", MaxPerUnit = 1, SupplyCount = 1, EffectText = "Spend 1 Main Phase action + 3 Rage to devour all Ensnared on the board: +1 Authority and heal 1HP per Ensnared removed." },
+                new EquipmentDef { Id = "mut_carapace", Name = "Carapace", Faction = FactionId.CarnivorousQueen, TargetUnitId = "carnivorous_queen", MaxPerUnit = 1, SupplyCount = 1, BonusHP = 1, BonusDefense = 1, EffectText = "Queen gains +1 Max HP (heals 1 on draft) and prevents the first 1HP damage taken each turn." }
+            };
         }
 
         public static List<RelicCardDef> GetAllRelicCardDefs()
@@ -215,6 +285,12 @@ namespace CrittersOfCalamity.Model
                         "Kill a Necromouser Special Unit: Gain Authority equal to its summoning cost (1/3/4) + free loot 1 equipment material (adds 1 Skeleton to Cauldron).",
                         "Destroy an unguarded Miasma Tile: Attacker gains 1 Authority, Necromouser adds 1 Skeleton to Cauldron."
                     },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Necromouser Faction Board", "1 Necromouser Special Unit Piece & Card", "3 Bloat Special Unit Pieces & Card",
+                        "3 Vanguard Special Unit Pieces & Card", "3 Brute Special Unit Pieces & Card", "18 Skeleton Unit Pieces & Card",
+                        "6 Miasma Tiles", "1 Cauldron Card", "6 Sword, 3 Helmet, 3 Shield, 3 Boots, 3 Locket, 3 Ring Equipment Cards"
+                    },
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "skeleton", Name = "Skeleton", Faction = FactionId.Necromouser, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 18, SummoningCondition = "Arise trait or Miasma trigger", AbilitiesText = "Spread the Bad News: Remove 1 Skeleton from board to place a Miasma Tile on its tile." },
@@ -262,11 +338,17 @@ namespace CrittersOfCalamity.Model
                         "Kill King of the Millions: 2 Authority.",
                         "Use or Destroy a Catapult Token: 1 Authority."
                     },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Horde of the Millions Faction Board", "30 Millions Unit Pieces & Card", "1 King of the Millions Special Unit Piece & Card",
+                        "2 Catapult Tokens", "3 Gluttony Tokens", "3 Burrow Buildings", "8-Card Forage Deck (3 Plague, 5 Rummage)"
+                    },
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "millions", Name = "Millions", Faction = FactionId.HordeOfTheMillions, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 30, SummoningCondition = "Recruit at Burrows", AbilitiesText = "Forage: Every player's End Phase on shared tile -> draw 1 Forage card. Other People's Gluttony: Free craft 1 Gluttony Token for 1 Gold." },
                         new UnitDef { Id = "king_of_the_millions", Name = "King of the Millions", Faction = FactionId.HordeOfTheMillions, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 4, SupplyCount = 1, SummoningCondition = "Once per game: Discard 1 Gold, 1 Stone, 1 Wood -> Summon at a Burrow.", AbilitiesText = "Spread the Fun: All other players draw & resolve 1 Forage card. King of the Rabbit Hill: Once per Main Phase, spawn 1 Millions on King's tile." }
-                    }
+                    },
+                    SubDeckCards = BuildMillionsForageDeck8()
                 },
 
                 // Faction 3: The Goat Cabal
@@ -297,6 +379,12 @@ namespace CrittersOfCalamity.Model
                         "Destroy a Demon Special Unit: 2 Authority (cannot be resummoned).",
                         "Destroy a Summoning Circle, Initiation Rite Token, or Effigy Token: 1 Authority."
                     },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Goat Cabal Faction Board", "1 Demon Rules Board", "1 Purgatory Card", "20 Goat Unit Pieces",
+                        "5 Demon Special Unit Pieces & Cards (Faust, The Midian, Serpentine Sovereign, The Lord of War, The Horned Beast)",
+                        "2 Initiation Rite Tokens", "3 Effigy Tokens", "3 Summoning Circle Buildings", "14-Card Grimoire Deck"
+                    },
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "goat", Name = "Goat", Faction = FactionId.GoatCabal, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at Summoning Circles", AbilitiesText = "Invocation: Purge 1 Goat + 1W/1S/1G -> Place Initiation Rite. Canto Inferno: Remove Initiation Rite + Demon cost -> Summon Demon. Effigy: Return 1 Purged -> Place Effigy Token." },
@@ -305,7 +393,8 @@ namespace CrittersOfCalamity.Model
                         new UnitDef { Id = "serpentine_sovereign", Name = "Serpentine Sovereign", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "3 Purged", AbilitiesText = "Royal Decree: Mark tile within 4 tiles; start of next Draw Phase destroy all pieces and overlay tiles on it. Binding: Lose 2 Authority during turn." },
                         new UnitDef { Id = "lord_of_war", Name = "The Lord of War", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 3, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "3 Purged", AbilitiesText = "Fear: Push non-Goats on summon. Onslaught: 3 free battles in Main Phase. Greed: Roll d6 on attack (even +1 Auth, odd -1 Gold)." },
                         new UnitDef { Id = "horned_beast", Name = "The Horned Beast", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 3, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "5 Purged", AbilitiesText = "Subservience: Impose global restriction on all opponents next turn. Binding: 2 Gold, 1 Card, 1 Auth, 1 Purged + 3 Summoning Circles." }
-                    }
+                    },
+                    SubDeckCards = BuildGoatGrimoireDeck14()
                 },
 
                 // Faction 4: Curly Tail's Warband
@@ -332,6 +421,12 @@ namespace CrittersOfCalamity.Model
                     {
                         "Destroy a Supply Line Token or War Party Building: 1 Authority.",
                         "Force Curly Tail into Strategic Retreat (0 HP): 2 Authority."
+                    },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Curly Tail's Warband Faction Board", "20 Warband Unit Pieces & Card", "1 Curly Tail Special Unit Piece & Card",
+                        "5 War Party Buildings", "8 Supply Line Tokens", "3 Meter Boards (Thirst for Glory, Hunger, Momentum)",
+                        "5 Golden Equipment Cards (Golden Sword, Golden Gauntlet, Golden War Axe, Golden Chestplate, Tyrant's Crown)"
                     },
                     Units = new List<UnitDef>
                     {
@@ -376,6 +471,11 @@ namespace CrittersOfCalamity.Model
                         "Destroy a Bunker, Fire Tile (costs 2 Stone on tile), or Tar Pit Token: 1 Authority.",
                         "Kill the Pyromaniac: 2 Authority."
                     },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Firestarting Squirrels Faction Board", "15 Squirrel Unit Pieces & Card", "1 Pyromaniac Special Unit Piece & Card",
+                        "6 Fire Tiles", "3 Tar Pit Tokens", "3 Bunker Buildings", "6 Charcoal Resource Cards", "3 Acorn Firestarter Cards"
+                    },
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "squirrel", Name = "Squirrel", Faction = FactionId.FirestartingSquirrels, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 15, SummoningCondition = "Recruit at Bunkers", AbilitiesText = "Tar Pit Token: Spend 2 Charcoal in Crafting Phase. Acorn Firestarter: Spend 1 Charcoal + 1 Wood to craft; discard to place Fire Tile." },
@@ -409,6 +509,11 @@ namespace CrittersOfCalamity.Model
                         "Kill 2 or more Crusaders in one battle: 1 Authority.",
                         "Kill The Platy-Pope: 2 Authority (Papacy loses 1 Authority).",
                         "Destroy a Holy Relic Token or The Citadel: 1 Authority."
+                    },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Platypus Papacy Faction Board", "5 Pilgrim Unit Pieces & Card", "13 Crusader Unit Pieces & Card",
+                        "1 Platy-Pope Special Unit Piece & Card", "2 Holy Relic Tokens", "1 Citadel Building", "1 Faith & Platy-Pope Level Meter Board (0-5)"
                     },
                     Units = new List<UnitDef>
                     {
@@ -446,12 +551,19 @@ namespace CrittersOfCalamity.Model
                         "Kill the Carnivorous Queen: 2 Authority.",
                         "Destroy an Egg Token or Chrysalis: 1 Authority."
                     },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Carnivorous Queen Faction Board", "1 Rage (0-15) & Feeding (0-7) Meter", "7-Card Equipment Mutation Deck",
+                        "1 Carnivorous Queen Special Unit Piece & 4 Stage Cards", "8 Ensnared Unit Pieces & Card", "6 Larvae Unit Pieces & Card",
+                        "8 Egg Tokens", "3 Chrysalis Building Pieces & Card"
+                    },
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "larvae", Name = "Larvae", Faction = FactionId.CarnivorousQueen, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 6, SummoningCondition = "Recruit at Chrysalis or hatch Egg Tokens via Swarm", AbilitiesText = "Grants +1 Rage when killed; beacon for Verdant Voracity." },
                         new UnitDef { Id = "ensnared", Name = "Ensnared", Faction = FactionId.CarnivorousQueen, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 8, SummoningCondition = "Created by Queen's Ensnare ability (exiles enemy unit)", AbilitiesText = "Cannot move, attack, or use abilities; can be attacked or devoured by Scaphism." },
                         new UnitDef { Id = "carnivorous_queen", Name = "Carnivorous Queen", Faction = FactionId.CarnivorousQueen, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 1, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "Starts at Stage 1 (2/1/3) -> Stage 2 (3/1/3 @ 2 Feed) -> Stage 3 (4/2/4 @ 4 Feed) -> Stage 4 (5/2/5 @ 7 Feed).", AbilitiesText = "Hidden Amongst the Trees (2 Rage), Ensnare (1 Action + 3 Rage -> +1 Auth & +1 Feed), Verdant Voracity (3 Rage teleport), Law of Nature (2 Rage devour)." }
-                    }
+                    },
+                    Equipment = BuildQueenMutations7()
                 },
 
                 // Faction 8: The Glacier Kingdom
@@ -480,6 +592,12 @@ namespace CrittersOfCalamity.Model
                     {
                         "Destroy an Iceberg Wall, Igloo, or Frozen Harbor: 1 Authority.",
                         "Kill The Emperor Penguin: 2 Authority."
+                    },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Glacier Kingdom Faction Board", "1 Blizzard Meter", "18 Penguin Unit Pieces & Card",
+                        "1 Emperor Penguin Special Unit Piece & Card", "20 Glacier Tiles", "4 Igloo Buildings",
+                        "1 Frozen Harbor Building", "20 Iceberg Wall Pieces (0/0/2)", "9 Snowfall Tokens (3x Lv1, 3x Lv2, 3x Lv3)"
                     },
                     Units = new List<UnitDef>
                     {
@@ -513,6 +631,11 @@ namespace CrittersOfCalamity.Model
                     {
                         "Destroy a flipped Fallen Leaves Tile or a Shrine: 1 Authority.",
                         "Reduce A Band of Troublemakers to 0 HP: 2 Authority (splits into 3 Tanukis)."
+                    },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Troublemaking Tanuki Faction Board", "18 Tanuki Unit Pieces & Card", "1 A Band of Troublemakers Special Unit Piece & Card",
+                        "3 Shrine Buildings", "20 Coin Tokens", "8 Prank Fallen Leaves Tiles", "5 Trap Fallen Leaves Tiles"
                     },
                     Units = new List<UnitDef>
                     {
@@ -549,12 +672,19 @@ namespace CrittersOfCalamity.Model
                         "Kill Capybara Trader or destroy a Wallow: 1 Authority.",
                         "Kill The Riverkeeper: 2 Authority."
                     },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Capybara Caravan Faction Board", "5 Wallow Buildings", "8-Card Traded Goods Deck",
+                        "1 Riverkeeper Special Unit Piece & Card", "1 Capybara Trader Special Unit Piece & Card",
+                        "20 Capybara Unit Pieces & Card", "8 River Tiles"
+                    },
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "capybara", Name = "Capybara", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 20, SummoningCondition = "Recruit at Wallows", AbilitiesText = "Forage: Once/Main Phase on a River Tile, gain 1 Gold or 1 Stone. Semiaquatic: Move 2 River Tiles for 1 Move action." },
                         new UnitDef { Id = "capybara_trader", Name = "Capybara Trader", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Starts on board; if removed, discard 2 Relic cards in Excavation Phase to respawn at a Wallow.", AbilitiesText = "Traveling Caravan: Opponents on/adjacent can buy from the 3-card Traded Goods Stall (+1 Auth to both). Peddling: 1 free move/turn (2 land or 3 river tiles)." },
                         new UnitDef { Id = "riverkeeper", Name = "The Riverkeeper", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 4, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "Requires 2+ Wallows: Spend 2 resources + 1 Gold -> Summon at a Wallow.", AbilitiesText = "Hospitality: Guest on tile draws 1 Relic -> Capybara gains +1 Authority & recovers 1 discarded Relic. Immovable. Commerce: Guests anywhere can buy Traded Goods." }
-                    }
+                    },
+                    SubDeckCards = BuildCapybaraTradedGoodsDeck8()
                 },
 
                 // Faction 11: The Briared Flower
@@ -584,6 +714,12 @@ namespace CrittersOfCalamity.Model
                     {
                         "Destroy a Prickly Thicket: 1 Authority.",
                         "Kill the Blooming Briar: 2 Authority (triggers Propagation: 1HP damage + spawns 1 Thorned Seed)."
+                    },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Briared Flower Faction Board", "1 Thorn Meter Board (0-6 Thorns)",
+                        "1 Blooming Briar Special Unit Piece & Card", "18 Thorned Seed Unit Pieces & Card",
+                        "4 Prickly Thicket Building Pieces"
                     },
                     Units = new List<UnitDef>
                     {

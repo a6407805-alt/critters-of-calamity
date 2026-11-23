@@ -128,6 +128,22 @@ namespace ProjectBootstrap
             colorAdj.contrast.overrideState = true;
             colorAdj.contrast.value = 5f;
 
+            // 6. Ensure CrittersOfCalamity_GameController exists in SampleScene so it runs immediately in Editor and Standalone Builds
+            var existingCtrl = Object.FindObjectsByType<CrittersOfCalamity.UI.CrittersTabletopHUD>();
+            GameObject ctrlGo;
+            if (existingCtrl != null && existingCtrl.Length > 0)
+            {
+                ctrlGo = existingCtrl[0].gameObject;
+            }
+            else
+            {
+                ctrlGo = new GameObject("CrittersOfCalamity_GameController");
+                ctrlGo.AddComponent<CrittersOfCalamity.Multiplayer.CrittersMultiplayerSessionManager>();
+                ctrlGo.AddComponent<CrittersOfCalamity.Visuals.Tabletop3DBoardRenderer>();
+                ctrlGo.AddComponent<CrittersOfCalamity.UI.CrittersTabletopHUD>();
+            }
+            EditorUtility.SetDirty(ctrlGo);
+
             EditorUtility.SetDirty(profile);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             EditorSceneManager.SaveOpenScenes();
