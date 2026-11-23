@@ -1,0 +1,15 @@
+# BEGIN unity vcs merge-setup
+# Unity scene and prefab merging. Managed block: edits here are overwritten.
+*.anim merge=unityyamlmerge
+*.asset merge=unityyamlmerge
+*.controller merge=unityyamlmerge
+*.mat merge=unityyamlmerge
+*.physicMaterial merge=unityyamlmerge
+*.prefab merge=unityyamlmerge
+*.unity merge=unityyamlmerge
+# END unity vcs merge-setup
+
+# BEGIN unity vcs doctor
+# Unity attributes kept current by `unity vcs doctor --fix`. Managed block: edits here are overwritten. To opt out of a rule, override it below this block.
+* text=auto
+# END unity vcs doctor
