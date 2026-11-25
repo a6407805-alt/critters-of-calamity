@@ -85,8 +85,8 @@ namespace CrittersOfCalamity.Visuals
                 case "pilgrim": if (!SculptedModel(body, "Models/Pilgrim", a, b, 0.56f, u)) { Platypus(body, a, b); Hood(body, b); } break;
                 case "crusader": if (!SculptedModel(body, "Models/Crusader", a, b, 0.50f, u)) { Platypus(body, a, b); Crusader(body, a, b); } break;
                 case "platy_pope": if (!SculptedModel(body, "Models/PlatyPope", a, b, 0.72f, u)) { Platypus(body, a, b); Mitre(body); } break;
-                case "tanuki": Tanuki(body, a, b); break;
-                case "band_of_troublemakers": Tanuki(body, a, b); BellyDrum(body, b); break;
+                case "tanuki": if (!SculptedModel(body, "Models/Tanuki", a, b, 0.48f, u)) Tanuki(body, a, b); break;
+                case "band_of_troublemakers": if (!SculptedModel(body, "Models/BandOfTroublemakers", a, b, 0.64f, u)) { Tanuki(body, a, b); BellyDrum(body, b); } break;
                 case "skeleton": Mouse(body, Palette.BoneWhite, Palette.BoneWhite, a); break;
                 case "necromouser": Mouse(body, a, b, b); NecroHood(body, a, b); break;
                 case "the_bloat": Bloat(body, a, b); break;
