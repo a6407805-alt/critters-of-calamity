@@ -24,7 +24,7 @@ namespace CrittersOfCalamity.UI
               FactionId.CurlyTail, FactionId.PlatypusPapacy, FactionId.Necromouser, FactionId.BriaredFlower };
         private System.Random _debugRng = new System.Random(7);
         private int _debugFocusIndex;
-        private int _debugSetups;
+        private int _debugSetups = System.Environment.TickCount & 7;  // different factions each play session
         private bool _debugBusy;
 
         private void DebugHotkeys()
@@ -48,7 +48,7 @@ namespace CrittersOfCalamity.UI
                 _mpManager.StartMatch();
                 yield return null;
             }
-            int offset = _debugSetups++ % DebugFactionOrder.Length;   // each F9 game seats a different set of factions
+            int offset = (_debugSetups++ & 0x7fffffff) % DebugFactionOrder.Length;  // each F9 game seats a different set of factions
             int guard = 0;
             while (_engine != null && _engine.IsPreGame && guard++ < 400)
             {
