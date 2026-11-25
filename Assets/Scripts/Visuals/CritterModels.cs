@@ -101,8 +101,10 @@ namespace CrittersOfCalamity.Visuals
                 case "riverkeeper":
                     if (!SculptedModel(body, "Models/Riverkeeper", a, b, 0.70f, u)) { Capybara(body, a, b); S(body, new Vector3(0f, 0.33f, -0.16f), Vector3.one * 0.09f, Palette.CarrotOrange); }
                     break;
-                case "thorned_seed": Seed(body, a, b); break;
-                case "blooming_briar": Briar(body, a, b, owner.BriaredFlowerThorns); break;
+                case "thorned_seed": if (!SculptedModel(body, "Models/ThornedSeed", a, b, 0.40f, u)) Seed(body, a, b); break;
+                case "blooming_briar":
+                    if (!SculptedModel(body, "Models/BloomingBriar", a, b, 0.72f, u, owner.BriaredFlowerThorns)) Briar(body, a, b, owner.BriaredFlowerThorns);
+                    break;
                 default: Mouse(body, a, b, b); break;
             }
 
@@ -120,7 +122,7 @@ namespace CrittersOfCalamity.Visuals
         /// Its materials are named by role and recolored here, so the model still wears the owner's faction colors
         /// and the Palette accents. Returns false if the model isn't in the project.
         /// </summary>
-        static bool SculptedModel(Transform parent, string resource, Color a, Color b, float scale, UnitInstance unit = null)
+        static bool SculptedModel(Transform parent, string resource, Color a, Color b, float scale, UnitInstance unit = null, int count = 0)
         {
             var prefab = Resources.Load<GameObject>(resource);
             if (prefab == null) return false;
@@ -141,9 +143,11 @@ namespace CrittersOfCalamity.Visuals
                     string id = child.name.Substring(5);
                     child.gameObject.SetActive(unit != null && unit.EquippedItems.Exists(e => e.Id == id));
                 }
+                else if (child.name.StartsWith("Count_") && int.TryParse(child.name.Substring(6), out int n))
+                    child.gameObject.SetActive(n <= count);   // e.g. one thorn per Thorn the Blooming Briar carries
             // Size from the bare model's measured bounds (FBX unit scale varies by exporter): longest side = scale.
             // Gear is left out so forging a sword doesn't shrink the piece.
-            var rs = Array.FindAll(go.GetComponentsInChildren<Renderer>(true), r => !r.name.StartsWith("Gear_"));
+            var rs = Array.FindAll(go.GetComponentsInChildren<Renderer>(true), r => !r.name.StartsWith("Gear_") && !r.name.StartsWith("Count_"));
             if (rs.Length > 0)
             {
                 var bounds = rs[0].bounds;
@@ -171,6 +175,7 @@ namespace CrittersOfCalamity.Visuals
                             : n.StartsWith("Bone") ? Palette.BoneWhite
                             : n.StartsWith("Flame") ? Palette.EmberYellow
                             : n.StartsWith("Ember") ? Palette.CarrotOrange
+                            : n.StartsWith("Thorn") ? Palette.LeafRust
                             : n.StartsWith("Rot") ? new Color(0.62f, 0.66f, 0.55f)
                             : n.StartsWith("Robe") ? Palette.HolyWhite
                             : n.StartsWith("Bill") ? Color.Lerp(Palette.InkAccent, Palette.ShadowSlate, 0.4f)

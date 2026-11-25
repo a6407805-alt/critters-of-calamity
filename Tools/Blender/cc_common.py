@@ -53,7 +53,7 @@ def cone(loc, r, depth, mat, rot=(0, 0, 0)):
 
 def tube(points, radius, mat):
     cu = bpy.data.curves.new("tube", 'CURVE'); cu.dimensions = '3D'
-    cu.bevel_depth = radius; cu.bevel_resolution = 2
+    cu.bevel_depth = radius; cu.bevel_resolution = 2; cu.use_fill_caps = True
     sp = cu.splines.new('POLY'); sp.points.add(len(points) - 1)
     for i, p in enumerate(points): sp.points[i].co = (p[0], p[1], p[2], 1)
     o = bpy.data.objects.new("tube", cu); scene.collection.objects.link(o)
