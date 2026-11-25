@@ -746,6 +746,7 @@ namespace CrittersOfCalamity.UI
 
             foreach (Transform child in _handButtonsRoot)
                 Destroy(child.gameObject);
+            HideCardPreview();
 
             for (int hIdx = 0; hIdx < viewer.RelicHand.Count; hIdx++)
             {
@@ -767,6 +768,62 @@ namespace CrittersOfCalamity.UI
             var t = CreateText(cardBox.transform, "Text", $"<b>{card.Name}</b>  <size=10>({card.Cost})</size>\n<size=10>{card.EffectText}</size>",
                 12, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, new Vector2(6f, 3f), new Vector2(-6f, -3f), Palette.ParchmentMap);
             t.verticalOverflow = VerticalWrapMode.Truncate;
+            t.raycastTarget = false;
+
+            // Hovering a card pops up the full card above the hand
+            var trigger = cardBox.AddComponent<EventTrigger>();
+            var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enter.callback.AddListener(_ => ShowCardPreview(card, cardBox.GetComponent<RectTransform>()));
+            trigger.triggers.Add(enter);
+            var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+            exit.callback.AddListener(_ => HideCardPreview());
+            trigger.triggers.Add(exit);
+        }
+
+        private GameObject _cardPreview;
+        private Text _cardPreviewText;
+
+        private void ShowCardPreview(RelicCardDef card, RectTransform anchor)
+        {
+            if (_cardPreview == null)
+            {
+                var rt = CreatePanel(_canvas.transform, "CardPreview", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0.5f, 0f),
+                    Vector2.zero, new Vector2(340f, 250f), Palette.UICard);
+                _cardPreview = rt.gameObject;
+                var outline = _cardPreview.AddComponent<Outline>();
+                outline.effectColor = Palette.AuthorityGold;
+                outline.effectDistance = new Vector2(2f, -2f);
+                _cardPreviewText = CreateText(rt, "Text", "", 15, TextAnchor.UpperLeft, Vector2.zero, Vector2.one,
+                    new Vector2(14f, 12f), new Vector2(-14f, -12f), Palette.ParchmentMap);
+                _cardPreviewText.raycastTarget = false;
+                _cardPreview.GetComponent<Image>().raycastTarget = false;
+            }
+            var sb = new StringBuilder();
+            sb.AppendLine($"<size=20><b>{card.Name}</b></size>");
+            sb.AppendLine($"<color=#{ColorUtility.ToHtmlStringRGB(Palette.AuthorityGold)}>Cost: {card.Cost}</color>");
+            sb.AppendLine();
+            sb.AppendLine(card.EffectText);
+            sb.AppendLine();
+            sb.Append(card.DisassembleChoiceWoodOrStone ? "<b>Disassemble:</b> gain 1 Wood or 1 Stone (your choice)" : $"<b>Disassemble:</b> gain {card.DisassembleGain}");
+            _cardPreviewText.text = sb.ToString();
+
+            // place it just above the hovered card, kept on screen
+            var prt = (RectTransform)_cardPreview.transform;
+            var canvasRt = (RectTransform)_canvas.transform;
+            var corners = new Vector3[4];
+            anchor.GetWorldCorners(corners);
+            Vector2 topMid = canvasRt.InverseTransformPoint((corners[1] + corners[2]) * 0.5f);
+            float halfW = canvasRt.rect.width * 0.5f;
+            float x = Mathf.Clamp(topMid.x, -halfW + 180f, halfW - 180f) + halfW;
+            float y = topMid.y + canvasRt.rect.height * 0.5f + 10f;
+            prt.anchoredPosition = new Vector2(x, y);
+            _cardPreview.SetActive(true);
+            _cardPreview.transform.SetAsLastSibling();
+        }
+
+        private void HideCardPreview()
+        {
+            if (_cardPreview != null) _cardPreview.SetActive(false);
         }
 
         private string GetFactionMeterSummary(PlayerState p)

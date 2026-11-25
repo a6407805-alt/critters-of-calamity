@@ -35,6 +35,8 @@ namespace CrittersOfCalamity.UI
 
             CreateText(root, "Title", "CRITTERS OF CALAMITY", 44, TextAnchor.MiddleCenter,
                 new Vector2(0.1f, 0.84f), new Vector2(0.9f, 0.95f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
+            CreateText(root, "Version", $"Version {Application.version}", 13, TextAnchor.LowerRight,
+                new Vector2(0.75f, 0.005f), new Vector2(0.995f, 0.04f), Vector2.zero, Vector2.zero, Palette.UITextMuted);
 
             _menuStatusText = CreateText(root, "Status", "", 16, TextAnchor.MiddleCenter,
                 new Vector2(0.1f, 0.03f), new Vector2(0.9f, 0.09f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
