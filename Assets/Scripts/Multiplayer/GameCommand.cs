@@ -273,11 +273,12 @@ namespace CrittersOfCalamity.Multiplayer
                     Mix(p.TableRelics.Count);
                     Mix(p.PlatypusFaith); Mix(p.PlatyPopeLevel); Mix(p.CrusadeTurnsRemaining);
                     Mix(p.BriaredFlowerThorns); Mix(p.NecromouserCauldronDeadCount);
+                    Mix(p.PurchasedTradedGoods.Count); Mix(p.HorseHairBrushReady ? 1 : 0);
                 }
                 foreach (var tile in engine.Board.Values)
                 {
                     Mix(tile.Units.Count);
-                    foreach (var u in tile.Units) { Mix(u.OwnerPlayerIndex); Mix(u.CurrentHP); }
+                    foreach (var u in tile.Units) { Mix(u.OwnerPlayerIndex); Mix(u.CurrentHP); Mix(u.IsGuest ? 1 : 0); }
                     Mix(tile.Building != null ? (int)tile.Building.Type + 1 : 0);
                     Mix(tile.Tokens.Count);
                     Mix((int)tile.Overlay);

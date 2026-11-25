@@ -395,11 +395,11 @@ namespace CrittersOfCalamity.Engine
             c.Tiles = wallows;
         }
 
-        /// <summary>A relic card's cost, with the Horse Hair Brush discount (1 less, Gold first) if the player holds one.</summary>
+        /// <summary>A relic card's cost, with the Horse Hair Brush discount (1 less, Gold first) once the brush has been used.</summary>
         public ResourceCost RelicCostFor(PlayerState p, RelicCardDef card)
         {
             var c = new ResourceCost(card.Cost.Wood, card.Cost.Stone, card.Cost.Gold, card.Cost.AnyResource, card.Cost.Charcoal);
-            if (!p.PurchasedTradedGoods.Any(g => g.Id == "tg_horse_hair_brush")) return c;
+            if (!p.HorseHairBrushReady) return c;
             if (c.Gold > 0) c.Gold--;
             else if (c.Stone > 0) c.Stone--;
             else if (c.Wood > 0) c.Wood--;
@@ -409,13 +409,11 @@ namespace CrittersOfCalamity.Engine
 
         private void UseHorseHairBrushIfDiscounted(PlayerState p, RelicCardDef card)
         {
-            var brush = p.PurchasedTradedGoods.FirstOrDefault(g => g.Id == "tg_horse_hair_brush");
-            if (brush == null) return;
+            if (!p.HorseHairBrushReady) return;
             var full = card.Cost;
             if (full.Wood + full.Stone + full.Gold + full.AnyResource + full.Charcoal == 0) return;
-            p.PurchasedTradedGoods.Remove(brush);
-            TradedGoodsDiscard.Add(brush);
-            Log($"{p.DisplayName} used the Horse Hair Brush: {card.Name} cost 1 less.");
+            p.HorseHairBrushReady = false;
+            Log($"{p.DisplayName}'s Horse Hair Brush discount: {card.Name} cost 1 less.");
         }
 
         private bool OfferIgnite(PlayerState p)

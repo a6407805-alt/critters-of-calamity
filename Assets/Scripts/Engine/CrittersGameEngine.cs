@@ -88,6 +88,7 @@ namespace CrittersOfCalamity.Engine
         public List<RelicCardDef> RelicHand = new List<RelicCardDef>();
         public List<RelicCardDef> TableRelics = new List<RelicCardDef>();
         public List<FactionSubDeckCardDef> PurchasedTradedGoods = new List<FactionSubDeckCardDef>();
+        public bool HorseHairBrushReady;   // Traded Good discarded in a Main phase: the next unearth or assemble costs 1 less
 
         // Faction 1: Curly Tail's Warband Meters & State
         public int CurlyTailThirstForGlory = 0; // 0-4
@@ -509,9 +510,11 @@ namespace CrittersOfCalamity.Engine
         }
 
         /// <summary>
-        /// Part 17 Faction 7: the Capybara Caravan places its 8 Stream Tiles before any other player sets up.
+        /// Part 17 Faction 7: the Capybara Caravan places its 10 Stream Tiles before any other player sets up.
         /// Each Stream Tile goes on a forest tile next to another stream tile.
         /// </summary>
+        public const int CapybaraStreamTiles = 10;   // Faction 7 Special Setup
+
         private void RunCapybaraSpecialSetup()
         {
             foreach (var p in Players.Where(pl => pl.Faction.Id == FactionId.CapybaraCaravan))
@@ -519,7 +522,7 @@ namespace CrittersOfCalamity.Engine
                 int placedStreams = 0;
                 foreach (var tile in Board.Values)
                 {
-                    if (tile.BaseTerrain == TileTerrainType.Forest && tile.Overlay == FactionOverlayTileType.None && placedStreams < 8)
+                    if (tile.BaseTerrain == TileTerrainType.Forest && tile.Overlay == FactionOverlayTileType.None && placedStreams < CapybaraStreamTiles)
                     {
                         bool adjStream = tile.Coord.GetNeighbors().Any(n => Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Stream);
                         if (adjStream && !AutoSetupAnchors.Contains(tile.Coord))
@@ -967,7 +970,7 @@ namespace CrittersOfCalamity.Engine
 
                 case FactionId.CapybaraCaravan:
                     int guestOwners = Players.Count(pl => pl.PlayerIndex != p.PlayerIndex && Board.Values.SelectMany(t => t.Units).Any(u => u.OwnerPlayerIndex == pl.PlayerIndex && u.IsGuest));
-                    if (guestOwners > 0) AwardAuthority(p.PlayerIndex, Mathf.Min(2, guestOwners), "Customary Greeting");
+                    if (guestOwners > 0) AwardAuthority(p.PlayerIndex, guestOwners, "Customary Greeting");
                     break;
 
                 case FactionId.BriaredFlower:
@@ -1228,10 +1231,7 @@ namespace CrittersOfCalamity.Engine
             }
         }
 
-        /// <summary>
-        /// Traveling Caravan: a player with a unit on or next to the Trader's tile may buy (or, with the Riverkeeper on
-        /// the board, a player with a guest unit anywhere: Commerce).
-        /// </summary>
+        /// <summary>Traveling Caravan: a player with a unit on the Capybara Trader's tile may buy from the stall.</summary>
         public bool CanBuyTradedGood(PlayerState buyer, int stallIndex, out string reason)
         {
             reason = null;
@@ -1241,11 +1241,8 @@ namespace CrittersOfCalamity.Engine
             if (capy == null || capy.PlayerIndex == buyer.PlayerIndex) { reason = "Only other players buy from the Capybara Trader."; return false; }
             if (stallIndex < 0 || stallIndex >= TradedGoodsStall.Count) { reason = "That stall slot is empty."; return false; }
             var trader = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.OwnerPlayerIndex == capy.PlayerIndex && u.Definition.Id == "capybara_trader"));
-            bool near = trader != null && (trader.Units.Any(u => u.OwnerPlayerIndex == buyer.PlayerIndex) ||
-                                           Neighbors(trader).Any(n => n.Units.Any(u => u.OwnerPlayerIndex == buyer.PlayerIndex)));
-            bool commerce = Board.Values.Any(t => t.Units.Any(u => u.OwnerPlayerIndex == capy.PlayerIndex && u.Definition.Id == "riverkeeper")) &&
-                            Board.Values.Any(t => t.Units.Any(u => u.OwnerPlayerIndex == buyer.PlayerIndex && u.IsGuest));
-            if (!near && !commerce) { reason = "You need a unit on or next to the Capybara Trader's tile (or a guest while the Riverkeeper is out)."; return false; }
+            bool onTile = trader != null && trader.Units.Any(u => u.OwnerPlayerIndex == buyer.PlayerIndex);
+            if (!onTile) { reason = "You need a unit on the Capybara Trader's tile."; return false; }
             if (!CanAfford(buyer, TradedGoodsStall[stallIndex].Cost)) { reason = $"Costs {TradedGoodsStall[stallIndex].Cost}."; return false; }
             return true;
         }
@@ -1257,14 +1254,10 @@ namespace CrittersOfCalamity.Engine
             var capyPlayer = Players.First(pl => pl.Faction.Id == FactionId.CapybaraCaravan);
             var card = TradedGoodsStall[stallIndex];
 
-            // Pay the Capybara player (cheapest cards first)
+            // Pay the cost into the discard (cheapest cards first)
             var order = new[] { ResourceType.Charcoal, ResourceType.Wood, ResourceType.Stone, ResourceType.Gold };
             for (int i = 0; i < card.Cost.AnyResource && buyer.ResourcePile.Count > 0; i++)
-            {
-                var r = order.First(x => buyer.ResourcePile.Contains(x));
-                buyer.ResourcePile.Remove(r);
-                capyPlayer.ResourcePile.Add(r);
-            }
+                buyer.ResourcePile.Remove(order.First(x => buyer.ResourcePile.Contains(x)));
 
             TradedGoodsStall.RemoveAt(stallIndex);
             buyer.PurchasedTradedGoods.Add(card);
@@ -1669,9 +1662,9 @@ namespace CrittersOfCalamity.Engine
                 fromTile.Units.Remove(u);
                 toTile.Units.Add(u);
                 u.HasMovedThisTurn = true;
-                u.IsGuest = (toTile.Building != null && toTile.Building.Type == BuildingType.Wallow && toTile.Building.OwnerPlayerIndex != p.PlayerIndex) ||
-                            toTile.Units.Any(x => x.Definition.Id == "riverkeeper" && x.OwnerPlayerIndex != p.PlayerIndex);
+                u.IsGuest = BecomesGuestOnArrival(toTile, u.OwnerPlayerIndex);   // leaving its tile ends guest status
             }
+            if (movableUnits.Any(u => u.Definition.Id == "riverkeeper")) WelcomeGuestsAtRiverkeeper(toTile);
 
             // Trouble Making Tanukis: The Coin Hunt (compulsory - Line 614) & Shrine Coin Scoring (+2 Authority - Line 612)
             if (p.Faction.Id == FactionId.TroubleMakingTanukis)
@@ -1978,6 +1971,10 @@ namespace CrittersOfCalamity.Engine
                 }
             }
 
+            // Watering Hole: a unit that attacks the Capybara Trader or the Riverkeeper stops being a guest
+            if (defenderUnits.Any(u => u.Definition.Id == "capybara_trader" || u.Definition.Id == "riverkeeper"))
+                EndGuestStatus(attackerUnits, "attacked the Capybara Caravan's host");
+
             // Part 13: Removing Isolated Enemy Buildings, Tokens, and Removable Tiles (no dice rolled!)
             if (defenderUnits.Count == 0)
             {
@@ -1988,6 +1985,7 @@ namespace CrittersOfCalamity.Engine
                 if (tile.Building != null && tile.Building.OwnerPlayerIndex == defender.PlayerIndex && canRemove > 0)
                 {
                     Log($"{attacker.DisplayName} removed isolated {tile.Building.Type} at {coord}!");
+                    if (tile.Building.Type == BuildingType.Wallow) EndGuestStatus(attackerUnits, "destroyed a Wallow");
                     tile.Building = null;
                     canRemove--;
                     removedCount++;
@@ -2649,31 +2647,12 @@ namespace CrittersOfCalamity.Engine
         private List<UnitInstance> ApplyBattleDamageToSide(HexTileState tile, List<UnitInstance> units, int totalDamage, int killerPlayerIndex, BattleReport report, bool allow2HpToSingleUnit = false)
         {
             var removed = new List<UnitInstance>();
-            // Capybara Caravan Selfless Nature (Line 824): When a Guest would take damage in battle, a Capybara unit on that tile absorbs 1HP damage
             var ordered = units.OrderBy(u => u.Definition.IsSpecialUnit ? 1 : 0).ToList();
             int remaining = totalDamage;
 
             foreach (var u in ordered)
             {
                 if (remaining <= 0) break;
-
-                if (u.IsGuest)
-                {
-                    var protectorCapy = tile.Units.FirstOrDefault(c => c.Definition.Id == "capybara" && c.CurrentHP > 0);
-                    if (protectorCapy != null)
-                    {
-                        protectorCapy.CurrentHP -= 1;
-                        remaining -= 1;
-                        Log($"Selfless Nature! Capybara at {tile.Coord} absorbed 1HP battle damage for Guest {u.Definition.Name}!");
-                        if (protectorCapy.CurrentHP <= 0)
-                        {
-                            report.DestroyedUnitNames.Add(protectorCapy.Definition.Name);
-                            removed.Add(protectorCapy);
-                            RemoveUnitFromBoard(tile, protectorCapy, killerPlayerIndex);
-                        }
-                        continue;
-                    }
-                }
 
                 var owner = Players[u.OwnerPlayerIndex];
                 // Briared Flower Thorn Armor: Remove 1 Thorn instead of taking 1HP
@@ -3015,7 +2994,7 @@ namespace CrittersOfCalamity.Engine
                     Definition = def,
                     CurrentHP = def.BaseMaxHP + bonusHp,
                     MaxHP = def.BaseMaxHP + bonusHp,
-                    IsGuest = (tile.Building != null && tile.Building.Type == BuildingType.Wallow && tile.Building.OwnerPlayerIndex != owner.PlayerIndex)
+                    IsGuest = BecomesGuestOnArrival(tile, owner.PlayerIndex)
                 };
                 tile.Units.Add(inst);
                 list.Add(inst);
@@ -3030,6 +3009,36 @@ namespace CrittersOfCalamity.Engine
             }
 
             return list;
+        }
+
+        /// <summary>
+        /// Watering Hole (Part 17 Faction 7): an enemy unit that enters a tile with a Wallow and a Capybara unit, or a tile
+        /// with the Riverkeeper, becomes a Guest.
+        /// </summary>
+        internal bool BecomesGuestOnArrival(HexTileState tile, int unitOwner)
+        {
+            var capy = Players.FirstOrDefault(pl => pl.Faction != null && pl.Faction.Id == FactionId.CapybaraCaravan);
+            if (capy == null || capy.PlayerIndex == unitOwner) return false;
+            bool wallow = tile.Building != null && tile.Building.Type == BuildingType.Wallow && tile.Building.OwnerPlayerIndex == capy.PlayerIndex;
+            bool capybara = tile.Units.Any(u => u.OwnerPlayerIndex == capy.PlayerIndex && u.Definition.Id == "capybara");
+            bool riverkeeper = tile.Units.Any(u => u.OwnerPlayerIndex == capy.PlayerIndex && u.Definition.Id == "riverkeeper");
+            return (wallow && capybara) || riverkeeper;
+        }
+
+        /// <summary>Watering Hole case 4: enemy units on the Riverkeeper's tile become Guests when it arrives.</summary>
+        internal void WelcomeGuestsAtRiverkeeper(HexTileState tile)
+        {
+            var rk = tile.Units.FirstOrDefault(u => u.Definition.Id == "riverkeeper");
+            if (rk == null) return;
+            foreach (var u in tile.Units.Where(u => u.OwnerPlayerIndex != rk.OwnerPlayerIndex)) u.IsGuest = true;
+        }
+
+        /// <summary>Watering Hole: guests that attack the Trader or the Riverkeeper, or destroy a Wallow, stop being guests.</summary>
+        internal void EndGuestStatus(IEnumerable<UnitInstance> units, string why)
+        {
+            var ended = units.Where(u => u.IsGuest).ToList();
+            foreach (var u in ended) u.IsGuest = false;
+            if (ended.Count > 0) Log($"{Players[ended[0].OwnerPlayerIndex].DisplayName}'s units are no longer guests: they {why}.");
         }
 
         public void PlaceBuilding(HexCoord coord, BuildingType type, PlayerState owner)
@@ -3048,7 +3057,7 @@ namespace CrittersOfCalamity.Engine
                 tile.Tokens.RemoveAll(t => t.Type == TokenType.Coin);
                 AwardAuthority(owner.PlayerIndex, 2, "Shrine Built on Coin Token");
             }
-            // Capybara Caravan Watering Hole Case 2 (Line 820): Building a Wallow on a tile that already has enemy units makes them Guests
+            // Capybara Caravan Watering Hole case 2: building a Wallow on a tile that already has enemy units makes them Guests
             if (type == BuildingType.Wallow)
             {
                 foreach (var enemy in tile.Units.Where(u => u.OwnerPlayerIndex != owner.PlayerIndex))

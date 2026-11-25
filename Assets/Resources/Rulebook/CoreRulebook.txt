@@ -807,52 +807,54 @@ List of Firestarting Squirrels' Faction Materials:
 3 Acorn Firestarter Cards
 Faction 7: The Capybara Caravan
 Description: At the bottom of the stream are remnants of the Ananke, and the capybaras dredge that memory up one relic at a time and sell those relics using their merchants. The Capybaras are a peaceful empire on the Continent that seeks to gain Authority through their caravan of unbothered merchants who carve the waterways and welcome every weary traveler to their wallows.
-Special Setup: Complete the special setup before any other player sets up any pieces on the board. Take the 8 Stream Tiles from your supply and place them one at a time onto the game board following the below rules for Stream Tile placement.
+Special Setup: Complete the special setup before any other player sets up any pieces on the board. Take the 10 Stream Tiles from your supply and place them one at a time onto the game board following the below rules for Stream Tile placement.
 Stream Tile Placement Rules:
-Stream Tiles can only be placed on forest tiles.
-Each Stream Tile must be placed adjacent to another Stream Tile.
-Stream Tiles replace and overrule the forest tile underneath.
+•	Stream Tiles can only be placed on forest tiles.
+•	Each Stream Tile must be placed adjacent to another Stream Tile.
+•	Stream Tiles replace and overrule the forest tile underneath.
 After you complete the special setup, continue the setup phase as usual.
 Setup: Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile.
 Building - Wallow: Once during your excavation phase, you can discard 1 Wood and 1 Stone from your resource pile to place 1 Wallow on a stream tile with a Capybara unit or on a forest tile that is adjacent to a stream tile with a Capybara unit on it. When you recruit, summon 1 Capybara unit at each Wallow.
 Species Trait - Watering Hole: An enemy unit becomes a Guest in any of these cases:
-1.	It enters a tile with a Wallow and its controller chooses not to attack on that tile.
+1.	It enters a tile with a Wallow and a Capybara unit.
 2.	The Capybara builds a Wallow on a tile that already has an enemy unit on it.
 3.	When a player purchases a card from the Capybara Trader.
-4.	The Riverkeeper is on a tile with enemy units on it.
-While a unit is a Guest, each player that controls a Guest unit draws 1 card from the resource deck during their end phase. A unit loses Guest status when it moves out of, or is moved out of, the tile with the Wallow (or, for case 4, the tile with the Riverkeeper).
-Species Trait - Selfless Nature: When a guest would take damage in battle, a Capybara unit on that tile absorbs 1HP damage from that battle.
-Species Trait - Customary Greeting: Once during your end phase, gain 1 Authority for each player who has a guest unit (cap 2 Authority per turn).
-Species Trait - Exchange Rate: Once during your main phase, you can discard three resource cards of the same type to add 2 resource cards of any one type you choose (Wood, Stone, or Gold) from the resource deck to your resource pile.
+4.	It is on a tile with the Riverkeeper.
+While a unit is a Guest, each player that controls a Guest unit draws 1 card from the resource deck during their end phase. 
+A unit loses Guest status in any of these cases:
+1.	It leaves a tile with a wallow.
+2.	It attacks the Capybara Trader.
+3.	It attacks the Riverkeeper.
+4.	It destroys a Wallow.
+Species Trait - Customary Greeting: Once during your end phase, gain 1 Authority for each player who has a guest unit.
 Unit - Capybara:
 Unit Stats: 1/1/2
-Capybara Ability - Forage: Once during your main phase, when a Capybara is on a stream tile, you can take 1 Gold or 1 Stone from the resource deck and add it to your resource pile.
+Capybara Ability - Forage: Once during your main phase, when a Capybara is on a stream tile, you may draw 1 relic deck card.
 Capybara Ability - Semiaquatic: For 1 movement action, a Capybara unit or units can move across 2 stream tiles.
 Special Unit - The Riverkeeper:
-Unit Stats: 1/4/3
-Summoning Condition: During your main phase, when there are 2 or more Wallows on the board, you can discard any 2 resource cards and 1 Gold from your resource pile to summon the Riverkeeper on a tile with a Wallow.
-Riverkeeper Ability - Hospitality: Once during your main phase, if you have a guest on the Riverkeeper's tile the guest may draw 1 relic deck card; when they do, the Capybara player gains 1 Authority and adds 1 card from the discard pile to their hand.
-Riverkeeper Ability - Immovable: The Riverkeeper cannot be moved by an enemy effect but they can be moved by a tile effect.
-Riverkeeper Ability - Commerce: While the Riverkeeper is on the board, guests can purchase Traded Good Cards as if they were on a tile with the Capybara Trader.
+Unit Stats: 2/4/3
+Summoning Condition: During your main phase, when there are 2 or more Wallows on the board, you can discard 1 Stone and 2 Gold from your resource pile to summon the Riverkeeper on a tile with a Wallow.
+Riverkeeper Ability - Hospitality: Once during your main phase, if you have a guest on the Riverkeeper's tile the guest may draw 1 relic deck card; when they do, the Capybara player gains 1 Authority.
+Riverkeeper Ability - Commerce: During your main phase, you can discard 2 Gold to heal HP.
 Special Unit - Capybara Trader:
 Unit Stats: 0/2/2
 Summoning Condition: If the Capybara Trader is not on the board during your excavation phase, you can discard 2 relic deck cards from your hand to place the Capybara Trader at a Wallow.
-Capybara Trader Ability - Traveling Caravan: During any player's main phase, when they have a unit on the tile with the Capybara Trader or their unit is on an adjacent tile, they can purchase 1 of the Trader's faceup Traded Goods cards from the stall by paying the resource cost to the Capybara player. The purchasing player then gains 1 Authority, the Capybara player gains 1 Authority, and the purchasing player places 1 of their basic units from their supply onto a tile with a Wallow as a guest. During each end phase, refill the stall to 3 cards.
+Capybara Trader Ability - Traveling Caravan: During any player's main phase, when they have a unit on the tile with the Capybara Trader, they can purchase 1 of the Trader's faceup Traded Goods cards from the stall by paying the resource cost. The purchasing player then gains 1 Authority, the Capybara player gains 1 Authority, and the purchasing player places 1 of their basic units from their supply onto a tile with a Wallow as a guest. During each end phase, refill the stall to 3 cards.
 Capybara Trader Ability - Peddling: The Capybara Trader receives 1 free movement action during each of your turns. During each movement action, the Capybara Trader can move up to 2 land tiles or up to 3 stream tiles.
 Faction Deck - Traded Goods Cards:
 When you purchase these cards from the Capybara Trader, place the purchased card faceup in front of you. You can use the effect of the card during an appropriate time and then discard the card.
-Rusty Shovel: The next time you use the looting action, you can draw 3 cards from the resource deck and end the looting action, then discard this card. Cost: 3 resource cards.
-Equipment - Clay Edict: You can equip this card to 1 of your special units; it gains +1 tile movement for the next three turns. Cost: 3 resource cards.
-Prayer Beads: During your excavation phase, you can draw the top 2 cards from the relic deck, then discard this card. Cost: 3 resources.
-Silver Spoon: During your excavation phase, you can add 2 relic cards from the discard pile to your hand; then both you and the Capybara player gain 1 Authority. Cost: 2 resources.
-Copper Figurine: After a die has been rolled, you can discard this card to re-roll 1 die (can be used during the battle dice roll phase). Cost: 3 resources.
-Broken Sickle: Add 1 relic card from the discard pile to your hand, then discard this card. Cost: 1 resource.
-Horse Hair Brush: Your next unearth, assemble, or disassemble action costs 1 less resource of your choosing, then discard this card. Cost: 2 resources.
-Old Jug: During your main phase, you can heal a special unit for 1HP, then discard this card. Cost: 2 resources.
+•	Rusty Shovel: The next time you use the looting action, you can draw 3 cards from the resource deck and end the looting action, then discard this card. Cost: 2 resource cards.
+•	Equipment - Clay Edict: During your main phase, you can equip this card to 1 of your units; it gains +1 tile movement for this turn, then discard this card. Cost: 2 resource cards.
+•	Prayer Beads: During your excavation phase, you can draw the top 2 cards from the relic deck, then discard this card. Cost: 2 resources.
+•	Silver Spoon: During your excavation phase, you can add 2 relic cards from the discard pile to your hand; then both you and the Capybara player gain 1 Authority. Cost: 2 resources.
+•	Copper Figurine: After a die has been rolled, you can discard this card to re-roll 1 die (can be used during the battle dice roll phase). Cost: 2 resources.
+•	Broken Pickaxe: Add 1 relic card from the discard pile to your hand, then discard this card. Cost: 1 resource.
+•	Horse Hair Brush: During your main phase, you can discard this card. Your next unearth, assemble, or disassemble action costs 1 less resource of your choosing.
+•	Equipment – Healing Salve: During your main phase, you can equip this card to a unit, it gains 1HP, then discard this card. Cost: 2 resources.
 Ways Enemies Can Score Authority From You:
-Buying a Traded Good Card gives 1 Authority to the Capybara player (see Traveling Caravan above).
-Removing the Capybara Trader gives 1 Authority.
-Removing the Riverkeeper gives 2 Authority.
+•	Buying a Traded Good Card gives 1 Authority to the Capybara player (see Traveling Caravan above).
+•	Removing the Capybara Trader gives 1 Authority.
+•	Removing the Riverkeeper gives 2 Authority.
 List of The Capybara Caravan's Faction Materials:
 5 Wallows
 Traded Goods Deck (8 cards)
@@ -862,7 +864,7 @@ Traded Goods Deck (8 cards)
 1 Riverkeeper Special Unit Card
 1 Capybara Trader Special Unit Card
 1 Capybara Unit Card
-8 Stream Tiles
+10 Stream Tiles
 Faction 8: The Briared Flower
 Description: There is a legend that in the farthest corner of the Continent, a flower once sought to grow so high it could touch the sun. But the higher it climbed, the more attention it drew from those who coveted its beautiful petals, and slowly, those petals metamorphosed into fiery thorns. When at last the flower was cut down, it bloomed one final time in an act of defiance. Now one of its seedlings has flowered, born with an instinctual hatred of other creatures. It hurls its spines across the Continent so that it might be left alone and its seedlings might take root, and when it is stripped bare, it thrashes out one last fury to protect what it has sown. Bloom violently, spend yourself utterly, and rise again from your own scattered seed. Claim Authority through everything you remove.
 Setup: Place the Blooming Briar with 6 Thorns, 2 Thorned Seeds, and 1 Prickly Thicket on a forest tile with no enemy pieces within 4 tiles. Other factions cannot place their pieces within 4 tiles of any Briared Flower pieces during setup.

@@ -52,7 +52,7 @@ namespace CrittersOfCalamity.Engine
                 if (seat < 0) return 0;
                 switch (CurrentSetupKind)
                 {
-                    case SetupStepKind.CapybaraStreams: return 8;
+                    case SetupStepKind.CapybaraStreams: return CapybaraStreamTiles;
                     case SetupStepKind.TanukiCoins: return 12;
                 }
                 return SetupTilesNeeded(Players[seat].Faction.Id);
@@ -68,7 +68,7 @@ namespace CrittersOfCalamity.Engine
                 switch (CurrentSetupKind)
                 {
                     case SetupStepKind.CapybaraStreams:
-                        return "Special setup, before anyone else: click 8 forest tiles one at a time to turn them into streams. Each new stream must touch a stream.";
+                        return $"Special setup, before anyone else: click {CapybaraStreamTiles} forest tiles one at a time to turn them into streams. Each new stream must touch a stream.";
                     case SetupStepKind.TanukiCoins:
                         return "Everyone has set up. Click 12 different forest tiles with no enemy units for your Coin Tokens. Coins must be at least 2 tiles apart.";
                 }
@@ -180,7 +180,7 @@ namespace CrittersOfCalamity.Engine
             CurrentPhase = TurnPhase.PreGame_ReverseFactionSetup;
             SetupOrder.Clear();
             SetupKinds.Clear();
-            // The Capybara Caravan places its 8 streams before anyone sets up (Faction 7 Special Setup)
+            // The Capybara Caravan places its 10 streams before anyone sets up (Faction 7 Special Setup)
             foreach (var capy in Players.Where(pl => pl.Faction.Id == FactionId.CapybaraCaravan))
             { SetupOrder.Add(capy.PlayerIndex); SetupKinds.Add(SetupStepKind.CapybaraStreams); }
             for (int k = Players.Count - 1; k >= 0; k--)
@@ -348,7 +348,7 @@ namespace CrittersOfCalamity.Engine
                 if (SetupPicks.Count >= CurrentSetupTilesNeeded)
                 {
                     Log(CurrentSetupKind == SetupStepKind.CapybaraStreams
-                        ? $"{p.DisplayName} placed 8 Stream Tiles." : $"{p.DisplayName} placed 12 Coin Tokens.");
+                        ? $"{p.DisplayName} placed {CapybaraStreamTiles} Stream Tiles." : $"{p.DisplayName} placed 12 Coin Tokens.");
                     SetupPicks.Clear();
                     SetupCursor++;
                 }

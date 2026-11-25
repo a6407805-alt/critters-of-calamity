@@ -65,7 +65,7 @@ namespace CrittersOfCalamity.Model
                 case FactionId.TroubleMakingTanukis: list.Add(new KeyValuePair<string, int>("Fallen Leaves", 13)); break;
                 case FactionId.Necromouser: list.Add(new KeyValuePair<string, int>("Miasma", 6)); break;
                 case FactionId.FirestartingSquirrels: list.Add(new KeyValuePair<string, int>("Fire", 6)); break;
-                case FactionId.CapybaraCaravan: list.Add(new KeyValuePair<string, int>("Stream", 8)); break;
+                case FactionId.CapybaraCaravan: list.Add(new KeyValuePair<string, int>("Stream", 10)); break;
             }
             return list;
         }
@@ -98,14 +98,14 @@ namespace CrittersOfCalamity.Model
         {
             return new List<FactionSubDeckCardDef>
             {
-                new FactionSubDeckCardDef { Id = "tg_rusty_shovel", DeckName = "Traded Goods", Title = "Rusty Shovel", Copies = 1, Cost = new ResourceCost(any: 3), EffectText = "Cost: 3 Resources. Next time you use Loot, draw 3 cards from the resource deck and end the looting action, then discard this card." },
-                new FactionSubDeckCardDef { Id = "tg_clay_edict", DeckName = "Traded Goods", Title = "Equipment - Clay Edict", Copies = 1, Cost = new ResourceCost(any: 3), EffectText = "Cost: 3 Resources. Equip to 1 of your special units; it gains +1 tile movement for the next three turns." },
-                new FactionSubDeckCardDef { Id = "tg_prayer_beads", DeckName = "Traded Goods", Title = "Prayer Beads", Copies = 1, Cost = new ResourceCost(any: 3), EffectText = "Cost: 3 Resources. During your excavation phase, draw the top 2 cards from the relic deck, then discard this card." },
+                new FactionSubDeckCardDef { Id = "tg_rusty_shovel", DeckName = "Traded Goods", Title = "Rusty Shovel", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. The next time you use the looting action, you can draw 3 cards from the resource deck and end the looting action, then discard this card." },
+                new FactionSubDeckCardDef { Id = "tg_clay_edict", DeckName = "Traded Goods", Title = "Equipment - Clay Edict", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your main phase, equip this card to 1 of your units; it gains +1 tile movement for this turn, then discard this card." },
+                new FactionSubDeckCardDef { Id = "tg_prayer_beads", DeckName = "Traded Goods", Title = "Prayer Beads", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your excavation phase, draw the top 2 cards from the relic deck, then discard this card." },
                 new FactionSubDeckCardDef { Id = "tg_silver_spoon", DeckName = "Traded Goods", Title = "Silver Spoon", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your excavation phase, add 2 relic cards from the discard pile to your hand; then both you and the Capybara player gain 1 Authority." },
-                new FactionSubDeckCardDef { Id = "tg_copper_figurine", DeckName = "Traded Goods", Title = "Copper Figurine", Copies = 1, Cost = new ResourceCost(any: 3), EffectText = "Cost: 3 Resources. After a die has been rolled, discard this card to re-roll 1 die (can be used during the battle dice roll phase)." },
-                new FactionSubDeckCardDef { Id = "tg_broken_sickle", DeckName = "Traded Goods", Title = "Broken Sickle", Copies = 1, Cost = new ResourceCost(any: 1), EffectText = "Cost: 1 Resource. Add 1 relic card from the discard pile to your hand, then discard this card." },
-                new FactionSubDeckCardDef { Id = "tg_horse_hair_brush", DeckName = "Traded Goods", Title = "Horse Hair Brush", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. Your next unearth, assemble, or disassemble action costs 1 less resource of your choosing, then discard this card." },
-                new FactionSubDeckCardDef { Id = "tg_old_jug", DeckName = "Traded Goods", Title = "Old Jug", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your main phase, heal a special unit for 1HP, then discard this card." }
+                new FactionSubDeckCardDef { Id = "tg_copper_figurine", DeckName = "Traded Goods", Title = "Copper Figurine", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. After a die has been rolled, discard this card to re-roll 1 die (can be used during the battle dice roll phase)." },
+                new FactionSubDeckCardDef { Id = "tg_broken_pickaxe", DeckName = "Traded Goods", Title = "Broken Pickaxe", Copies = 1, Cost = new ResourceCost(any: 1), EffectText = "Cost: 1 Resource. Add 1 relic card from the discard pile to your hand, then discard this card." },
+                new FactionSubDeckCardDef { Id = "tg_horse_hair_brush", DeckName = "Traded Goods", Title = "Horse Hair Brush", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your main phase, you can discard this card. Your next unearth, assemble, or disassemble action costs 1 less resource of your choosing." },
+                new FactionSubDeckCardDef { Id = "tg_healing_salve", DeckName = "Traded Goods", Title = "Equipment - Healing Salve", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your main phase, equip this card to a unit; it gains 1HP, then discard this card." }
             };
         }
 
@@ -554,9 +554,9 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 5,
                     ShortSummary = "Peaceful economic faction that expands the stream network and profits from enemy movements through hospitality and trade.",
-                    HowToScoreAuthority = "Customary Greeting: 1 Authority per player with a Guest unit (max 2 per turn). Traded Goods: 1 Authority each time someone buys from your Trader. Hospitality: 1 Authority when a Guest draws a relic. Remove enemy buildings, tokens and special units.",
+                    HowToScoreAuthority = "Customary Greeting: 1 Authority per player with a Guest unit. Traded Goods: 1 Authority each time someone buys from your Trader. Hospitality: 1 Authority when a Guest draws a relic. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "At the bottom of the stream are remnants of the Ananke, and the capybaras dredge that memory up one relic at a time and sell those relics using their merchants.",
-                    SetupInstructions = "Special Setup (before any other player sets up): Place all 8 Stream Tiles one at a time onto forest tiles, each adjacent to another Stream Tile. Regular Setup: Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile.",
+                    SetupInstructions = "Special Setup (before any other player sets up): Place all 10 Stream Tiles one at a time onto forest tiles, each adjacent to another Stream Tile. Regular Setup: Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile.",
                     PrimaryColor = Palette.FromHex("#9C6B3B"),
                     SecondaryColor = Palette.FromHex("#5BC0BE"),
                     PrimaryBuilding = BuildingType.Wallow,
@@ -564,10 +564,8 @@ namespace CrittersOfCalamity.Model
                     BuildingRules = "Wallow: Craft (1 Wood, 1 Stone) on a stream tile with a Capybara unit, or on a forest tile adjacent to a stream tile with a Capybara unit.",
                     SpeciesTraits = new List<string>
                     {
-                        "Watering Hole: Enemy units at a Wallow (that choose not to attack), on the Riverkeeper's tile, or placed when buying a Traded Good become Guests (controller draws +1 Resource during their End phase).",
-                        "Selfless Nature: When a Guest would take damage in battle, a Capybara unit on that tile absorbs 1HP damage from that battle.",
-                        "Customary Greeting: Once during your End phase, gain 1 Authority for each player who has a Guest unit (cap 2 Authority/turn).",
-                        "Exchange Rate: Once during your Main phase, discard 3 of the same resource type to add 2 of the same resource type from the resource deck to your Resource Pile."
+                        "Watering Hole: An enemy unit becomes a Guest when it enters a tile with a Wallow and a Capybara unit, when a Wallow is built on its tile, when it is placed after buying from the Capybara Trader, or while it is on the Riverkeeper's tile. Each player with a Guest draws 1 resource card in their End phase. A Guest stops being one when it leaves the tile, attacks the Capybara Trader or the Riverkeeper, or destroys a Wallow.",
+                        "Customary Greeting: Once during your End phase, gain 1 Authority for each player who has a Guest unit."
                     },
                     EnemyAuthorityScoring = new List<string>
                     {
@@ -579,13 +577,13 @@ namespace CrittersOfCalamity.Model
                     {
                         "1 Capybara Caravan Faction Board", "5 Wallows", "Traded Goods Deck (8 cards)",
                         "1 Riverkeeper Special Unit Piece & Card", "1 Capybara Trader Special Unit Piece & Card",
-                        "20 Capybara Unit Pieces & Card", "8 Stream Tiles"
+                        "20 Capybara Unit Pieces & Card", "10 Stream Tiles"
                     },
                     Units = new List<UnitDef>
                     {
-                        new UnitDef { Id = "capybara", Name = "Capybara", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 20, SummoningCondition = "Recruit at Wallows", AbilitiesText = "Forage: Once per Main phase on a stream tile, take 1 Gold or 1 Stone from the resource deck. Semiaquatic: For 1 Move action, move across 2 stream tiles." },
-                        new UnitDef { Id = "capybara_trader", Name = "Capybara Trader", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Starts on board; if off board during Excavation phase, discard 2 relic cards from Hand to place at a Wallow.", AbilitiesText = "Traveling Caravan: Players on/adjacent can buy from the 3-card Traded Goods Stall (+1 Auth to buyer & Capybara, buyer places 1 basic unit as Guest at a Wallow). Peddling: 1 free Move action each turn (up to 2 land or 3 stream tiles)." },
-                        new UnitDef { Id = "riverkeeper", Name = "The Riverkeeper", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 4, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "During Main phase with 2+ Wallows on board: Discard 2 resources + 1 Gold -> Summon at a Wallow.", AbilitiesText = "Hospitality: Guest on tile draws 1 relic -> Capybara gains 1 Authority and adds 1 card from Discard Area to Hand. Immovable. Commerce: Guests anywhere can buy Traded Goods." }
+                        new UnitDef { Id = "capybara", Name = "Capybara", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 20, SummoningCondition = "Recruit at Wallows", AbilitiesText = "Forage: Once per Main phase on a stream tile, draw 1 relic deck card. Semiaquatic: For 1 Move action, move across 2 stream tiles." },
+                        new UnitDef { Id = "capybara_trader", Name = "Capybara Trader", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Starts on board; if off board during Excavation phase, discard 2 relic cards from Hand to place at a Wallow.", AbilitiesText = "Traveling Caravan: Players with a unit on the Trader's tile can buy from the 3-card Traded Goods Stall (+1 Auth to buyer & Capybara, buyer places 1 basic unit as Guest at a Wallow). Peddling: 1 free Move action each turn (up to 2 land or 3 stream tiles)." },
+                        new UnitDef { Id = "riverkeeper", Name = "The Riverkeeper", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 4, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "During Main phase with 2+ Wallows on board: Discard 1 Stone + 2 Gold -> Summon at a Wallow.", AbilitiesText = "Hospitality: Once per Main phase, a Guest on its tile draws 1 relic -> Capybara gains 1 Authority. Commerce: During your Main phase, discard 2 Gold to heal 1 HP." }
                     },
                     SubDeckCards = BuildCapybaraTradedGoodsDeck8()
                 },

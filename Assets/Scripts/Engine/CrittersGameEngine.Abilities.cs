@@ -272,18 +272,18 @@ namespace CrittersOfCalamity.Engine
             {
                 from.Units.Remove(u);
                 to.Units.Add(u);
-                u.IsGuest = (to.Building != null && to.Building.Type == BuildingType.Wallow && to.Building.OwnerPlayerIndex != u.OwnerPlayerIndex) ||
-                            to.Units.Any(x => x.Definition.Id == "riverkeeper" && x.OwnerPlayerIndex != u.OwnerPlayerIndex);
+                u.IsGuest = BecomesGuestOnArrival(to, u.OwnerPlayerIndex);
             }
+            if (units.Any(u => u.Definition.Id == "riverkeeper")) WelcomeGuestsAtRiverkeeper(to);
             var tanukiMover = units.FirstOrDefault(u => u.Faction == FactionId.TroubleMakingTanukis);
             if (tanukiMover != null && !from.Units.Any(u => u.OwnerPlayerIndex == tanukiMover.OwnerPlayerIndex))
                 MoveAndScoreTanukiCoin(from, to, tanukiMover.OwnerPlayerIndex);
         }
 
-        /// <summary>Whether an effect may move this unit (Platy-Pope, Riverkeeper, Trap Leaves, War Axe Curly Tail).</summary>
+        /// <summary>Whether an effect may move this unit (Platy-Pope, Trap Leaves, War Axe Curly Tail).</summary>
         private bool CanBeMovedByEnemyEffect(UnitInstance u)
         {
-            if (u.Definition.Id == "platy_pope" || u.Definition.Id == "riverkeeper") return false;
+            if (u.Definition.Id == "platy_pope") return false;
             if (u.TrapLeafTurnsRemaining > 0 || (u.CannotMoveThisTurn && u.IsTrapped)) return false;
             if (u.Definition.Id == "curly_tail" && u.EquippedItems.Any(e => e.Id == "golden_war_axe")) return false;
             return true;
@@ -296,6 +296,8 @@ namespace CrittersOfCalamity.Engine
             if (building && tile.Building != null)
             {
                 Log($"{remover.DisplayName} removed {Players[tile.Building.OwnerPlayerIndex].DisplayName}'s {tile.Building.Type} at {tile.Coord}.");
+                if (tile.Building.Type == BuildingType.Wallow)
+                    EndGuestStatus(tile.Units.Where(u => u.OwnerPlayerIndex == remover.PlayerIndex), "destroyed a Wallow");
                 tile.Building = null;
                 AwardAuthority(remover.PlayerIndex, 1 + crusade, "Removed an enemy building");
             }
@@ -1065,49 +1067,15 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "capy_forage", Name = "Capybara Forage", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
-                Summary = "Once per Main phase with a Capybara on a stream tile: take 1 Gold or 1 Stone from the resource deck.",
+                Summary = "Once per Main phase with a Capybara on a stream tile: draw 1 relic deck card.",
                 Check = pl => Uses("capy_forage") > 0 ? "Already used this Main phase." :
                               !Board.Values.Any(t => t.EffectiveTerrain == TileTerrainType.Stream && Has(t, pl, "capybara")) ? "Needs a Capybara on a stream tile." : null,
-                Choices = (pl, a, b) => new List<string> { "Take 1 Gold", "Take 1 Stone" },
                 Run = (pl, a, b, o) =>
                 {
-                    var r = o == 1 ? ResourceType.Stone : ResourceType.Gold;
-                    GainSpecificResourceFromDeck(pl, r);
+                    var d = DrawRelicCard();
+                    if (d != null) pl.RelicHand.Add(d);
                     MarkUsed("capy_forage");
-                    Log($"{pl.DisplayName} foraged the stream for 1 {r}.");
-                    return true;
-                }
-            });
-
-            L.Add(new AbilitySpec
-            {
-                Id = "exchange", Name = "Exchange Rate", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
-                Summary = "Once per Main phase: discard 3 resource cards of the same type to take 2 resource cards of one type from the resource deck.",
-                Check = pl => Uses("exchange") > 0 ? "Already used this Main phase." :
-                              !new[] { ResourceType.Wood, ResourceType.Stone, ResourceType.Gold }.Any(r => Count(pl, r) >= 3) ? "Needs 3 cards of the same type." : null,
-                Choices = (pl, a, b) =>
-                {
-                    var opts = new List<string>();
-                    foreach (var give in new[] { ResourceType.Wood, ResourceType.Stone, ResourceType.Gold })
-                        if (Count(pl, give) >= 3)
-                            foreach (var get in new[] { ResourceType.Wood, ResourceType.Stone, ResourceType.Gold })
-                                opts.Add($"3 {give} for 2 {get}");
-                    return opts;
-                },
-                Run = (pl, a, b, o) =>
-                {
-                    var pairs = new List<(ResourceType, ResourceType)>();
-                    foreach (var give in new[] { ResourceType.Wood, ResourceType.Stone, ResourceType.Gold })
-                        if (Count(pl, give) >= 3)
-                            foreach (var get in new[] { ResourceType.Wood, ResourceType.Stone, ResourceType.Gold })
-                                pairs.Add((give, get));
-                    var pick = pairs[Mathf.Clamp(o, 0, pairs.Count - 1)];
-                    var g = pick.Item1; var t = pick.Item2;
-                    RemoveResources(pl, g, 3);
-                    GainSpecificResourceFromDeck(pl, t);
-                    GainSpecificResourceFromDeck(pl, t);
-                    MarkUsed("exchange");
-                    Log($"{pl.DisplayName} traded 3 {g} for 2 {t} (Exchange Rate).");
+                    Log($"{pl.DisplayName} foraged the stream bed and drew a relic card.");
                     return true;
                 }
             });
@@ -1140,18 +1108,18 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "summon_riverkeeper", Name = "Summon the Riverkeeper", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "With 2+ Wallows on the board: discard any 2 resource cards and 1 Gold to summon the Riverkeeper on a Wallow.",
+                Summary = "With 2+ Wallows on the board: discard 1 Stone and 2 Gold to summon the Riverkeeper on a Wallow.",
                 Prompt1 = "Click one of your Wallows.",
                 Check = pl => OnBoard(pl, "riverkeeper") ? "The Riverkeeper is already on the board." :
                               Board.Values.Count(ownWallow) < 2 ? "Needs 2 Wallows on the board." :
-                              !CanAfford(pl, new ResourceCost(gold: 1, any: 2)) ? "Needs 1 Gold and 2 other resource cards." : null,
+                              !CanAfford(pl, new ResourceCost(stone: 1, gold: 2)) ? "Needs 1 Stone and 2 Gold." : null,
                 Legal1 = (pl, t) => ownWallow(t) && CanAddUnitToTile(t, me),
                 Run = (pl, a, b, o) =>
                 {
-                    RemoveResources(pl, ResourceType.Gold, 1);
-                    DiscardCheapest(pl, 2);
+                    RemoveResources(pl, ResourceType.Stone, 1);
+                    RemoveResources(pl, ResourceType.Gold, 2);
                     SpawnUnit(a, "riverkeeper", pl, 1);
-                    foreach (var u in Board[a].Units.Where(u => u.OwnerPlayerIndex != me)) u.IsGuest = true; // Watering Hole case 4
+                    WelcomeGuestsAtRiverkeeper(Board[a]);   // Watering Hole case 4
                     Log($"{pl.DisplayName} summoned the Riverkeeper at {a}.");
                     return true;
                 }
@@ -1160,35 +1128,51 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "hospitality", Name = "Hospitality", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
-                Summary = "Riverkeeper, once per Main phase: a guest on its tile draws 1 relic card; you gain 1 Authority and add 1 card from the Discard Area to your Hand.",
+                Summary = "Riverkeeper, once per Main phase: a guest on its tile draws 1 relic card and you gain 1 Authority.",
                 Check = pl =>
                 {
                     if (Uses("hospitality") > 0) return "Already used this Main phase.";
                     var rk = TileOf(pl, "riverkeeper");
                     if (rk == null) return "The Riverkeeper isn't on the board.";
-                    return HasEnemyUnits(rk, me) ? null : "No guest on the Riverkeeper's tile.";
+                    return rk.Units.Any(u => u.OwnerPlayerIndex != me && u.IsGuest) ? null : "No guest on the Riverkeeper's tile.";
                 },
                 Choices = (pl, a, b) =>
                 {
                     var rk = TileOf(pl, "riverkeeper");
                     return rk == null ? new List<string>() :
-                        rk.Units.Where(u => u.OwnerPlayerIndex != me).Select(u => u.OwnerPlayerIndex).Distinct().Select(s => $"Host {Players[s].DisplayName}").ToList();
+                        rk.Units.Where(u => u.OwnerPlayerIndex != me && u.IsGuest).Select(u => u.OwnerPlayerIndex).Distinct().Select(s => $"Host {Players[s].DisplayName}").ToList();
                 },
                 Run = (pl, a, b, o) =>
                 {
                     var rk = TileOf(pl, "riverkeeper");
-                    var guests = rk.Units.Where(u => u.OwnerPlayerIndex != me).Select(u => u.OwnerPlayerIndex).Distinct().ToList();
+                    var guests = rk.Units.Where(u => u.OwnerPlayerIndex != me && u.IsGuest).Select(u => u.OwnerPlayerIndex).Distinct().ToList();
                     var guest = Players[guests[Mathf.Clamp(o, 0, guests.Count - 1)]];
                     var drawn = DrawRelicCard();
                     if (drawn != null) guest.RelicHand.Add(drawn);
                     AwardAuthority(me, 1, "Hospitality");
-                    if (RelicDiscardPile.Count > 0)
-                    {
-                        pl.RelicHand.Add(RelicDiscardPile[RelicDiscardPile.Count - 1]);
-                        RelicDiscardPile.RemoveAt(RelicDiscardPile.Count - 1);
-                    }
                     MarkUsed("hospitality");
                     Log($"The Riverkeeper hosted {guest.DisplayName}, who drew a relic card.");
+                    return true;
+                }
+            });
+
+            L.Add(new AbilitySpec
+            {
+                Id = "riverkeeper_commerce", Name = "Commerce", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
+                Summary = "Riverkeeper, any number of times in your Main phase: discard 2 Gold to heal the Riverkeeper 1 HP.",
+                Check = pl =>
+                {
+                    var rk = AllUnits.FirstOrDefault(u => u.OwnerPlayerIndex == me && u.Definition.Id == "riverkeeper");
+                    if (rk == null) return "The Riverkeeper isn't on the board.";
+                    if (rk.CurrentHP >= rk.MaxHP) return "The Riverkeeper is at full HP.";
+                    return Count(pl, ResourceType.Gold) < 2 ? "Needs 2 Gold." : null;
+                },
+                Run = (pl, a, b, o) =>
+                {
+                    var rk = AllUnits.First(u => u.OwnerPlayerIndex == me && u.Definition.Id == "riverkeeper");
+                    RemoveResources(pl, ResourceType.Gold, 2);
+                    rk.CurrentHP = Mathf.Min(rk.MaxHP, rk.CurrentHP + 1);
+                    Log($"{pl.DisplayName} paid 2 Gold: the Riverkeeper healed to {rk.CurrentHP} HP (Commerce).");
                     return true;
                 }
             });
@@ -1592,10 +1576,10 @@ namespace CrittersOfCalamity.Engine
                     }
                 });
 
-            if (has("tg_broken_sickle"))
+            if (has("tg_broken_pickaxe"))
                 L.Add(new AbilitySpec
                 {
-                    Id = "tg_broken_sickle", Name = "Broken Sickle (Traded Good)", Phase = TurnPhase.ExcavationPhase, Phase2 = TurnPhase.MainPhase,
+                    Id = "tg_broken_pickaxe", Name = "Broken Pickaxe (Traded Good)", Phase = TurnPhase.ExcavationPhase, Phase2 = TurnPhase.MainPhase,
                     Target = AbilityTarget.None, General = true,
                     Summary = "Add 1 relic card from the Discard Area to your Hand, then discard this card.",
                     Check = pl => RelicDiscardPile.Count == 0 ? "The Discard Area is empty." : null,
@@ -1603,25 +1587,41 @@ namespace CrittersOfCalamity.Engine
                     {
                         pl.RelicHand.Add(RelicDiscardPile[RelicDiscardPile.Count - 1]);
                         RelicDiscardPile.RemoveAt(RelicDiscardPile.Count - 1);
-                        spend("tg_broken_sickle");
-                        Log($"{pl.DisplayName} used the Broken Sickle to take a relic card from the Discard Area.");
+                        spend("tg_broken_pickaxe");
+                        Log($"{pl.DisplayName} used the Broken Pickaxe to take a relic card from the Discard Area.");
                         return true;
                     }
                 });
 
-            if (has("tg_old_jug"))
+            if (has("tg_healing_salve"))
                 L.Add(new AbilitySpec
                 {
-                    Id = "tg_old_jug", Name = "Old Jug (Traded Good)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile, General = true,
-                    Summary = "Heal one of your special units 1 HP, then discard this card.",
-                    Prompt1 = "Click a tile with your hurt special unit.",
-                    Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == me && u.Definition.IsSpecialUnit && u.CurrentHP < u.MaxHP),
+                    Id = "tg_healing_salve", Name = "Healing Salve (Traded Good)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile, General = true,
+                    Summary = "Equip to one of your units: it heals 1 HP, then discard this card.",
+                    Prompt1 = "Click a tile with your hurt unit.",
+                    Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == me && u.CurrentHP < u.MaxHP),
                     Run = (pl, a, b, o) =>
                     {
-                        var u = Board[a].Units.First(x => x.OwnerPlayerIndex == me && x.Definition.IsSpecialUnit && x.CurrentHP < x.MaxHP);
+                        var u = Board[a].Units.Where(x => x.OwnerPlayerIndex == me && x.CurrentHP < x.MaxHP)
+                                    .OrderByDescending(x => x.Definition.IsSpecialUnit).First();   // special units first
                         u.CurrentHP++;
-                        spend("tg_old_jug");
-                        Log($"{pl.DisplayName} used the Old Jug: {u.Definition.Name} healed to {u.CurrentHP} HP.");
+                        spend("tg_healing_salve");
+                        Log($"{pl.DisplayName} used the Healing Salve: {u.Definition.Name} healed to {u.CurrentHP} HP.");
+                        return true;
+                    }
+                });
+
+            if (has("tg_horse_hair_brush"))
+                L.Add(new AbilitySpec
+                {
+                    Id = "tg_horse_hair_brush", Name = "Horse Hair Brush (Traded Good)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None, General = true,
+                    Summary = "Discard this card: your next unearth or assemble costs 1 less resource.",
+                    Check = pl => pl.HorseHairBrushReady ? "A brush discount is already waiting." : null,
+                    Run = (pl, a, b, o) =>
+                    {
+                        spend("tg_horse_hair_brush");
+                        pl.HorseHairBrushReady = true;
+                        Log($"{pl.DisplayName} used the Horse Hair Brush: their next unearth or assemble costs 1 less.");
                         return true;
                     }
                 });
@@ -1629,17 +1629,18 @@ namespace CrittersOfCalamity.Engine
             if (has("tg_clay_edict"))
                 L.Add(new AbilitySpec
                 {
-                    Id = "tg_clay_edict", Name = "Clay Edict (Traded Good)", Phase = TurnPhase.MainPhase, Phase2 = TurnPhase.ExcavationPhase,
+                    Id = "tg_clay_edict", Name = "Clay Edict (Traded Good)", Phase = TurnPhase.MainPhase,
                     Target = AbilityTarget.Tile, General = true,
-                    Summary = "Equip to one of your special units: it gets +1 tile movement for this turn and your next two turns.",
-                    Prompt1 = "Click a tile with your special unit.",
-                    Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == me && u.Definition.IsSpecialUnit),
+                    Summary = "Equip to one of your units: it gets +1 tile movement this turn, then discard this card.",
+                    Prompt1 = "Click a tile with your unit.",
+                    Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == me && u.ClayEdictTurns == 0),
                     Run = (pl, a, b, o) =>
                     {
-                        var u = Board[a].Units.First(x => x.OwnerPlayerIndex == me && x.Definition.IsSpecialUnit);
-                        u.ClayEdictTurns = 3;
+                        var u = Board[a].Units.Where(x => x.OwnerPlayerIndex == me && x.ClayEdictTurns == 0)
+                                    .OrderByDescending(x => x.Definition.IsSpecialUnit).First();
+                        u.ClayEdictTurns = 1;   // counts down at your next turn's start, so it lasts this turn
                         spend("tg_clay_edict");
-                        Log($"{pl.DisplayName} equipped the Clay Edict to {u.Definition.Name} (+1 movement for 3 turns).");
+                        Log($"{pl.DisplayName} equipped the Clay Edict to {u.Definition.Name} (+1 movement this turn).");
                         return true;
                     }
                 });
