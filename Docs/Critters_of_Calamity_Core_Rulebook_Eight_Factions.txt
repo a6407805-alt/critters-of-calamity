@@ -530,7 +530,7 @@ Horde of the Millions Materials
 Faction 3: Platypus Papacy
 Description
 The platypus: no creature so impossible could be an accident. The Papacy holds the platypus to be the divinely inspired creation of a divine being. Turning away from the heresy of the Ananke, the Platypus Pilgrims carry their gospel into hostile lands and die for it gladly. Through death, faith grows, and more Platypi take up the cause as Crusaders. Enshrine your holy relics, grow the Platy-Pope's holiness, crusade, and reclaim the Continent for its rightful heirs.
-How the Papacy scores Authority: Martyrdom (1 Authority each), Holy Relic Tokens (1 Authority when crafted), Alms (1 Authority per Platy-Pope level), Level 5 Faith conversion, and removing enemy buildings, tokens, and special units (extra Authority during a Crusade).
+How the Papacy scores Authority: Martyrdom (1 Authority each), Holy Relic Tokens (1 Authority when crafted), Alms (1 Authority each time it raises the Platy-Pope's level), Level 5 Faith conversion, and removing enemy buildings, tokens, and special units (extra Authority during a Crusade).
 Setup
 Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units. Set the Faith Meter and the Platy-Pope Level Meter to 0.
 Building: The Citadel
@@ -552,7 +552,7 @@ Holy Relic Token Effect: during your End phase, gain 1 Faith for each Holy Relic
 Special Unit: The Platy-Pope
 Stats: 0/3/3
 Platy-Pope Ability: Unyielding. The Platy-Pope cannot move or be moved.
-Platy-Pope Ability: Crusade. When the Platy-Pope reaches Level 1, and each time it levels up after that, enter a Crusade for your next 2 turns. If Crusades overlap, add the Crusade turns together.
+Platy-Pope Ability: Crusade. When the Platy-Pope reaches Level 1, and each time it levels up after that, enter a Crusade for your next 2 turns. The Crusade starts at the beginning of your next turn and lasts until the start of your turn after the second one, so it stays on during other players' turns in between. If Crusades overlap, add the Crusade turns together.
 During a Crusade:
 Crusaders gain +1 Attack.
 When you remove an enemy building, token, or special unit, gain 1 extra Authority.
@@ -768,7 +768,7 @@ End Phase Resolution:
 During your end phase, resolve your Fire Tiles one at a time. On each Fire Tile, take these steps in order:
 1.	Clear Squirrels: Return all of your Squirrel units on this Fire Tile to your supply. Gain 1 Charcoal card to your resource pile for each one returned.
 2.	Burn structures: Remove 1 building or token of your choice on this Fire Tile. Then roll two dice; if you roll doubles, remove every building and token on every Fire Tile on the board (Tar Pit Tokens cannot be removed by Fire Tiles).
-3.	Drive out enemies: Each enemy unit on this Fire Tile is moved by its controller to an adjacent tile of their choice. A unit moved onto a forest tile takes 1HP; a unit moved onto a stream or ruin tile takes none.
+3.	Drive out enemies: Each enemy unit on this Fire Tile is moved to an adjacent tile. The game picks the least harmful one: a tile without a Fire Tile first, then a stream or ruin tile before a forest tile. A unit moved onto a forest tile takes 1HP; a unit moved onto a stream or ruin tile takes none.
 4.	Spread: Roll one die. If you roll a 1 or 6, place a new Fire Tile on a forest tile holding one of the enemies you just drove out, and deal 1HP to every unit on that new Fire Tile. (Spread is not considered entering a Fire Tile, as the units are not moving onto it.)
 5.	Burn the Deck: Burn the top card of the resource deck. If it is Gold, gain 1 Authority.
 Rules That Apply For Fire Tiles Throughout the End Phase:
@@ -823,7 +823,7 @@ Species Trait - Watering Hole: An enemy unit becomes a Guest in any of these cas
 While a unit is a Guest, each player that controls a Guest unit draws 1 card from the resource deck during their end phase. A unit loses Guest status when it moves out of, or is moved out of, the tile with the Wallow (or, for case 4, the tile with the Riverkeeper).
 Species Trait - Selfless Nature: When a guest would take damage in battle, a Capybara unit on that tile absorbs 1HP damage from that battle.
 Species Trait - Customary Greeting: Once during your end phase, gain 1 Authority for each player who has a guest unit (cap 2 Authority per turn).
-Species Trait - Exchange Rate: Once during your main phase, you can discard three of the same type of resource card to add 2 of the same type of resource card from the resource deck to your resource pile.
+Species Trait - Exchange Rate: Once during your main phase, you can discard three resource cards of the same type to add 2 resource cards of any one type you choose (Wood, Stone, or Gold) from the resource deck to your resource pile.
 Unit - Capybara:
 Unit Stats: 1/1/2
 Capybara Ability - Forage: Once during your main phase, when a Capybara is on a stream tile, you can take 1 Gold or 1 Stone from the resource deck and add it to your resource pile.
@@ -879,7 +879,7 @@ Special Unit - Blooming Briar:
 Unit Stats: 6/1/1
 Blooming Briar Trait - Thorned Body:
 The Blooming Briar carries Thorns (0 to 6). While the Blooming Briar has 1 or more Thorns you can activate the following three abilities:
-1.	Thistle Barrage: Up to twice during your main phase, if enemy units are within 4 tiles of the Blooming Briar, you can target any number of enemy units or special units on that tile, then spend 1 Thorn and 1 resource from your resource pile for each targeted unit or special unit on that tile to deal 1HP damage to each. Then place 1 Thorned Seed per discarded Thorn on an adjacent forest tile to the tile with the targeted unit(s) or special unit(s). Alternatively, you can spend 1 Thorn to remove all enemy buildings and tokens on a tile within 3 tiles of the Blooming Briar if that faction's units or special units are not on that tile. Gain 1 Authority for every 2HP damage dealt by Thistle Barrage.
+1.	Thistle Barrage: Up to twice during your main phase, if enemy units are within 4 tiles of the Blooming Briar, you can target any number of enemy units or special units on that tile (the units with the least HP are targeted first), then spend 1 Thorn and 1 resource from your resource pile for each targeted unit or special unit on that tile to deal 1HP damage to each. Then place 1 Thorned Seed per discarded Thorn on an adjacent forest tile to the tile with the targeted unit(s) or special unit(s). Alternatively, you can spend 1 Thorn to remove all enemy buildings and tokens on a tile within 3 tiles of the Blooming Briar if that faction's units or special units are not on that tile. Gain 1 Authority for every 2HP damage dealt by Thistle Barrage.
 (Note: This does not initiate a battle.)
 2.	Thorn Armor: When the Blooming Briar would take HP damage, you can remove 1 Thorn per 1HP damage instead (this follows the unit damage cap).
 3.	Sun Eater: Once per turn during your main phase, you can remove 2 Thorned Seeds on the tile with the Blooming Briar or its adjacent tiles and 3 resources from your resource pile to gain 2 Thorns.

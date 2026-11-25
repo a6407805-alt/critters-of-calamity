@@ -21,6 +21,7 @@ namespace CrittersOfCalamity.Engine
         public string Name;
         public string Summary;
         public TurnPhase Phase;
+        public TurnPhase? Phase2;   // a second phase it can also be used in
         public AbilityTarget Target;
         public string Prompt1;
         public string Prompt2;
@@ -49,6 +50,7 @@ namespace CrittersOfCalamity.Engine
         {
             public string Id, Name, Summary, Prompt1, Prompt2;
             public TurnPhase Phase;
+            public TurnPhase? Phase2;
             public AbilityTarget Target;
             public bool General;
             public Func<PlayerState, string> Check;                                   // null = usable now
@@ -72,7 +74,7 @@ namespace CrittersOfCalamity.Engine
                 string blocked = AbilityBlockedReason(p, s);
                 list.Add(new FactionAbility
                 {
-                    Id = s.Id, Name = s.Name, Summary = s.Summary, Phase = s.Phase, Target = s.Target,
+                    Id = s.Id, Name = s.Name, Summary = s.Summary, Phase = s.Phase, Phase2 = s.Phase2, Target = s.Target,
                     Prompt1 = s.Prompt1, Prompt2 = s.Prompt2, IsGeneral = s.General,
                     Available = blocked == null, Blocked = blocked
                 });
@@ -148,7 +150,8 @@ namespace CrittersOfCalamity.Engine
         private string AbilityBlockedReason(PlayerState p, AbilitySpec s, bool ignorePhase = false)
         {
             if (p.PlayerIndex != CurrentTurnPlayerIndex) return "Only on your turn.";
-            if (!ignorePhase && CurrentPhase != s.Phase) return $"Only in your {PhaseLabel(s.Phase)}.";
+            if (!ignorePhase && CurrentPhase != s.Phase && s.Phase2 != CurrentPhase)
+                return s.Phase2.HasValue ? $"Only in your {PhaseLabel(s.Phase)} or {PhaseLabel(s.Phase2.Value)}." : $"Only in your {PhaseLabel(s.Phase)}.";
             if (PendingBattle != null) return "Finish the battle first.";
             if (PendingChoice != null) return "Finish the current choice first.";
             string why = s.Check?.Invoke(p);
@@ -364,6 +367,7 @@ namespace CrittersOfCalamity.Engine
                 case FactionId.BriaredFlower: AddBriar(L, p, me); break;
             }
             AddGeneral(L, p, me);
+            AddTradedGoods(L, p, me);
             return L;
         }
 
@@ -1540,6 +1544,105 @@ namespace CrittersOfCalamity.Engine
                     }
                 });
             }
+        }
+
+        // ---------------- Traded Goods bought from the Capybara Trader ----------------
+        private void AddTradedGoods(List<AbilitySpec> L, PlayerState p, int me)
+        {
+            Func<string, bool> has = id => p.PurchasedTradedGoods.Any(g => g.Id == id);
+            Action<string> spend = id =>
+            {
+                var g = p.PurchasedTradedGoods.First(x => x.Id == id);
+                p.PurchasedTradedGoods.Remove(g);
+                TradedGoodsDiscard.Add(g);
+            };
+            var capy = Players.FirstOrDefault(x => x.Faction != null && x.Faction.Id == FactionId.CapybaraCaravan);
+
+            if (has("tg_prayer_beads"))
+                L.Add(new AbilitySpec
+                {
+                    Id = "tg_prayer_beads", Name = "Prayer Beads (Traded Good)", Phase = TurnPhase.ExcavationPhase, Target = AbilityTarget.None, General = true,
+                    Summary = "Draw the top 2 cards of the relic deck, then discard this card.",
+                    Run = (pl, a, b, o) =>
+                    {
+                        for (int i = 0; i < 2; i++) { var d = DrawRelicCard(); if (d != null) pl.RelicHand.Add(d); }
+                        spend("tg_prayer_beads");
+                        Log($"{pl.DisplayName} used Prayer Beads and drew 2 relic cards.");
+                        return true;
+                    }
+                });
+
+            if (has("tg_silver_spoon"))
+                L.Add(new AbilitySpec
+                {
+                    Id = "tg_silver_spoon", Name = "Silver Spoon (Traded Good)", Phase = TurnPhase.ExcavationPhase, Target = AbilityTarget.None, General = true,
+                    Summary = "Add 2 relic cards from the Discard Area to your Hand; you and the Capybara player each gain 1 Authority.",
+                    Check = pl => RelicDiscardPile.Count == 0 ? "The Discard Area is empty." : null,
+                    Run = (pl, a, b, o) =>
+                    {
+                        for (int i = 0; i < 2 && RelicDiscardPile.Count > 0; i++)
+                        {
+                            pl.RelicHand.Add(RelicDiscardPile[RelicDiscardPile.Count - 1]);
+                            RelicDiscardPile.RemoveAt(RelicDiscardPile.Count - 1);
+                        }
+                        spend("tg_silver_spoon");
+                        AwardAuthority(me, 1, "Silver Spoon");
+                        if (capy != null) AwardAuthority(capy.PlayerIndex, 1, "Silver Spoon");
+                        return true;
+                    }
+                });
+
+            if (has("tg_broken_sickle"))
+                L.Add(new AbilitySpec
+                {
+                    Id = "tg_broken_sickle", Name = "Broken Sickle (Traded Good)", Phase = TurnPhase.ExcavationPhase, Phase2 = TurnPhase.MainPhase,
+                    Target = AbilityTarget.None, General = true,
+                    Summary = "Add 1 relic card from the Discard Area to your Hand, then discard this card.",
+                    Check = pl => RelicDiscardPile.Count == 0 ? "The Discard Area is empty." : null,
+                    Run = (pl, a, b, o) =>
+                    {
+                        pl.RelicHand.Add(RelicDiscardPile[RelicDiscardPile.Count - 1]);
+                        RelicDiscardPile.RemoveAt(RelicDiscardPile.Count - 1);
+                        spend("tg_broken_sickle");
+                        Log($"{pl.DisplayName} used the Broken Sickle to take a relic card from the Discard Area.");
+                        return true;
+                    }
+                });
+
+            if (has("tg_old_jug"))
+                L.Add(new AbilitySpec
+                {
+                    Id = "tg_old_jug", Name = "Old Jug (Traded Good)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile, General = true,
+                    Summary = "Heal one of your special units 1 HP, then discard this card.",
+                    Prompt1 = "Click a tile with your hurt special unit.",
+                    Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == me && u.Definition.IsSpecialUnit && u.CurrentHP < u.MaxHP),
+                    Run = (pl, a, b, o) =>
+                    {
+                        var u = Board[a].Units.First(x => x.OwnerPlayerIndex == me && x.Definition.IsSpecialUnit && x.CurrentHP < x.MaxHP);
+                        u.CurrentHP++;
+                        spend("tg_old_jug");
+                        Log($"{pl.DisplayName} used the Old Jug: {u.Definition.Name} healed to {u.CurrentHP} HP.");
+                        return true;
+                    }
+                });
+
+            if (has("tg_clay_edict"))
+                L.Add(new AbilitySpec
+                {
+                    Id = "tg_clay_edict", Name = "Clay Edict (Traded Good)", Phase = TurnPhase.MainPhase, Phase2 = TurnPhase.ExcavationPhase,
+                    Target = AbilityTarget.Tile, General = true,
+                    Summary = "Equip to one of your special units: it gets +1 tile movement for this turn and your next two turns.",
+                    Prompt1 = "Click a tile with your special unit.",
+                    Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == me && u.Definition.IsSpecialUnit),
+                    Run = (pl, a, b, o) =>
+                    {
+                        var u = Board[a].Units.First(x => x.OwnerPlayerIndex == me && x.Definition.IsSpecialUnit);
+                        u.ClayEdictTurns = 3;
+                        spend("tg_clay_edict");
+                        Log($"{pl.DisplayName} equipped the Clay Edict to {u.Definition.Name} (+1 movement for 3 turns).");
+                        return true;
+                    }
+                });
         }
 
         private void PlaceFireTile(HexTileState t, int ownerSeat)

@@ -23,6 +23,7 @@ namespace CrittersOfCalamity.Engine
         public int TrapLeafTurnsRemaining; // Trap Leaf immobilizes for rest of turn + next turn (Part 17 Faction 4)
         public bool IsTrapped;             // held by a Trap Leaf (a debuff): can't move or be moved by effects
         public bool CleansedThisTurn;      // Papacy Level 2: debuffs removed (ignores Gluttony this turn)
+        public int ClayEdictTurns;         // Traded Good Clay Edict: +1 tile movement while above 0
         public List<EquipmentDef> EquippedItems = new List<EquipmentDef>();
 
         public int EffectiveAttack => Mathf.Max(0, Definition.BaseAttack + BonusAttack + EquippedItems.Sum(e => e.BonusAttack));
@@ -160,7 +161,8 @@ namespace CrittersOfCalamity.Engine
         OvergrownWall,     // Defender, start of Attack and Defense Points (after the dice)
         PoliticalTreatise, // Defender, start of Attack and Defense Points (after the dice)
         BrassShield,       // Winner only, Damage Calculation
-        QuickFeet          // Trouble Making Tanukis trait, after 0 HP units are removed
+        QuickFeet,         // Trouble Making Tanukis trait, after 0 HP units are removed
+        CopperFigurine     // Traded Good: after the dice are rolled, re-roll 1 die
     }
 
     public class BattleDecision
@@ -174,6 +176,8 @@ namespace CrittersOfCalamity.Engine
     public enum PendingBattleStage
     {
         RollDice,
+        FigurineAttackerWindow,
+        FigurineDefenderWindow,
         HalberdWindow,
         WarHornWindow,
         OvergrownWallWindow,
@@ -726,6 +730,7 @@ namespace CrittersOfCalamity.Engine
                 {
                     if (u.OwnerPlayerIndex != playerIndex) continue;
                     u.CleansedThisTurn = false;
+                    if (u.ClayEdictTurns > 0) u.ClayEdictTurns--;
                     if (u.TrapLeafTurnsRemaining > 0)
                     {
                         u.TrapLeafTurnsRemaining--;   // Trap Leaf: still stuck during this, their next turn
@@ -1052,6 +1057,7 @@ namespace CrittersOfCalamity.Engine
             foreach (var ft in fireTiles)
             {
                 if (ft.Overlay != FactionOverlayTileType.Fire) continue; // put out earlier this phase
+                BeginRemovalEvent();
                 bool tarPit = ft.Tokens.Any(tk => tk.Type == TokenType.TarPit);
 
                 // 1. Clear Squirrels: return your Squirrels here to supply for 1 Charcoal each (Bunker squirrels are untouched)
@@ -1222,46 +1228,55 @@ namespace CrittersOfCalamity.Engine
             }
         }
 
+        /// <summary>
+        /// Traveling Caravan: a player with a unit on or next to the Trader's tile may buy (or, with the Riverkeeper on
+        /// the board, a player with a guest unit anywhere: Commerce).
+        /// </summary>
+        public bool CanBuyTradedGood(PlayerState buyer, int stallIndex, out string reason)
+        {
+            reason = null;
+            if (CurrentPhase != TurnPhase.MainPhase || buyer.PlayerIndex != CurrentTurnPlayerIndex) { reason = "Only during your Main phase."; return false; }
+            if (PendingBattle != null || PendingChoice != null) { reason = "Finish what's in progress first."; return false; }
+            var capy = Players.FirstOrDefault(pl => pl.Faction != null && pl.Faction.Id == FactionId.CapybaraCaravan);
+            if (capy == null || capy.PlayerIndex == buyer.PlayerIndex) { reason = "Only other players buy from the Capybara Trader."; return false; }
+            if (stallIndex < 0 || stallIndex >= TradedGoodsStall.Count) { reason = "That stall slot is empty."; return false; }
+            var trader = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.OwnerPlayerIndex == capy.PlayerIndex && u.Definition.Id == "capybara_trader"));
+            bool near = trader != null && (trader.Units.Any(u => u.OwnerPlayerIndex == buyer.PlayerIndex) ||
+                                           Neighbors(trader).Any(n => n.Units.Any(u => u.OwnerPlayerIndex == buyer.PlayerIndex)));
+            bool commerce = Board.Values.Any(t => t.Units.Any(u => u.OwnerPlayerIndex == capy.PlayerIndex && u.Definition.Id == "riverkeeper")) &&
+                            Board.Values.Any(t => t.Units.Any(u => u.OwnerPlayerIndex == buyer.PlayerIndex && u.IsGuest));
+            if (!near && !commerce) { reason = "You need a unit on or next to the Capybara Trader's tile (or a guest while the Riverkeeper is out)."; return false; }
+            if (!CanAfford(buyer, TradedGoodsStall[stallIndex].Cost)) { reason = $"Costs {TradedGoodsStall[stallIndex].Cost}."; return false; }
+            return true;
+        }
+
         public bool TryBuyTradedGoodFromCapybaraStall(int stallIndex)
         {
-            if (CurrentPhase != TurnPhase.MainPhase) return false;
-            if (stallIndex < 0 || stallIndex >= TradedGoodsStall.Count) return false;
-
             var buyer = Players[CurrentTurnPlayerIndex];
-            var capyPlayer = Players.FirstOrDefault(pl => pl.Faction.Id == FactionId.CapybaraCaravan);
-            if (capyPlayer == null || capyPlayer.PlayerIndex == buyer.PlayerIndex) return false;
-
+            if (!CanBuyTradedGood(buyer, stallIndex, out var why)) { Log(why); return false; }
+            var capyPlayer = Players.First(pl => pl.Faction.Id == FactionId.CapybaraCaravan);
             var card = TradedGoodsStall[stallIndex];
-            if (!CanAfford(buyer, card.Cost)) return false;
 
+            // Pay the Capybara player (cheapest cards first)
+            var order = new[] { ResourceType.Charcoal, ResourceType.Wood, ResourceType.Stone, ResourceType.Gold };
             for (int i = 0; i < card.Cost.AnyResource && buyer.ResourcePile.Count > 0; i++)
             {
-                capyPlayer.ResourcePile.Add(buyer.ResourcePile[0]);
-                buyer.ResourcePile.RemoveAt(0);
+                var r = order.First(x => buyer.ResourcePile.Contains(x));
+                buyer.ResourcePile.Remove(r);
+                capyPlayer.ResourcePile.Add(r);
             }
 
             TradedGoodsStall.RemoveAt(stallIndex);
             buyer.PurchasedTradedGoods.Add(card);
-
-            // Both buyer and Capybara player gain 1 Authority, and buyer places 1 basic unit as a Guest at a Wallow (Line 840)
+            Log($"{buyer.DisplayName} bought {card.Title} from the Capybara Trader.");
             AwardAuthority(buyer.PlayerIndex, 1, $"Bought Traded Good '{card.Title}'");
             AwardAuthority(capyPlayer.PlayerIndex, 1, $"Sold Traded Good '{card.Title}'");
 
-            var wallowTile = Board.Values.FirstOrDefault(t => t.Building != null && t.Building.Type == BuildingType.Wallow);
-            var basicUnit = buyer.Faction.Units.FirstOrDefault(u => !u.IsSpecialUnit);
-            if (wallowTile != null && basicUnit != null)
-            {
-                var spawned = SpawnUnit(wallowTile.Coord, basicUnit.Id, buyer, 1);
-                foreach (var u in spawned) u.IsGuest = true;
-            }
-
+            // The buyer places 1 basic unit from their supply on a Wallow as a guest (they pick the Wallow)
+            OfferGuestPlacement(buyer, capyPlayer);
             OnStateChanged?.Invoke();
             return true;
         }
-
-        // =====================================================================
-        // 2. EXCAVATION PHASE ACTIONS (Unearth, Craft, Assemble, Disassemble)
-        // =====================================================================
 
         public bool CanAfford(PlayerState p, ResourceCost cost)
         {
@@ -1306,9 +1321,11 @@ namespace CrittersOfCalamity.Engine
 
             var p = Players[CurrentTurnPlayerIndex];
             var card = ExcavationArea[excavationIndex];
-            if (!CanAfford(p, card.Cost)) return false;
+            var cost = RelicCostFor(p, card);
+            if (!CanAfford(p, cost)) return false;
 
-            SpendResources(p, card.Cost);
+            SpendResources(p, cost);
+            UseHorseHairBrushIfDiscounted(p, card);
             ExcavationArea.RemoveAt(excavationIndex);
             UsedUnearthThisTurn = true;
 
@@ -1324,9 +1341,11 @@ namespace CrittersOfCalamity.Engine
             if (handIndex < 0 || handIndex >= p.RelicHand.Count) return false;
 
             var card = p.RelicHand[handIndex];
-            if (!card.HasCraftedEffect || !CanAfford(p, card.Cost)) return false;
+            var cost = RelicCostFor(p, card);
+            if (!CanAfford(p, cost)) return false;
 
-            SpendResources(p, card.Cost);
+            SpendResources(p, cost);
+            UseHorseHairBrushIfDiscounted(p, card);
             p.RelicHand.RemoveAt(handIndex);
             UsedAssembleThisTurn = true;
 
@@ -1627,6 +1646,9 @@ namespace CrittersOfCalamity.Engine
             // Leather Boots on The Brute: only when every unit moving has the extra movement
             if (movableUnits.All(u => u.EquippedItems.Any(e => e.BonusMove > 0)))
                 maxDist = Mathf.Max(maxDist, 2);
+            // Clay Edict: +1 tile movement when every moving unit has it
+            if (movableUnits.All(u => u.ClayEdictTurns > 0))
+                maxDist += 1;
             // Rooted in Place: the Blooming Briar only moves 1 tile
             if (movableUnits.Any(u => u.Definition.Id == "blooming_briar"))
                 maxDist = 1;
@@ -2094,6 +2116,28 @@ namespace CrittersOfCalamity.Engine
                     case BattleDecisionKind.QuickFeet:
                         ExecuteQuickFeet(pb, player);
                         break;
+                    case BattleDecisionKind.CopperFigurine:
+                    {
+                        var fig = player.PurchasedTradedGoods.FirstOrDefault(g => g.Id == "tg_copper_figurine");
+                        if (fig == null) break;
+                        player.PurchasedTradedGoods.Remove(fig);
+                        TradedGoodsDiscard.Add(fig);
+                        var r = pb.Report;
+                        int roll = RollD6();
+                        if (player == pb.Attacker)
+                        {
+                            if (r.AttackerDice1 <= r.AttackerDice2) r.AttackerDice1 = roll; else r.AttackerDice2 = roll;
+                            pb.AttackerRoll = r.AttackerDice1 + r.AttackerDice2;
+                        }
+                        else
+                        {
+                            if (r.DefenderDice1 <= r.DefenderDice2) r.DefenderDice1 = roll; else r.DefenderDice2 = roll;
+                            pb.DefenderRoll = r.DefenderDice1 + r.DefenderDice2;
+                        }
+                        Log($"{player.DisplayName} used the Copper Figurine and re-rolled a {roll}.");
+                        RecomputeBattlePoints(pb);
+                        break;
+                    }
                 }
             }
 
@@ -2213,7 +2257,22 @@ namespace CrittersOfCalamity.Engine
                         pb.AttackerRoll = Roll2D6(out report.AttackerDice1, out report.AttackerDice2);
                         pb.DefenderRoll = Roll2D6(out report.DefenderDice1, out report.DefenderDice2);
                         RecomputeBattlePoints(pb);
+                        pb.Stage = PendingBattleStage.FigurineAttackerWindow;
+                        break;
+
+                    // Copper Figurine (Traded Good): after a die has been rolled, re-roll 1 die. Attacker first.
+                    case PendingBattleStage.FigurineAttackerWindow:
+                        pb.Stage = PendingBattleStage.FigurineDefenderWindow;
+                        if (attacker.PurchasedTradedGoods.Any(g => g.Id == "tg_copper_figurine"))
+                            AskBattleDecision(BattleDecisionKind.CopperFigurine, attacker, "Copper Figurine",
+                                $"You rolled {report.AttackerDice1} and {report.AttackerDice2}. Discard Copper Figurine to re-roll your lower die?");
+                        break;
+
+                    case PendingBattleStage.FigurineDefenderWindow:
                         pb.Stage = PendingBattleStage.HalberdWindow;
+                        if (defender.PurchasedTradedGoods.Any(g => g.Id == "tg_copper_figurine"))
+                            AskBattleDecision(BattleDecisionKind.CopperFigurine, defender, "Copper Figurine",
+                                $"You rolled {report.DefenderDice1} and {report.DefenderDice2}. Discard Copper Figurine to re-roll your lower die?");
                         break;
 
                     // All relic dice effects are offered after the dice, at the start of the Attack and Defense Points
@@ -2326,6 +2385,7 @@ namespace CrittersOfCalamity.Engine
 
         private void ApplyPendingBattleDamage(PendingBattleState pb)
         {
+            BeginRemovalEvent();
             var tile = pb.Tile;
             var attacker = pb.Attacker;
             var defender = pb.Defender;
@@ -2522,6 +2582,7 @@ namespace CrittersOfCalamity.Engine
 
             PendingBattle = null;
             LastBattleReport = report;
+            OpenNextQueuedChoice();
             OnBattleResolved?.Invoke(report);
             OnStateChanged?.Invoke();
         }
@@ -2786,6 +2847,10 @@ namespace CrittersOfCalamity.Engine
                     authGain = 1;
                 }
                 AwardAuthority(removerPlayerIndex, authGain + crusadeBonus, $"Removed {u.Definition.Name}");
+                // Necro-mouser: an attacker who removes an equipped special unit may loot 1 material from its equipment
+                if (owner.Faction.Id == FactionId.Necromouser && u.EquippedItems.Count > 0 &&
+                    PendingBattle != null && PendingBattle.Attacker.PlayerIndex == removerPlayerIndex)
+                    OfferNecroEquipmentLoot(Players[removerPlayerIndex], owner, u);
             }
 
             // Necro-mouser Miasma trigger (Line 667 & Line 675): Any unit removed on or adjacent to a Miasma Tile places 1 unit onto Cauldron & awakens Necromouser
@@ -2796,7 +2861,9 @@ namespace CrittersOfCalamity.Engine
             {
                 foreach (var necroPlayer in Players.Where(pl => pl.Faction.Id == FactionId.Necromouser))
                 {
-                    necroPlayer.NecromouserCauldronDeadCount++;
+                    // "place 1 of those removed units from each faction onto the Cauldron" (once per faction per removal)
+                    if (_cauldronCountedThisEvent.Add(necroPlayer.PlayerIndex * 16 + owner.PlayerIndex))
+                        necroPlayer.NecromouserCauldronDeadCount++;
                     if (!necroPlayer.NecromouserAwakened)
                     {
                         necroPlayer.NecromouserAwakened = true;

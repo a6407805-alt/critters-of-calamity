@@ -183,6 +183,7 @@ namespace CrittersOfCalamity.Multiplayer
         /// <summary>Runs the command on the engine. Returns false when the engine rejected the action as illegal.</summary>
         public static bool Apply(CrittersGameEngine engine, GameCommand cmd)
         {
+            engine.BeginRemovalEvent();
             switch (cmd.Type)
             {
                 case GameCommandType.AdvancePhase:
@@ -256,6 +257,7 @@ namespace CrittersOfCalamity.Multiplayer
                 Mix(engine.SetupCursor);
                 Mix(engine.SetupPicks.Count);
                 Mix(engine.ExtraBattleActions);
+                Mix(engine.QueuedChoices.Count);
                 Mix(engine.IsChoicePending ? 1000 + engine.PendingChoice.PlayerIndex * 37 + engine.PendingChoice.Options.Count * 7 + engine.PendingChoice.Tiles.Count : 0);
                 foreach (var kv in engine.AbilityUses.OrderBy(k => k.Key, StringComparer.Ordinal)) { Mix(kv.Key.Length); Mix(kv.Value); }
                 Mix(engine.PreGameSeatsToRoll.Count);

@@ -39,11 +39,29 @@ namespace CrittersOfCalamity.Engine
 
         private bool _endPhaseIgniteAsked;
 
+        /// <summary>Choices waiting their turn (one opened while a battle or another choice was in progress).</summary>
+        public List<PendingChoiceState> QueuedChoices = new List<PendingChoiceState>();
+
         private PendingChoiceState NewChoice(string kind, int seat, string title, string prompt)
         {
-            PendingChoice = new PendingChoiceState { Kind = kind, PlayerIndex = seat, Title = title, Prompt = prompt };
-            return PendingChoice;
+            var c = new PendingChoiceState { Kind = kind, PlayerIndex = seat, Title = title, Prompt = prompt };
+            if (PendingChoice != null || PendingBattle != null) QueuedChoices.Add(c);
+            else PendingChoice = c;
+            return c;
         }
+
+        private void OpenNextQueuedChoice()
+        {
+            if (PendingChoice != null || PendingBattle != null || QueuedChoices.Count == 0) return;
+            PendingChoice = QueuedChoices[0];
+            QueuedChoices.RemoveAt(0);
+        }
+
+        // Necro-mouser Miasma: each removal event puts at most 1 unit per faction in the Cauldron
+        private readonly HashSet<int> _cauldronCountedThisEvent = new HashSet<int>();
+
+        /// <summary>Starts a new "removal event" (one battle, one ability, one command) for the Cauldron rule.</summary>
+        public void BeginRemovalEvent() => _cauldronCountedThisEvent.Clear();
 
         private static void AddOption(PendingChoiceState c, string label, bool enabled = true)
         {
@@ -200,6 +218,27 @@ namespace CrittersOfCalamity.Engine
                     break;
                 }
 
+                case "necro_loot":
+                {
+                    if (skip) break;
+                    var r = (ResourceType)int.Parse(c.UnitIds[option]);
+                    GainSpecificResourceFromDeck(p, r);
+                    var necro = Players[c.Number];
+                    necro.NecromouserCauldronDeadCount++;
+                    Log($"{p.DisplayName} looted 1 {r} from the fallen unit's equipment; {necro.DisplayName} adds a Skeleton to the Cauldron.");
+                    break;
+                }
+
+                case "guest_wallow":
+                {
+                    var basic = p.Faction.Units.FirstOrDefault(u => !u.IsSpecialUnit);
+                    if (basic == null) break;
+                    var spawned = SpawnUnit(tile, basic.Id, p, 1);
+                    foreach (var u in spawned) u.IsGuest = true;
+                    Log(spawned.Count > 0 ? $"{p.DisplayName} placed a {basic.Name} as a guest at the Wallow {tile}." : $"{p.DisplayName} had no {basic.Name} to place as a guest.");
+                    break;
+                }
+
                 case "ignite_place":
                 {
                     var card = c.Cards[0];
@@ -214,6 +253,7 @@ namespace CrittersOfCalamity.Engine
                 }
             }
 
+            OpenNextQueuedChoice();
             OnStateChanged?.Invoke();
             return true;
         }
@@ -320,6 +360,62 @@ namespace CrittersOfCalamity.Engine
                     Neighbors(t).Any(n => HasEnemyUnits(n, p.PlayerIndex)) &&
                     squirrelTiles.Any(s => HexCoord.Distance(s, t.Coord) <= 3))
                 .Select(t => t.Coord).ToList();
+        }
+
+        /// <summary>Necro-mouser: loot 1 material used by the removed special unit's equipment (Necro adds a Skeleton to the Cauldron).</summary>
+        private void OfferNecroEquipmentLoot(PlayerState looter, PlayerState necro, UnitInstance fallen)
+        {
+            var mats = new List<ResourceType>();
+            foreach (var e in fallen.EquippedItems)
+            {
+                if (e.Cost.Wood > 0 && !mats.Contains(ResourceType.Wood)) mats.Add(ResourceType.Wood);
+                if (e.Cost.Stone > 0 && !mats.Contains(ResourceType.Stone)) mats.Add(ResourceType.Stone);
+                if (e.Cost.Gold > 0 && !mats.Contains(ResourceType.Gold)) mats.Add(ResourceType.Gold);
+            }
+            if (mats.Count == 0) return;
+            var c = NewChoice("necro_loot", looter.PlayerIndex, "Loot the equipment",
+                $"You removed {fallen.Definition.Name}. Take 1 of the materials from its equipment? ({necro.DisplayName} then adds a Skeleton to the Cauldron.)");
+            c.Number = necro.PlayerIndex;
+            foreach (var r in mats) { AddOption(c, $"Take 1 {r}"); c.UnitIds.Add(((int)r).ToString()); }
+            c.CanSkip = true;
+            c.SkipLabel = "Don't loot";
+        }
+
+        /// <summary>Traveling Caravan: the buyer places 1 basic unit from their supply on a Wallow of their choice as a guest.</summary>
+        private void OfferGuestPlacement(PlayerState buyer, PlayerState capy)
+        {
+            var basic = buyer.Faction.Units.FirstOrDefault(u => !u.IsSpecialUnit);
+            if (basic == null || UnitSupplyLeft(buyer, basic.Id) <= 0) return;
+            var wallows = Board.Values.Where(t => t.Building != null && t.Building.Type == BuildingType.Wallow &&
+                                                  t.Building.OwnerPlayerIndex == capy.PlayerIndex && CanAddUnitToTile(t, buyer.PlayerIndex))
+                                      .Select(t => t.Coord).ToList();
+            if (wallows.Count == 0) return;
+            var c = NewChoice("guest_wallow", buyer.PlayerIndex, "Visit a Wallow",
+                $"Place 1 {basic.Name} from your supply on a Wallow as a guest. Click a green Wallow.");
+            c.Tiles = wallows;
+        }
+
+        /// <summary>A relic card's cost, with the Horse Hair Brush discount (1 less, Gold first) if the player holds one.</summary>
+        public ResourceCost RelicCostFor(PlayerState p, RelicCardDef card)
+        {
+            var c = new ResourceCost(card.Cost.Wood, card.Cost.Stone, card.Cost.Gold, card.Cost.AnyResource, card.Cost.Charcoal);
+            if (!p.PurchasedTradedGoods.Any(g => g.Id == "tg_horse_hair_brush")) return c;
+            if (c.Gold > 0) c.Gold--;
+            else if (c.Stone > 0) c.Stone--;
+            else if (c.Wood > 0) c.Wood--;
+            else if (c.AnyResource > 0) c.AnyResource--;
+            return c;
+        }
+
+        private void UseHorseHairBrushIfDiscounted(PlayerState p, RelicCardDef card)
+        {
+            var brush = p.PurchasedTradedGoods.FirstOrDefault(g => g.Id == "tg_horse_hair_brush");
+            if (brush == null) return;
+            var full = card.Cost;
+            if (full.Wood + full.Stone + full.Gold + full.AnyResource + full.Charcoal == 0) return;
+            p.PurchasedTradedGoods.Remove(brush);
+            TradedGoodsDiscard.Add(brush);
+            Log($"{p.DisplayName} used the Horse Hair Brush: {card.Name} cost 1 less.");
         }
 
         private bool OfferIgnite(PlayerState p)

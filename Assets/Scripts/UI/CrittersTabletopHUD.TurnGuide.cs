@@ -265,8 +265,9 @@ namespace CrittersOfCalamity.UI
                 {
                     int slot = i;
                     var card = _engine.ExcavationArea[i];
-                    GuideButton($"   Unearth <b>{card.Name}</b> (cost {card.Cost})", new Color(0.18f, 0.24f, 0.32f, 1f),
-                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slot)), 40f, _engine.CanAfford(p, card.Cost));
+                    var ucost = _engine.RelicCostFor(p, card);
+                    GuideButton($"   Unearth <b>{card.Name}</b> (cost {ucost})", new Color(0.18f, 0.24f, 0.32f, 1f),
+                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slot)), 40f, _engine.CanAfford(p, ucost));
                 }
             }
 
@@ -289,8 +290,9 @@ namespace CrittersOfCalamity.UI
                 {
                     int idx = i;
                     var card = p.RelicHand[i];
-                    GuideButton($"   Assemble <b>{card.Name}</b> (cost {card.Cost})", new Color(0.22f, 0.18f, 0.30f, 1f),
-                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Assemble, idx)), 40f, _engine.CanAfford(p, card.Cost));
+                    var acost = _engine.RelicCostFor(p, card);
+                    GuideButton($"   Assemble <b>{card.Name}</b> (cost {acost})", new Color(0.22f, 0.18f, 0.30f, 1f),
+                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Assemble, idx)), 40f, _engine.CanAfford(p, acost));
                 }
             }
 
@@ -381,7 +383,7 @@ namespace CrittersOfCalamity.UI
         /// <summary>Faction abilities for the current phase (and general ones such as the Catapult), with why any are unavailable.</summary>
         private void BuildFactionAbilityOptions(PlayerState p)
         {
-            var abilities = _engine.GetFactionAbilities(p).Where(a => a.Phase == _engine.CurrentPhase).ToList();
+            var abilities = _engine.GetFactionAbilities(p).Where(a => a.Phase == _engine.CurrentPhase || a.Phase2 == _engine.CurrentPhase).ToList();
             if (abilities.Count == 0) return;
             bool drawPhase = _engine.CurrentPhase == TurnPhase.DrawPhase;
             string key = "faction";
