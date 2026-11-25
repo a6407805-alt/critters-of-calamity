@@ -94,8 +94,8 @@ namespace CrittersOfCalamity.Visuals
                     if (!SculptedModel(body, "Models/TheVanguard", a, b, 0.60f, u)) { Mouse(body, a, b, b); Shield(body, b, new Vector3(-0.13f, 0.14f, -0.12f)); Helmet(body, b, 0.30f); }
                     break;
                 case "the_brute": if (!SculptedModel(body, "Models/TheBrute", a, b, 0.62f, u)) Brute(body, a, b); break;
-                case "squirrel": Squirrel(body, a, b); break;
-                case "pyromaniac": Squirrel(body, a, b); Flame(body, new Vector3(0f, 0.42f, -0.06f), 0.10f); break;
+                case "squirrel": if (!SculptedModel(body, "Models/Squirrel", a, b, 0.46f, u)) Squirrel(body, a, b); break;
+                case "pyromaniac": if (!SculptedModel(body, "Models/Pyromaniac", a, b, 0.64f, u)) { Squirrel(body, a, b); Flame(body, new Vector3(0f, 0.42f, -0.06f), 0.10f); } break;
                 case "capybara": Capybara(body, a, b); break;
                 case "capybara_trader": if (!SculptedModel(body, "Models/CapybaraTrader", a, b, 0.62f)) { Capybara(body, a, b); Pack(body, b); } break;
                 case "riverkeeper": Capybara(body, a, b); S(body, new Vector3(0f, 0.33f, -0.16f), Vector3.one * 0.09f, Palette.CarrotOrange); break;
@@ -167,6 +167,8 @@ namespace CrittersOfCalamity.Visuals
                             : n.StartsWith("Cloth") ? Color.Lerp(a, Palette.InkAccent, 0.55f)
                             : n.StartsWith("Leather") ? Color.Lerp(Palette.InkAccent, Palette.WoodPlank, 0.5f)
                             : n.StartsWith("Bone") ? Palette.BoneWhite
+                            : n.StartsWith("Flame") ? Palette.EmberYellow
+                            : n.StartsWith("Ember") ? Palette.CarrotOrange
                             : n.StartsWith("Rot") ? new Color(0.62f, 0.66f, 0.55f)
                             : n.StartsWith("Robe") ? Palette.HolyWhite
                             : n.StartsWith("Bill") ? Color.Lerp(Palette.InkAccent, Palette.ShadowSlate, 0.4f)
