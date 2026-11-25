@@ -51,6 +51,19 @@ namespace CrittersOfCalamity.Visuals
         public static readonly Color WoodPlank       = FromHex("#8A6440"); // Catapult frame
         public static readonly Color HolyWhite       = FromHex("#F4EEDC"); // Holy Relic, Pope vestments
 
+        // HUD (slate panels from ShadowSlate, warm parchment text, gold accent)
+        public static readonly Color UIPanelDark     = WithAlpha(FromHex("#1A222D"), 0.94f); // bars and drawers
+        public static readonly Color UIPanelMid      = FromHex("#2A3442");                   // badges, tabs, neutral buttons
+        public static readonly Color UIScrim         = WithAlpha(FromHex("#2C3847"), 0.70f); // translucent backing over the board
+        public static readonly Color UICard          = FromHex("#3A3026");                   // relic cards in hand
+        public static readonly Color UIBattle        = WithAlpha(FromHex("#3A1E22"), 0.95f); // battle result toast
+        public static readonly Color UIButtonBlue    = FromHex("#355870");
+        public static readonly Color UIButtonTeal    = FromHex("#2E7D6B");
+        public static readonly Color UIButtonWarm    = FromHex("#8C5328");
+        public static readonly Color UITextMuted     = FromHex("#AAB8C6");
+
+        public static Color WithAlpha(Color c, float a) { c.a = a; return c; }
+
         public static Color FromHex(string hex)
         {
             if (ColorUtility.TryParseHtmlString(hex, out var color))

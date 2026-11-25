@@ -27,6 +27,9 @@ namespace CrittersOfCalamity.UI
 
         private Font _uiFont;
         private Canvas _canvas;
+        private GameObject _stallButton;
+        private GameObject _activityPanel;
+        private GameObject _bottomBar;
 
         // UI References
         private Text _topStatusText;
@@ -245,49 +248,51 @@ namespace CrittersOfCalamity.UI
 
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // 1. TOP BAR: 4-Player Authority Track (30 Authority to Win) + Quick Camera & Menu Buttons
+            // Layout (1920x1080 reference): a slim top bar; the Turn Guide owns the right-hand column; the board keeps
+            // the middle. Your faction board and the table info are drawers on the left (closed by default); a small
+            // Activity feed sits bottom-left; your resources and hand are a compact strip along the bottom.
+
+            // 1. TOP BAR: turn and phase, the players' Authority, camera and menu buttons
             var topBar = CreatePanel(canvasGo.transform, "TopBar",
                 new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, 0f), new Vector2(0f, 78f), new Color(0.10f, 0.13f, 0.18f, 0.95f));
+                new Vector2(0f, 0f), new Vector2(0f, 64f), Palette.UIPanelDark);
 
-            _topStatusText = CreateText(topBar, "TopStatusText", "CRITTERS OF CALAMITY — Core Rulebook (8 Factions)", 14, TextAnchor.MiddleLeft,
-                new Vector2(0f, 0f), new Vector2(0.28f, 1f), new Vector2(14f, 0f), new Vector2(-6f, 0f), Palette.AuthorityGold);
+            _topStatusText = CreateText(topBar, "TopStatusText", "CRITTERS OF CALAMITY", 14, TextAnchor.MiddleLeft,
+                new Vector2(0f, 0f), new Vector2(0.24f, 1f), new Vector2(14f, 0f), new Vector2(-6f, 0f), Palette.AuthorityGold);
 
             for (int i = 0; i < 4; i++)
             {
                 int capturedIdx = i;
-                float xMin = 0.285f + i * 0.115f;
-                float xMax = xMin + 0.111f;
+                float xMin = 0.245f + i * 0.116f;
+                float xMax = xMin + 0.112f;
                 var badgeBtn = CreateButton(topBar, $"PlayerBadge_{i}", $"P{i + 1}",
-                    new Vector2(xMin, 0.10f), new Vector2(xMax, 0.90f), new Color(0.17f, 0.21f, 0.27f, 0.96f), () =>
-                    {
-                        FocusCameraOnPlayer(capturedIdx);
-                    });
+                    new Vector2(xMin, 0.10f), new Vector2(xMax, 0.90f), Palette.UIPanelMid, () => FocusCameraOnPlayer(capturedIdx));
                 _playerScoreBadges[i] = badgeBtn.GetComponentInChildren<Text>();
             }
 
-            CreateButton(topBar, "BtnResetCam", "Overview Cam [Space]",
-                new Vector2(0.75f, 0.15f), new Vector2(0.825f, 0.85f), Palette.FromHex("#355870"), () =>
-                {
-                    _boardRenderer.ResetCameraToOverview();
-                });
-
-            CreateButton(topBar, "BtnCapybaraStall", "Capybara Trader Stall",
-                new Vector2(0.83f, 0.15f), new Vector2(0.905f, 0.85f), Palette.FromHex("#2E7D6B"), () =>
+            CreateButton(topBar, "BtnResetCam", "Overview [Space]",
+                new Vector2(0.715f, 0.15f), new Vector2(0.785f, 0.85f), Palette.UIButtonBlue, () => _boardRenderer.ResetCameraToOverview());
+            _stallButton = CreateButton(topBar, "BtnCapybaraStall", "Trader Stall",
+                new Vector2(0.79f, 0.15f), new Vector2(0.86f, 0.85f), Palette.UIButtonTeal, () =>
                 {
                     ToggleModal(_stallModal);
                     RefreshStallModal();
-                });
-
+                }).gameObject;
             CreateButton(topBar, "BtnRulebook", "Rulebook & Factions",
-                new Vector2(0.91f, 0.15f), new Vector2(0.995f, 0.85f), Palette.FromHex("#8C5328"), () => ToggleInfoModal());
+                new Vector2(0.865f, 0.15f), new Vector2(0.995f, 0.85f), Palette.UIButtonWarm, () => ToggleInfoModal());
 
-            // 2. LEFT PANEL: 5-Card Excavation Area & Selected Hex Inspector
-            _leftPanelRt = CreatePanel(canvasGo.transform, "LeftPanel",
-                new Vector2(0f, 0.19f), new Vector2(0.175f, 0.92f), new Vector2(0f, 0.5f),
-                Vector2.zero, Vector2.zero, new Color(0.11f, 0.14f, 0.19f, 0.90f));
+            // 2. LEFT DRAWER TABS (just under the top bar)
+            CreateButton(canvasGo.transform, "TabMyFaction", "My Faction",
+                new Vector2(0.005f, 0.895f), new Vector2(0.075f, 0.932f), Palette.UIPanelMid, () => ToggleDrawer(_rightPanelRt));
+            CreateButton(canvasGo.transform, "TabTable", "Table & Decks",
+                new Vector2(0.078f, 0.895f), new Vector2(0.148f, 0.932f), Palette.UIPanelMid, () => ToggleDrawer(_leftPanelRt));
 
-            CreateText(_leftPanelRt, "ExcavationHeader", "EXCAVATION AREA (5 Relics)", 13, TextAnchor.MiddleCenter,
+            // 2a. Table drawer: Excavation Area, decks and the selected tile
+            _leftPanelRt = CreatePanel(canvasGo.transform, "TableDrawer",
+                new Vector2(0.005f, 0.36f), new Vector2(0.215f, 0.89f), new Vector2(0f, 0.5f),
+                Vector2.zero, Vector2.zero, Palette.UIPanelDark);
+
+            CreateText(_leftPanelRt, "ExcavationHeader", "EXCAVATION AREA", 13, TextAnchor.MiddleCenter,
                 new Vector2(0f, 0.93f), new Vector2(1f, 0.99f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
             var excRootGo = new GameObject("ExcavationSlots");
@@ -305,56 +310,55 @@ namespace CrittersOfCalamity.UI
             excLayout.childForceExpandWidth = true;
             _excavationButtonsRoot = excRootGo.transform;
 
-            _selectedHexText = CreateText(_leftPanelRt, "SelectedHexInspector", "Click any 3D Hex Tile to inspect terrain, buildings, tokens, and units.", 12, TextAnchor.UpperLeft,
+            _selectedHexText = CreateText(_leftPanelRt, "SelectedHexInspector", "", 12, TextAnchor.UpperLeft,
                 new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.39f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
 
-            // 3. RIGHT PANEL: Faction Board, Meters & Live Battle / Turn Log
-            _rightPanelRt = CreatePanel(canvasGo.transform, "RightPanel",
-                new Vector2(0.81f, 0.19f), new Vector2(1f, 0.92f), new Vector2(1f, 0.5f),
-                Vector2.zero, Vector2.zero, new Color(0.11f, 0.14f, 0.19f, 0.90f));
+            // 2b. My Faction drawer: meters, Table relics, supply, and the full log
+            _rightPanelRt = CreatePanel(canvasGo.transform, "FactionDrawer",
+                new Vector2(0.005f, 0.36f), new Vector2(0.215f, 0.89f), new Vector2(0f, 0.5f),
+                Vector2.zero, Vector2.zero, Palette.UIPanelDark);
 
             _factionBoardText = CreateText(_rightPanelRt, "FactionBoardText", "Faction Board", 12, TextAnchor.UpperLeft,
-                new Vector2(0.04f, 0.58f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero, Color.white);
+                new Vector2(0.04f, 0.42f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
+            _gameLogText = CreateText(_rightPanelRt, "GameLogText", "", 10, TextAnchor.LowerLeft,
+                new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.40f), Vector2.zero, Vector2.zero, Palette.UITextMuted);
 
-            _activityText = CreateText(_rightPanelRt, "ActivityText", "<b>ACTIVITY</b>", 12, TextAnchor.LowerLeft,
-                new Vector2(0.04f, 0.27f), new Vector2(0.96f, 0.57f), Vector2.zero, Vector2.zero, Color.white);
+            _leftPanelRt.gameObject.SetActive(false);
+            _rightPanelRt.gameObject.SetActive(false);
 
-            _gameLogText = CreateText(_rightPanelRt, "GameLogText", "Turn & Battle Log", 10, TextAnchor.LowerLeft,
-                new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.26f), Vector2.zero, Vector2.zero, Palette.FromHex("#AAB8C6"));
+            // 3. ACTIVITY FEED: what everyone is doing (always visible, small, bottom-left)
+            var activity = CreatePanel(canvasGo.transform, "ActivityFeed",
+                new Vector2(0.005f, 0.115f), new Vector2(0.255f, 0.345f), new Vector2(0f, 0f),
+                Vector2.zero, Vector2.zero, Palette.UIScrim);
+            _activityPanel = activity.gameObject;
+            _activityText = CreateText(activity, "ActivityText", "<b>ACTIVITY</b>", 12, TextAnchor.LowerLeft,
+                new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.97f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
+            _activityText.verticalOverflow = VerticalWrapMode.Truncate;
+            _activityPanel.SetActive(false);
 
-            // 4. BOTTOM BAR: Active Player's Resource Pile, Relic Hand & Turn Phase Actions
+            // 4. BOTTOM STRIP: the viewing player's resources and relic hand (actions live in the Turn Guide)
             var bottomBar = CreatePanel(canvasGo.transform, "BottomBar",
-                new Vector2(0f, 0f), new Vector2(1f, 0.185f), new Vector2(0.5f, 0f),
-                Vector2.zero, Vector2.zero, new Color(0.09f, 0.12f, 0.16f, 0.95f));
+                new Vector2(0f, 0f), new Vector2(0.79f, 0.108f), new Vector2(0.5f, 0f),
+                Vector2.zero, Vector2.zero, Palette.UIPanelDark);
+            _bottomBar = bottomBar.gameObject;
 
-            _handAndResourcesText = CreateText(bottomBar, "HandAndResourcesText", "Resources & Hand", 12, TextAnchor.UpperLeft,
-                new Vector2(0.01f, 0.66f), new Vector2(0.55f, 0.97f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
+            _handAndResourcesText = CreateText(bottomBar, "HandAndResourcesText", "", 13, TextAnchor.MiddleLeft,
+                new Vector2(0.008f, 0.64f), new Vector2(0.99f, 0.97f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
 
-            // Hand Relic card boxes with SEPARATE [Assemble] and [Disassemble] buttons
-            var handRootGo = new GameObject("HandButtonsRow");
+            var handRootGo = new GameObject("HandRow");
             handRootGo.transform.SetParent(bottomBar, false);
             var handRt = handRootGo.AddComponent<RectTransform>();
-            handRt.anchorMin = new Vector2(0.01f, 0.05f);
-            handRt.anchorMax = new Vector2(0.55f, 0.64f);
+            handRt.anchorMin = new Vector2(0.008f, 0.06f);
+            handRt.anchorMax = new Vector2(0.99f, 0.62f);
             handRt.offsetMin = Vector2.zero;
             handRt.offsetMax = Vector2.zero;
             var handLayout = handRootGo.AddComponent<HorizontalLayoutGroup>();
             handLayout.spacing = 6f;
             handLayout.childControlHeight = true;
-            handLayout.childControlWidth = true;
+            handLayout.childControlWidth = false;
             handLayout.childForceExpandHeight = true;
-            handLayout.childForceExpandWidth = true;
+            handLayout.childForceExpandWidth = false;
             _handButtonsRoot = handRootGo.transform;
-
-            // Phase Action Buttons (Excavation & Main Phase)
-            // Phase actions live in the Turn Guide panel now; the bottom bar keeps the hand and a panel toggle.
-            CreateButton(bottomBar, "BtnToggleSidebars", "Hide/Show Side Panels",
-                new Vector2(0.89f, 0.53f), new Vector2(0.992f, 0.93f), Palette.FromHex("#3E4A59"), () =>
-                {
-                    bool show = !_leftPanelRt.gameObject.activeSelf;
-                    _leftPanelRt.gameObject.SetActive(show);
-                    _rightPanelRt.gameObject.SetActive(show);
-                });
 
             // 5. MODALS
             BuildLobbyCodexModal(canvasGo.transform);
@@ -366,6 +370,16 @@ namespace CrittersOfCalamity.UI
             BuildChoicePopup(canvasGo.transform);
             BuildPreGamePanel(canvasGo.transform);
             BuildMainMenu(canvasGo.transform);
+        }
+
+        /// <summary>Opens one left drawer (closing the other), or closes it if it was open.</summary>
+        private void ToggleDrawer(RectTransform drawer)
+        {
+            bool open = !drawer.gameObject.activeSelf;
+            _leftPanelRt.gameObject.SetActive(false);
+            _rightPanelRt.gameObject.SetActive(false);
+            drawer.gameObject.SetActive(open);
+            if (open) RefreshHUD();
         }
 
         private void ToggleModal(GameObject targetModal)
@@ -484,22 +498,18 @@ namespace CrittersOfCalamity.UI
 
         private void BuildBattlePopupModal(Transform canvasParent)
         {
-            var modalRt = CreatePanel(canvasParent, "BattlePopupModal",
-                new Vector2(0.28f, 0.28f), new Vector2(0.72f, 0.76f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, Vector2.zero, new Color(0.14f, 0.09f, 0.10f, 0.98f));
+            // A battle result is a toast under the top bar: it never blocks the board and hides itself
+            var modalRt = CreatePanel(canvasParent, "BattleResultToast",
+                new Vector2(0.27f, 0.74f), new Vector2(0.73f, 0.925f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero, Palette.UIBattle);
             _battlePopupModal = modalRt.gameObject;
 
-            CreateText(modalRt, "Header", "5-PHASE 2D6 BATTLE RESOLUTION REPORT (PART 12)",
-                16, TextAnchor.MiddleCenter, new Vector2(0.03f, 0.86f), new Vector2(0.97f, 0.98f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
-
-            _battlePopupText = CreateText(modalRt, "Body", "", 13, TextAnchor.MiddleLeft,
-                new Vector2(0.05f, 0.18f), new Vector2(0.95f, 0.84f), Vector2.zero, Vector2.zero, Color.white);
-
-            CreateButton(modalRt, "BtnDismissBattle", "Continue Turn [OK]",
-                new Vector2(0.35f, 0.04f), new Vector2(0.65f, 0.15f), Palette.FromHex("#8C3B2B"), () =>
-                {
-                    _battlePopupModal.SetActive(false);
-                });
+            CreateText(modalRt, "Header", "BATTLE RESULT", 14, TextAnchor.MiddleLeft,
+                new Vector2(0.03f, 0.80f), new Vector2(0.80f, 0.97f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
+            _battlePopupText = CreateText(modalRt, "Body", "", 13, TextAnchor.UpperLeft,
+                new Vector2(0.03f, 0.05f), new Vector2(0.97f, 0.80f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
+            CreateButton(modalRt, "BtnDismissBattle", "Close",
+                new Vector2(0.86f, 0.80f), new Vector2(0.985f, 0.97f), Palette.UIPanelMid, () => _battlePopupModal.SetActive(false));
 
             _battlePopupModal.SetActive(false);
         }
@@ -551,24 +561,27 @@ namespace CrittersOfCalamity.UI
             var def = _engine.Players[r.DefenderPlayerIndex];
 
             var sb = new StringBuilder();
-            sb.AppendLine($"<b>Battle Hex:</b> {r.TileCoord}");
-            sb.AppendLine($"<b>Phase 1 (Attack Declaration):</b> {atk.DisplayName} ({atk.Faction.Name}) attacked {def.DisplayName} ({def.Faction.Name})");
-            sb.AppendLine($"<b>Phase 2 (2d6 Dice Roll):</b> Attacker rolled {r.AttackerDice1}+{r.AttackerDice2} (Mod: {r.AttackerDiceBonus:+#;-#;0}) | Defender rolled {r.DefenderDice1}+{r.DefenderDice2} (Mod: {r.DefenderDiceBonus:+#;-#;0})");
-            sb.AppendLine($"<b>Phase 3 (Totals):</b> Attacker Total = <b>{r.AttackerTotal}</b> (ATK Points: {r.AttackerUnitAttackSum}) vs Defender Total = <b>{r.DefenderTotal}</b> (DEF Points: {r.DefenderUnitDefenseSum})");
-            if (r.IsTie)
-            {
-                sb.AppendLine("<b>Phase 4 (Tie):</b> Equal Totals! Each side takes 1 HP of damage and the battle ends immediately.");
-            }
-            else
-            {
-                var win = _engine.Players[r.WinnerPlayerIndex];
-                sb.AppendLine($"<b>Phase 4 (Damage Calculation):</b> <b>{win.DisplayName} WINS!</b> Damage Dealt: <b>{r.WinnerDamageDealt} HP</b> (Capped at 1 per winning unit) | Mandatory Loser Damage: <b>{r.MandatoryLoserDamageDealt} HP</b>");
-            }
-            sb.AppendLine($"<b>Phase 5 (Battle Resolution - 0 HP Units Removed):</b> {(r.DestroyedUnitNames.Count > 0 ? string.Join(", ", r.DestroyedUnitNames) : "None (Damage absorbed by multi-HP Special Units, Selfless Nature, or Thorn Armor)")}");
-
+            sb.AppendLine($"<b>{atk.DisplayName}</b> ({atk.Faction.Name}) attacked <b>{def.DisplayName}</b> ({def.Faction.Name}) at {r.TileCoord}.");
+            sb.AppendLine($"Dice: {r.AttackerDice1}+{r.AttackerDice2}{Bonus(r.AttackerDiceBonus)} vs {r.DefenderDice1}+{r.DefenderDice2}{Bonus(r.DefenderDiceBonus)}.   " +
+                          $"Totals: <b>{r.AttackerTotal}</b> (Attack {r.AttackerUnitAttackSum}) vs <b>{r.DefenderTotal}</b> (Defense {r.DefenderUnitDefenseSum}).");
+            if (r.IsTie) sb.AppendLine("<b>Tie:</b> each side takes 1 HP.");
+            else sb.AppendLine($"<b>{_engine.Players[r.WinnerPlayerIndex].DisplayName} wins</b>: {r.WinnerDamageDealt} HP dealt, {r.MandatoryLoserDamageDealt} HP back from the loser.");
+            sb.Append(r.DestroyedUnitNames.Count > 0 ? $"Removed: {string.Join(", ", r.DestroyedUnitNames)}." : "No units removed.");
             _battlePopupText.text = sb.ToString();
             _battlePopupModal.SetActive(true);
+            _battlePopupModal.transform.SetAsLastSibling();
+            if (_battleToastRoutine != null) StopCoroutine(_battleToastRoutine);
+            _battleToastRoutine = StartCoroutine(HideBattleToastLater());
         }
+
+        private Coroutine _battleToastRoutine;
+        private System.Collections.IEnumerator HideBattleToastLater()
+        {
+            yield return new WaitForSeconds(8f);
+            if (_battlePopupModal != null) _battlePopupModal.SetActive(false);
+        }
+
+        private static string Bonus(int b) => b > 0 ? $" (+{b})" : b < 0 ? $" ({b})" : "";
 
         private void RefreshCodexModal(FactionDef inspectFaction = null)
         {
@@ -612,6 +625,8 @@ namespace CrittersOfCalamity.UI
             RefreshGuideHighlights();
             if (_infoModal != null && _infoModal.activeSelf && !_infoShowingRulebook) RefreshInfoModal();
 
+            if (_activityPanel != null) _activityPanel.SetActive(!_engine.IsPreGame);
+            if (_bottomBar != null) _bottomBar.SetActive(!_engine.IsPreGame);
             if (_engine.IsPreGame)
             {
                 _topStatusText.text = $"<b>CRITTERS OF CALAMITY</b>\nSetting up: {(_engine.CurrentPhase == TurnPhase.PreGame_ReverseFactionSetup ? "Placing starting pieces" : PhaseName(_engine.CurrentPhase))}";
@@ -626,6 +641,8 @@ namespace CrittersOfCalamity.UI
                 }
                 return;
             }
+
+            if (_stallButton != null) _stallButton.SetActive(_engine.Players.Any(p => p.Faction != null && p.Faction.Id == FactionId.CapybaraCaravan));
 
             var activePlayer = _engine.Players[_engine.CurrentTurnPlayerIndex];
             int viewSeat = Mathf.Clamp(_mpManager.ViewingSeat, 0, _engine.Players.Count - 1);
@@ -647,8 +664,9 @@ namespace CrittersOfCalamity.UI
                 var p = _engine.Players[i];
                 bool isTurn = (i == _engine.CurrentTurnPlayerIndex);
                 string turnMark = isTurn ? "> " : "";
-                _playerScoreBadges[i].text = $"{turnMark}<b>{p.DisplayName}</b> ({p.Faction.Name})\n" +
-                                             $"<size=15><b>{p.Authority}</b> Authority</size>  <size=10>Res {p.ResourcePile.Count} | Hand {p.RelicHand.Count}</size>";
+                string facColor = ColorUtility.ToHtmlStringRGB(p.Faction.PrimaryColor);
+                _playerScoreBadges[i].text = $"{turnMark}<b>{p.DisplayName}</b> <color=#{facColor}>{p.Faction.Name}</color>\n" +
+                                             $"<size=16><b>{p.Authority}</b>/30 Authority</size>  <size=10>Res {p.ResourcePile.Count} · Hand {p.RelicHand.Count}</size>";
                 _playerScoreBadges[i].color = isTurn ? Palette.AuthorityGold : Color.white;
             }
 
@@ -719,10 +737,12 @@ namespace CrittersOfCalamity.UI
             int gCount = viewer.ResourcePile.Count(r => r == ResourceType.Gold);
             int cCount = viewer.ResourcePile.Count(r => r == ResourceType.Charcoal);
             _handAndResourcesText.text =
-                $"<b>{viewer.DisplayName}'s Resource Pile ({viewer.ResourcePile.Count} cards):</b> " +
-                $"Wood: <b>{wCount}</b> | Stone: <b>{sCount}</b> | Gold: <b>{gCount}</b>" +
-                (cCount > 0 ? $" | Charcoal: <b>{cCount}</b>" : "") +
-                $"  |  <b>Excavation Actions:</b> Unearth:{(_engine.UsedUnearthThisTurn ? "✓" : "○")} Craft:{(_engine.UsedFactionCraftThisTurn ? "✓" : "○")} Assemble:{(_engine.UsedAssembleThisTurn ? "✓" : "○")} Disassemble:{(_engine.UsedDisassembleThisTurn ? "✓" : "○")}";
+                $"<b>{(_mpManager.IsOnline ? "You" : viewer.DisplayName)}</b>   " +
+                $"<color=#{ColorUtility.ToHtmlStringRGB(Palette.WoodPlank)}>Wood</color> <b>{wCount}</b>    " +
+                $"<color=#{ColorUtility.ToHtmlStringRGB(Palette.RuinStoneLight)}>Stone</color> <b>{sCount}</b>    " +
+                $"<color=#{ColorUtility.ToHtmlStringRGB(Palette.AuthorityGold)}>Gold</color> <b>{gCount}</b>" +
+                (cCount > 0 || viewer.Faction.Id == FactionId.FirestartingSquirrels ? $"    <color=#{ColorUtility.ToHtmlStringRGB(Palette.FireTile)}>Charcoal</color> <b>{cCount}</b>" : "") +
+                $"      <size=12>Hand: {viewer.RelicHand.Count} card(s)" + (viewer.PurchasedTradedGoods.Count > 0 ? $"   Traded Goods: {string.Join(", ", viewer.PurchasedTradedGoods.Select(g => g.Title))}" : "") + "</size>";
 
             foreach (Transform child in _handButtonsRoot)
                 Destroy(child.gameObject);
@@ -735,33 +755,18 @@ namespace CrittersOfCalamity.UI
             }
         }
 
+        /// <summary>A compact hand card: name, cost and effect. (Assemble and Disassemble are in the Turn Guide.)</summary>
         private void CreateRelicHandCardWidget(Transform parent, RelicCardDef card, int handIdx)
         {
             var cardBox = new GameObject($"RelicCard_{handIdx}");
             cardBox.transform.SetParent(parent, false);
             cardBox.AddComponent<RectTransform>();
+            cardBox.AddComponent<LayoutElement>().preferredWidth = 230f;
             var bg = cardBox.AddComponent<Image>();
-            bg.color = new Color(0.20f, 0.18f, 0.14f, 0.98f);
-
-            CreateText(cardBox.transform, "Title", $"<b>{card.Name}</b>\n<size=10>{card.EffectText}</size>",
-                11, TextAnchor.UpperLeft, new Vector2(0.04f, 0.36f), new Vector2(0.96f, 0.96f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
-
-            // Separate [Assemble] button
-            CreateButton(cardBox.transform, "BtnAssemble", $"Assemble ({card.Cost})",
-                new Vector2(0.03f, 0.04f), new Vector2(0.49f, 0.34f),
-                card.HasCraftedEffect ? Palette.FromHex("#2E6B47") : new Color(0.3f, 0.3f, 0.3f, 0.5f), () =>
-                {
-                    _mpManager.Submit(GameCommand.Make(GameCommandType.Assemble, handIdx));
-                    RefreshHUD();
-                });
-
-            // Separate [Disassemble] button
-            CreateButton(cardBox.transform, "BtnDisassemble", $"Disassemble (+{card.DisassembleGain})",
-                new Vector2(0.51f, 0.04f), new Vector2(0.97f, 0.34f), Palette.FromHex("#7A4E24"), () =>
-                {
-                    _mpManager.Submit(GameCommand.Make(GameCommandType.Disassemble, handIdx));
-                    RefreshHUD();
-                });
+            bg.color = Palette.UICard;
+            var t = CreateText(cardBox.transform, "Text", $"<b>{card.Name}</b>  <size=10>({card.Cost})</size>\n<size=10>{card.EffectText}</size>",
+                12, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, new Vector2(6f, 3f), new Vector2(-6f, -3f), Palette.ParchmentMap);
+            t.verticalOverflow = VerticalWrapMode.Truncate;
         }
 
         private string GetFactionMeterSummary(PlayerState p)

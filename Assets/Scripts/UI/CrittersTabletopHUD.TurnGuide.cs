@@ -58,8 +58,9 @@ namespace CrittersOfCalamity.UI
 
         private void BuildTurnGuide(Transform canvasParent)
         {
-            var root = CreatePanel(canvasParent, "TurnGuide", new Vector2(0.585f, 0.20f), new Vector2(0.805f, 0.74f),
-                new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.09f, 0.11f, 0.15f, 0.96f));
+            // The Turn Guide owns the right-hand column, top bar to bottom edge
+            var root = CreatePanel(canvasParent, "TurnGuide", new Vector2(0.795f, 0.012f), new Vector2(0.995f, 0.928f),
+                new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Palette.UIPanelDark);
             _guideRoot = root.gameObject;
 
             CreateText(root, "Title", "TURN GUIDE", 14, TextAnchor.MiddleLeft,
@@ -72,11 +73,11 @@ namespace CrittersOfCalamity.UI
             _guidePhaseBar = CreateText(root, "Phases", "", 14, TextAnchor.MiddleLeft,
                 new Vector2(0.04f, 0.83f), new Vector2(0.97f, 0.875f), Vector2.zero, Vector2.zero, new Color(0.65f, 0.70f, 0.78f));
             _guideHint = CreateText(root, "Hint", "", 13, TextAnchor.UpperLeft,
-                new Vector2(0.04f, 0.72f), new Vector2(0.97f, 0.83f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
+                new Vector2(0.04f, 0.75f), new Vector2(0.97f, 0.83f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
 
-            _guideBody = BuildScrollList(root, new Vector2(0.03f, 0.13f), new Vector2(0.97f, 0.715f));
+            _guideBody = BuildScrollList(root, new Vector2(0.03f, 0.095f), new Vector2(0.97f, 0.745f));
 
-            _guideEndButton = CreateButton(root, "BtnEndPhase", "End Phase", new Vector2(0.06f, 0.02f), new Vector2(0.94f, 0.11f),
+            _guideEndButton = CreateButton(root, "BtnEndPhase", "End Phase", new Vector2(0.05f, 0.015f), new Vector2(0.95f, 0.08f),
                 Palette.FromHex("#C87A28"), () =>
                 {
                     CancelTileAction();
@@ -86,7 +87,7 @@ namespace CrittersOfCalamity.UI
             _guideEndLabel = _guideEndButton.GetComponentInChildren<Text>();
             _guideEndLabel.fontSize = 16;
 
-            var tab = CreateButton(canvasParent, "TurnGuideTab", "Show Turn Guide", new Vector2(0.705f, 0.20f), new Vector2(0.805f, 0.245f),
+            var tab = CreateButton(canvasParent, "TurnGuideTab", "Show Turn Guide", new Vector2(0.895f, 0.012f), new Vector2(0.995f, 0.057f),
                 Palette.FromHex("#C87A28"), () => { _guideMinimized = false; RefreshTurnGuide(); });
             _guideTab = tab.gameObject;
 
