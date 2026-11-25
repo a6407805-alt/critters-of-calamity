@@ -19,7 +19,7 @@ namespace CrittersOfCalamity.UI
     /// - Right Panel (Collapsible): Active Player's Faction Board (Meters, Species Traits, Table Relics, Battle Log)
     /// - Bottom Bar: Active Player's Resource Pile, Relic Hand with SEPARATE [Assemble] and [Disassemble] buttons per card, and Phase Actions (Craft Building, Move, Battle, Loot, Recruit, Faction Abilities Drawer, Next Phase)
     /// </summary>
-    public class CrittersTabletopHUD : MonoBehaviour
+    public partial class CrittersTabletopHUD : MonoBehaviour
     {
         private CrittersGameEngine _engine;
         private Tabletop3DBoardRenderer _boardRenderer;
@@ -43,7 +43,6 @@ namespace CrittersOfCalamity.UI
         // Modals
         private GameObject _lobbyCodexModal;
         private Text _codexDetailText;
-        private InputField _joinCodeInput;
 
         private GameObject _factionActionsModal;
         private Transform _factionActionsListRoot;
@@ -63,15 +62,6 @@ namespace CrittersOfCalamity.UI
         private bool _awaitingMoveDestination = false;
         private HexCoord _moveOriginCoord;
 
-        // Faction draft slots for 4 players (defaulting to the first 4 Core Factions)
-        private FactionId[] _draftedFactions = new FactionId[4]
-        {
-            FactionId.CurlyTail,
-            FactionId.HordeOfTheMillions,
-            FactionId.PlatypusPapacy,
-            FactionId.TroubleMakingTanukis
-        };
-        private int _editingPlayerSlot = 0;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void AutoBootstrapScene()
@@ -118,26 +108,97 @@ namespace CrittersOfCalamity.UI
             EnsureEventSystem();
             BuildCanvasHierarchy();
 
-            _engine = new CrittersGameEngine();
+            _engine = new CrittersGameEngine(); // empty until a match starts
+            _boardRenderer.OnHexClicked += HandleHexClicked;
+            _mpManager.OnSessionUpdated += HandleSessionUpdated;
+            _mpManager.OnMatchStarted += HandleMatchStarted;
+            _mpManager.OnCommandApplied += HandleCommandApplied;
+            _mpManager.OnLocalNotice += ShowLocalNotice;
+            _mpManager.OnReturnedToMenu += HandleReturnedToMenu;
+
+            ShowMainMenu();
+        }
+
+        /// <summary>Every computer builds the same match from the same seed; this hooks the HUD and board up to it.</summary>
+        private void HandleMatchStarted(MatchStartInfo info)
+        {
+            BindToEngine(_mpManager.Engine);
+            HideMainMenu();
+        }
+
+        private void BindToEngine(CrittersGameEngine engine)
+        {
+            if (_engine != null)
+            {
+                _engine.OnStateChanged -= RefreshHUD;
+                _engine.OnBattleResolved -= ShowBattleReportPopup;
+                _engine.OnBattleDecisionRequired -= ShowBattleDecisionModal;
+            }
+            _engine = engine;
             _engine.OnStateChanged += RefreshHUD;
             _engine.OnBattleResolved += ShowBattleReportPopup;
             _engine.OnBattleDecisionRequired += ShowBattleDecisionModal;
-            _boardRenderer.OnHexClicked += HandleHexClicked;
-            _mpManager.OnSessionUpdated += RefreshHUD;
 
-            StartMatchWithDraftedFactions();
-        }
-
-        private void StartMatchWithDraftedFactions()
-        {
             _awaitingMoveDestination = false;
-            _engine.StartNewMatch(_draftedFactions.ToList(), new List<string>
-            {
-                "Player 1", "Player 2", "Player 3", "Player 4"
-            });
             _boardRenderer.BindEngine(_engine);
             _boardRenderer.ResetCameraToOverview();
             RefreshHUD();
+        }
+
+        private void HandleSessionUpdated()
+        {
+            RefreshMainMenu();
+            RefreshHUD();
+        }
+
+        private void HandleReturnedToMenu(string reason)
+        {
+            if (_battleDecisionModal != null) _battleDecisionModal.SetActive(false);
+            if (_battlePopupModal != null) _battlePopupModal.SetActive(false);
+            ShowMainMenu();
+        }
+
+        /// <summary>A message just for this player (not part of the shared game).</summary>
+        private void ShowLocalNotice(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            if (_engine != null && _engine.Players.Count > 0)
+            {
+                _engine.Log($"[You] {message}");
+                RefreshHUD();
+            }
+            else
+            {
+                RefreshMainMenu();
+            }
+        }
+
+        /// <summary>Tells the player who sent an action when the rules didn't allow it.</summary>
+        private void HandleCommandApplied(GameCommand cmd, bool ok)
+        {
+            bool mine = !_mpManager.IsOnline || cmd.Seat == _mpManager.LocalSeat;
+            if (!ok && mine)
+            {
+                string why;
+                switch (cmd.Type)
+                {
+                    case GameCommandType.Move: why = $"Move from ({cmd.A}, {cmd.B}) to ({cmd.C}, {cmd.D}) isn't legal."; break;
+                    case GameCommandType.Loot: why = "Can't Loot there (you need units on the tile, no enemy pieces, and it can't have been looted this turn)."; break;
+                    case GameCommandType.Recruit: why = "Can't Recruit right now (Main phase, an action left, and a recruitment building with room)."; break;
+                    case GameCommandType.CraftBuilding: why = "Can't craft your building there (Excavation phase, unused Craft action, the cost, and a legal tile)."; break;
+                    case GameCommandType.Unearth: why = "Can't Unearth that card (Excavation phase, unused Unearth, and its cost)."; break;
+                    case GameCommandType.Assemble: why = "Can't Assemble that card (Excavation phase, unused Assemble, and its cost)."; break;
+                    case GameCommandType.Disassemble: why = "Can't Disassemble that card (Excavation phase and unused Disassemble)."; break;
+                    case GameCommandType.FactionAction: why = "That faction action can't be used right now (check costs, meters and the selected tile)."; break;
+                    case GameCommandType.CraftEquipment: why = $"Can't craft '{cmd.S}' right now (cost and target unit on the board)."; break;
+                    case GameCommandType.BuyTradedGood: why = "Can't buy that Traded Good (needs the Capybara Trader nearby and its cost)."; break;
+                    default: why = "That action isn't allowed right now."; break;
+                }
+                _engine.Log($"[You] {why}");
+            }
+            RefreshHUD();
+            if (_factionActionsModal != null && _factionActionsModal.activeSelf) RefreshFactionActionsModal();
+            if (_stallModal != null && _stallModal.activeSelf) RefreshStallModal();
         }
 
         private void HandleHexClicked(HexCoord coord)
@@ -145,10 +206,7 @@ namespace CrittersOfCalamity.UI
             if (_awaitingMoveDestination)
             {
                 _awaitingMoveDestination = false;
-                if (!_engine.TryMoveUnits(_moveOriginCoord, coord))
-                {
-                    _engine.Log($"Move from {_moveOriginCoord} to {coord} was not legal.");
-                }
+                _mpManager.Submit(GameCommand.Move(_moveOriginCoord, coord));
             }
             RefreshHUD();
         }
@@ -211,7 +269,7 @@ namespace CrittersOfCalamity.UI
                     RefreshStallModal();
                 });
 
-            CreateButton(topBar, "BtnLobbyCodex", "8 Factions / Room Lobby",
+            CreateButton(topBar, "BtnLobbyCodex", "Factions Codex",
                 new Vector2(0.91f, 0.15f), new Vector2(0.995f, 0.85f), Palette.FromHex("#8C5328"), () =>
                 {
                     ToggleModal(_lobbyCodexModal);
@@ -284,7 +342,7 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.56f, 0.53f), new Vector2(0.665f, 0.93f), Palette.FromHex("#4A6B48"), () =>
                 {
                     if (_boardRenderer.SelectedCoord.HasValue)
-                        _engine.TryFactionCraftBuilding(_boardRenderer.SelectedCoord.Value);
+                        _mpManager.Submit(GameCommand.CraftBuilding(_boardRenderer.SelectedCoord.Value));
                     else
                         _engine.Log("Click a legal 3D hex tile first to craft your faction's building.");
                     RefreshHUD();
@@ -311,7 +369,7 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.78f, 0.53f), new Vector2(0.885f, 0.93f), Palette.FromHex("#9C2F2F"), () =>
                 {
                     if (_boardRenderer.SelectedCoord.HasValue)
-                        _engine.TryBattleOnTile(_boardRenderer.SelectedCoord.Value);
+                        _mpManager.Submit(GameCommand.Battle(_boardRenderer.SelectedCoord.Value));
                     else
                         _engine.Log("Select a hex tile with both friendly and enemy pieces to initiate a Battle!");
                     RefreshHUD();
@@ -329,7 +387,7 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.56f, 0.07f), new Vector2(0.665f, 0.47f), Palette.FromHex("#8A6E2F"), () =>
                 {
                     if (_boardRenderer.SelectedCoord.HasValue)
-                        _engine.TryLootTile(_boardRenderer.SelectedCoord.Value);
+                        _mpManager.Submit(GameCommand.Loot(_boardRenderer.SelectedCoord.Value));
                     else
                         _engine.Log("Select a hex tile occupied by your units (and no enemies) to Loot.");
                     RefreshHUD();
@@ -338,7 +396,7 @@ namespace CrittersOfCalamity.UI
             CreateButton(bottomBar, "BtnRecruit", "3. Main: Recruit Units",
                 new Vector2(0.67f, 0.07f), new Vector2(0.775f, 0.47f), Palette.FromHex("#4E568C"), () =>
                 {
-                    _engine.TryRecruit();
+                    _mpManager.Submit(GameCommand.Make(GameCommandType.Recruit));
                     RefreshHUD();
                 });
 
@@ -353,7 +411,7 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.89f, 0.07f), new Vector2(0.992f, 0.47f), Palette.FromHex("#C87A28"), () =>
                 {
                     _awaitingMoveDestination = false;
-                    _engine.AdvancePhase();
+                    _mpManager.Submit(GameCommand.Make(GameCommandType.AdvancePhase));
                     RefreshHUD();
                 });
 
@@ -363,6 +421,7 @@ namespace CrittersOfCalamity.UI
             BuildStallModal(canvasGo.transform);
             BuildBattlePopupModal(canvasGo.transform);
             BuildBattleDecisionModal(canvasGo.transform);
+            BuildMainMenu(canvasGo.transform);
         }
 
         private void ToggleModal(GameObject targetModal)
@@ -399,66 +458,10 @@ namespace CrittersOfCalamity.UI
                 "CRITTERS OF CALAMITY — CORE RULEBOOK: EIGHT FACTION EDITION (108-TILE BOARD)",
                 16, TextAnchor.MiddleLeft, new Vector2(0.02f, 0.92f), new Vector2(0.55f, 0.99f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
-            CreateButton(modalRt, "BtnHostRoom", "Host Online Room",
-                new Vector2(0.47f, 0.925f), new Vector2(0.59f, 0.985f), Palette.FromHex("#2E7D5B"), async () =>
-                {
-                    await _mpManager.HostGroupRoomAsync();
-                    RefreshCodexModal();
-                });
-
-            // Join Code InputField + Join Button
-            var inputGo = new GameObject("JoinCodeInput");
-            inputGo.transform.SetParent(modalRt, false);
-            var inputRt = inputGo.AddComponent<RectTransform>();
-            inputRt.anchorMin = new Vector2(0.595f, 0.925f);
-            inputRt.anchorMax = new Vector2(0.685f, 0.985f);
-            inputRt.offsetMin = Vector2.zero;
-            inputRt.offsetMax = Vector2.zero;
-            var inputImg = inputGo.AddComponent<Image>();
-            inputImg.color = new Color(0.18f, 0.22f, 0.28f, 1f);
-            _joinCodeInput = inputGo.AddComponent<InputField>();
-            var txtComp = CreateText(inputGo.transform, "Text", "ROOM-CODE", 12, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(4f, 2f), new Vector2(-4f, -2f), Color.white);
-            _joinCodeInput.textComponent = txtComp;
-            _joinCodeInput.text = "ENTER-CODE";
-
-            CreateButton(modalRt, "BtnJoinRoom", "Join Code",
-                new Vector2(0.69f, 0.925f), new Vector2(0.765f, 0.985f), Palette.FromHex("#3A6B8C"), async () =>
-                {
-                    await _mpManager.JoinGroupRoomByCodeAsync(_joinCodeInput.text);
-                    RefreshCodexModal();
-                });
-
-            CreateButton(modalRt, "BtnStartNewMatch", "Start Match on 108-Tile Board",
-                new Vector2(0.77f, 0.925f), new Vector2(0.915f, 0.985f), Palette.FromHex("#B86B28"), () =>
-                {
-                    StartMatchWithDraftedFactions();
-                    _lobbyCodexModal.SetActive(false);
-                });
-
             CreateButton(modalRt, "BtnCloseModal", "Close [X]",
                 new Vector2(0.92f, 0.925f), new Vector2(0.985f, 0.985f), Palette.FromHex("#7A2828"), () =>
                 {
                     _lobbyCodexModal.SetActive(false);
-                });
-
-            // Player slot selector buttons (P1..P4) + Roll 2d6 Draft Order
-            for (int pSlot = 0; pSlot < 4; pSlot++)
-            {
-                int capturedSlot = pSlot;
-                float xMin = 0.02f + pSlot * 0.10f;
-                CreateButton(modalRt, $"BtnSlot_{pSlot}", $"Assign Seat {pSlot + 1}",
-                    new Vector2(xMin, 0.84f), new Vector2(xMin + 0.095f, 0.90f), Palette.FromHex("#3A4B63"), () =>
-                    {
-                        _editingPlayerSlot = capturedSlot;
-                        RefreshCodexModal();
-                    });
-            }
-
-            CreateButton(modalRt, "BtnRollDraftOrder", "Roll 2d6 Draft & Turn Order",
-                new Vector2(0.43f, 0.84f), new Vector2(0.62f, 0.90f), Palette.FromHex("#6B4E8C"), () =>
-                {
-                    _engine.Log("Rolled 2d6 for Faction Draft & Turn Order (Reverse Setup Order Active)!");
-                    RefreshCodexModal();
                 });
 
             // 8 Core Faction Picker Buttons on Left of Modal
@@ -472,7 +475,6 @@ namespace CrittersOfCalamity.UI
                     $"{fac.Name} (Difficulty {fac.DifficultyRatingOutOf10}/10)",
                     new Vector2(0.02f, yMin), new Vector2(0.40f, yMax), fac.PrimaryColor * 0.78f, () =>
                     {
-                        _draftedFactions[_editingPlayerSlot] = fac.Id;
                         RefreshCodexModal(fac);
                     });
             }
@@ -535,8 +537,7 @@ namespace CrittersOfCalamity.UI
                     p.Faction.PrimaryColor * 0.75f, () =>
                     {
                         var coord = _boardRenderer.SelectedCoord ?? new HexCoord(0, 0);
-                        if (!_engine.ExecuteSpecificFactionAction(capturedIdx, coord))
-                            _engine.Log($"Could not execute '{actions[capturedIdx]}' — check resource/meter requirements or selected hex.");
+                        _mpManager.Submit(GameCommand.FactionAction(capturedIdx, coord));
                         RefreshFactionActionsModal();
                         RefreshHUD();
                     });
@@ -549,8 +550,7 @@ namespace CrittersOfCalamity.UI
                     $"<b>[Craft Equipment] {eq.Name}</b> (Cost: {eq.Cost}) -> {eq.EffectText}",
                     new Color(0.28f, 0.24f, 0.16f, 0.96f), () =>
                     {
-                        if (!_engine.TryCraftAndEquipFactionEquipment(capturedEq.Id))
-                            _engine.Log($"Cannot craft/equip '{capturedEq.Name}' (need {capturedEq.Cost} and target unit '{capturedEq.TargetUnitId}' on board).");
+                        _mpManager.Submit(GameCommand.CraftEquipment(capturedEq.Id));
                         RefreshFactionActionsModal();
                         RefreshHUD();
                     });
@@ -604,8 +604,7 @@ namespace CrittersOfCalamity.UI
                     $"<b>[Buy Traded Good] {tg.Title}</b>\n{tg.EffectText}\n(Purchasing grants +1 Authority to Buyer & +1 Authority to Capybara Caravan, and places 1 Basic Unit as a Guest at a Wallow!)",
                     Palette.FromHex("#3A6B6C"), () =>
                     {
-                        if (!_engine.TryBuyTradedGoodFromCapybaraStall(slot))
-                            _engine.Log($"Cannot buy '{tg.Title}' (requires Capybara Caravan in match and {tg.Cost}).");
+                        _mpManager.Submit(GameCommand.Make(GameCommandType.BuyTradedGood, slot));
                         RefreshStallModal();
                         RefreshHUD();
                     });
@@ -658,6 +657,7 @@ namespace CrittersOfCalamity.UI
         private void ShowBattleDecisionModal(BattleDecision d)
         {
             if (d == null || _battleDecisionModal == null) return;
+            if (_mpManager.IsOnline && d.PlayerIndex != _mpManager.LocalSeat) return; // only the player being asked sees the prompt
             var p = _engine.Players[d.PlayerIndex];
             _battleDecisionHeaderText.text = $"{p.DisplayName} ({p.Faction.Name}): use {d.Title}?";
             _battleDecisionBodyText.text = d.Prompt;
@@ -669,7 +669,7 @@ namespace CrittersOfCalamity.UI
         {
             // Hide first: answering can immediately raise the next decision, which re-opens this modal.
             _battleDecisionModal.SetActive(false);
-            _engine.RespondToBattleDecision(use);
+            _mpManager.Submit(GameCommand.BattleDecision(use));
             RefreshHUD();
         }
 
@@ -704,18 +704,14 @@ namespace CrittersOfCalamity.UI
             if (_codexDetailText == null) return;
             var allFactions = RulebookDatabase.GetAllFactions();
             if (inspectFaction == null)
-                inspectFaction = allFactions.First(f => f.Id == _draftedFactions[_editingPlayerSlot]);
+                inspectFaction = _engine.Players.Count > 0 ? _engine.Players[_engine.CurrentTurnPlayerIndex].Faction : allFactions[0];
 
             var sb = new StringBuilder();
-            sb.AppendLine($"<b>MULTIPLAYER ROOM:</b> {_mpManager.StatusMessage} (Join Code: <b>{_mpManager.ActiveJoinCode}</b>)");
-            sb.AppendLine($"<b>CANONICAL BOARD:</b> {_engine.Board.Count} Tiles (90 Forest, 14 Stream, 4 Ruin) | Max 6 Units/Faction/Tile | Reverse Turn-Order Setup");
-            sb.AppendLine($"<b>CURRENT 4-PLAYER TABLE DRAFT</b> (Editing Seat {_editingPlayerSlot + 1}):");
-            for (int i = 0; i < 4; i++)
-            {
-                var f = allFactions.First(x => x.Id == _draftedFactions[i]);
-                string marker = (i == _editingPlayerSlot) ? ">> " : "   ";
-                sb.AppendLine($"{marker}Seat {i + 1}: <b>{f.Name}</b> (Difficulty {f.DifficultyRatingOutOf10}/10)");
-            }
+            if (_mpManager.IsOnline)
+                sb.AppendLine($"<b>ONLINE ROOM:</b> join code <b>{_mpManager.ActiveJoinCode}</b>");
+            sb.AppendLine("<b>PLAYERS IN THIS GAME:</b>");
+            foreach (var pl in _engine.Players)
+                sb.AppendLine($"   {pl.DisplayName}: <b>{pl.Faction.Name}</b> (Difficulty {pl.Faction.DifficultyRatingOutOf10}/10)");
             sb.AppendLine("------------------------------------------------------------------");
             sb.AppendLine($"<b>{inspectFaction.Name.ToUpperInvariant()}</b> — Difficulty {inspectFaction.DifficultyRatingOutOf10}/10 (Recommended for New Players)");
             sb.AppendLine(inspectFaction.ShortSummary);
@@ -738,14 +734,20 @@ namespace CrittersOfCalamity.UI
             if (_engine == null || _engine.Players.Count == 0) return;
 
             var activePlayer = _engine.Players[_engine.CurrentTurnPlayerIndex];
+            int viewSeat = Mathf.Clamp(_mpManager.ViewingSeat, 0, _engine.Players.Count - 1);
+            var viewer = _engine.Players[viewSeat]; // whose hand and Resource Pile this screen shows
 
             // 1. Top Bar
             string moveHint = _awaitingMoveDestination ? $" | [CLICK DESTINATION HEX FROM {_moveOriginCoord}]" : "";
             if (_engine.IsBattlePending && _engine.PendingBattle.CurrentDecision != null)
                 moveHint += $" | [BATTLE PAUSED: waiting on {_engine.Players[_engine.PendingBattle.CurrentDecision.PlayerIndex].DisplayName}]";
+            if (_mpManager.IsOnline)
+                moveHint += $" | You: {viewer.DisplayName} ({viewer.Faction.Name})" + (_mpManager.OutOfSync ? " | OUT OF SYNC" : "");
             _topStatusText.text = $"<b>TURN {_engine.TurnNumber} — {activePlayer.DisplayName} ({activePlayer.Faction.Name})</b>\n" +
                                   $"Phase: <b>{_engine.CurrentPhase}</b> (Main Actions: {_engine.MainPhaseActionsRemaining}/3) | Board: {_engine.Board.Count} Tiles{moveHint}";
 
+            for (int i = 0; i < 4; i++)
+                _playerScoreBadges[i].transform.parent.gameObject.SetActive(i < _engine.Players.Count);
             for (int i = 0; i < _engine.Players.Count && i < 4; i++)
             {
                 var p = _engine.Players[i];
@@ -768,8 +770,7 @@ namespace CrittersOfCalamity.UI
                     $"<b>[Unearth] {card.Name}</b> (Cost: {card.Cost})\n{card.EffectText}",
                     new Color(0.20f, 0.25f, 0.32f, 0.95f), () =>
                     {
-                        if (!_engine.TryUnearthRelic(slotIdx))
-                            _engine.Log($"Cannot Unearth '{card.Name}' (need 2. Excavation Phase, unused Unearth, and {card.Cost}).");
+                        _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slotIdx));
                         RefreshHUD();
                     });
             }
@@ -814,19 +815,25 @@ namespace CrittersOfCalamity.UI
             foreach (var tr in activePlayer.Faction.SpeciesTraits.Take(4))
                 sbFac.AppendLine($" • {tr}");
             if (activePlayer.TableRelics.Count > 0)
-                sbFac.AppendLine($"<b>Table Relics (In Play):</b> {string.Join(", ", activePlayer.TableRelics.Select(r => r.Name))}");
+            {
+                // Crafted cards on a Table are facedown: only their owner may look at them.
+                if (activePlayer == viewer)
+                    sbFac.AppendLine($"<b>Your Table Relics (facedown):</b> {string.Join(", ", activePlayer.TableRelics.Select(r => r.Name))}");
+                else
+                    sbFac.AppendLine($"<b>Table Relics:</b> {activePlayer.TableRelics.Count} facedown card(s)");
+            }
             _factionBoardText.text = sbFac.ToString();
 
             var recentLogs = _engine.GameLog.Skip(Mathf.Max(0, _engine.GameLog.Count - 10));
             _gameLogText.text = "<b>TABLETOP EVENT & BATTLE LOG:</b>\n" + string.Join("\n", recentLogs);
 
             // 4. Bottom Bar: Active Player's Resource Pile & Relic Hand
-            int wCount = activePlayer.ResourcePile.Count(r => r == ResourceType.Wood);
-            int sCount = activePlayer.ResourcePile.Count(r => r == ResourceType.Stone);
-            int gCount = activePlayer.ResourcePile.Count(r => r == ResourceType.Gold);
-            int cCount = activePlayer.ResourcePile.Count(r => r == ResourceType.Charcoal);
+            int wCount = viewer.ResourcePile.Count(r => r == ResourceType.Wood);
+            int sCount = viewer.ResourcePile.Count(r => r == ResourceType.Stone);
+            int gCount = viewer.ResourcePile.Count(r => r == ResourceType.Gold);
+            int cCount = viewer.ResourcePile.Count(r => r == ResourceType.Charcoal);
             _handAndResourcesText.text =
-                $"<b>{activePlayer.DisplayName}'s Resource Pile ({activePlayer.ResourcePile.Count} cards):</b> " +
+                $"<b>{viewer.DisplayName}'s Resource Pile ({viewer.ResourcePile.Count} cards):</b> " +
                 $"Wood: <b>{wCount}</b> | Stone: <b>{sCount}</b> | Gold: <b>{gCount}</b>" +
                 (cCount > 0 ? $" | Charcoal: <b>{cCount}</b>" : "") +
                 $"  |  <b>Excavation Actions:</b> Unearth:{(_engine.UsedUnearthThisTurn ? "✓" : "○")} Craft:{(_engine.UsedFactionCraftThisTurn ? "✓" : "○")} Assemble:{(_engine.UsedAssembleThisTurn ? "✓" : "○")} Disassemble:{(_engine.UsedDisassembleThisTurn ? "✓" : "○")}";
@@ -834,10 +841,10 @@ namespace CrittersOfCalamity.UI
             foreach (Transform child in _handButtonsRoot)
                 Destroy(child.gameObject);
 
-            for (int hIdx = 0; hIdx < activePlayer.RelicHand.Count; hIdx++)
+            for (int hIdx = 0; hIdx < viewer.RelicHand.Count; hIdx++)
             {
                 int capturedIdx = hIdx;
-                var card = activePlayer.RelicHand[hIdx];
+                var card = viewer.RelicHand[hIdx];
                 CreateRelicHandCardWidget(_handButtonsRoot, card, capturedIdx);
             }
         }
@@ -858,8 +865,7 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.03f, 0.04f), new Vector2(0.49f, 0.34f),
                 card.HasCraftedEffect ? Palette.FromHex("#2E6B47") : new Color(0.3f, 0.3f, 0.3f, 0.5f), () =>
                 {
-                    if (!_engine.TryAssembleRelicFromHand(handIdx))
-                        _engine.Log($"Cannot Assemble '{card.Name}' (need 2. Excavation Phase, unused Assemble, crafted effect, and {card.Cost}).");
+                    _mpManager.Submit(GameCommand.Make(GameCommandType.Assemble, handIdx));
                     RefreshHUD();
                 });
 
@@ -867,8 +873,7 @@ namespace CrittersOfCalamity.UI
             CreateButton(cardBox.transform, "BtnDisassemble", $"Disassemble (+{card.DisassembleGain})",
                 new Vector2(0.51f, 0.04f), new Vector2(0.97f, 0.34f), Palette.FromHex("#7A4E24"), () =>
                 {
-                    if (!_engine.TryDisassembleRelicFromHand(handIdx))
-                        _engine.Log($"Cannot Disassemble '{card.Name}' (need 2. Excavation Phase and unused Disassemble).");
+                    _mpManager.Submit(GameCommand.Make(GameCommandType.Disassemble, handIdx));
                     RefreshHUD();
                 });
         }
