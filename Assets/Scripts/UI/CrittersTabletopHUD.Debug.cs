@@ -21,10 +21,10 @@ namespace CrittersOfCalamity.UI
     {
         private static readonly FactionId[] DebugFactionOrder =
             { FactionId.CapybaraCaravan, FactionId.TroubleMakingTanukis, FactionId.HordeOfTheMillions, FactionId.FirestartingSquirrels,
-              FactionId.CurlyTail, FactionId.PlatypusPapacy, FactionId.Necromouser, FactionId.BriaredFlower };
+              FactionId.CurlyTail, FactionId.PlatypusPapacy, FactionId.Necromouser, FactionId.BriaredFlower, FactionId.GoatCabal };
         private System.Random _debugRng = new System.Random(7);
         private int _debugFocusIndex;
-        private int _debugSetups = System.Environment.TickCount & 7;  // different factions each play session
+        private int _debugSetups = (System.Environment.TickCount & 0x7fffffff) % 9;  // different factions each play session
         private bool _debugBusy;
 
         private void DebugHotkeys()

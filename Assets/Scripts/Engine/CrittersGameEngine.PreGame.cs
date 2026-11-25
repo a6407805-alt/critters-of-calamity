@@ -219,6 +219,7 @@ namespace CrittersOfCalamity.Engine
                 case FactionId.FirestartingSquirrels: return "Click 3 forest tiles that touch each other, with no enemy units. Each gets a Squirrel; the first gets your Bunker.";
                 case FactionId.CapybaraCaravan: return "Click a stream tile with no enemy units for 3 Capybaras, the Capybara Trader and a Wallow.";
                 case FactionId.BriaredFlower: return "Click a forest tile with no enemy units within 4 tiles for the Blooming Briar, 2 Thorned Seeds and a Prickly Thicket.";
+                case FactionId.GoatCabal: return "Click a forest or ruin tile at least 2 tiles away from every enemy piece for 4 Goats and a Summoning Circle.";
             }
             return "Click a tile.";
         }
@@ -246,8 +247,22 @@ namespace CrittersOfCalamity.Engine
                 }
             }
 
+            // Nobody else may place within 2 tiles of a Goat unit during setup.
+            if (p.Faction.Id != FactionId.GoatCabal && NearGoatUnit(p.PlayerIndex, c))
+            { reason = "Too close to the Goat Cabal (no pieces within 2 tiles of a Goat during setup)."; return false; }
+
             switch (p.Faction.Id)
             {
+                case FactionId.GoatCabal:
+                {
+                    if (terrain != TileTerrainType.Forest && terrain != TileTerrainType.Ruin) { reason = "The Goat Cabal sets up on a forest or ruin tile."; return false; }
+                    bool enemyNear = Board.Values.Any(t => HexCoord.Distance(t.Coord, c) < 2 &&
+                        (t.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex) || (t.Building != null && t.Building.OwnerPlayerIndex != p.PlayerIndex) ||
+                         t.Tokens.Any(k => k.OwnerPlayerIndex != p.PlayerIndex) || (t.Overlay != FactionOverlayTileType.None && t.OverlayOwnerPlayerIndex >= 0 &&
+                         t.OverlayOwnerPlayerIndex != p.PlayerIndex && t.Overlay != FactionOverlayTileType.CapybaraStream)));
+                    if (enemyNear) { reason = "Must be at least 2 tiles away from every enemy piece."; return false; }
+                    return true;
+                }
                 case FactionId.CurlyTail:
                     if (terrain != TileTerrainType.Forest && terrain != TileTerrainType.Ruin) { reason = "Curly Tail sets up on a forest or ruin tile."; return false; }
                     if (enemyUnitTiles.Any(e => HexCoord.Distance(e, c) < 2)) { reason = "Must be at least 2 tiles away from every enemy unit."; return false; }
@@ -288,6 +303,11 @@ namespace CrittersOfCalamity.Engine
             return true;
         }
 
+        /// <summary>Goat Cabal setup rule: other factions can't place pieces within 2 tiles of a Goat unit.</summary>
+        bool NearGoatUnit(int seat, HexCoord c) =>
+            Board.Values.Any(t => HexCoord.Distance(t.Coord, c) <= 2 &&
+                                  t.Units.Any(u => u.OwnerPlayerIndex != seat && u.Definition.Id == "goat"));
+
         /// <summary>Every tile the current setup player could click next (for highlighting).</summary>
         public List<HexCoord> LegalSetupTiles()
         {
@@ -311,6 +331,7 @@ namespace CrittersOfCalamity.Engine
                     return true;
                 case SetupStepKind.TanukiCoins:
                     if (tile.EffectiveTerrain != TileTerrainType.Forest) { reason = "Coins go on forest tiles."; return false; }
+                    if (NearGoatUnit(p.PlayerIndex, c)) { reason = "Not within 2 tiles of a Goat."; return false; }
                     if (tile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex)) { reason = "That tile has enemy units."; return false; }
                     if (tile.Building != null && tile.Building.Type == BuildingType.Shrine) { reason = "Not on a Shrine."; return false; }
                     if (tile.Tokens.Any(t => t.Type == TokenType.Coin) || tile.Tokens.Count >= 2) { reason = "No room for a coin there."; return false; }

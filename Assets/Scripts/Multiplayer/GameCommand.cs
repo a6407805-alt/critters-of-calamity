@@ -274,6 +274,8 @@ namespace CrittersOfCalamity.Multiplayer
                     Mix(p.PlatypusFaith); Mix(p.PlatyPopeLevel); Mix(p.CrusadeTurnsRemaining);
                     Mix(p.BriaredFlowerThorns); Mix(p.NecromouserCauldronDeadCount);
                     Mix(p.PurchasedTradedGoods.Count); Mix(p.HorseHairBrushReady ? 1 : 0);
+                    Mix(p.GoatPurged); Mix(p.Grimoire.Count); Mix(p.SubservienceTurnsLeft * 10 + p.SubservienceRestriction);
+                    foreach (var kv in p.DemonStates.OrderBy(k => k.Key, StringComparer.Ordinal)) Mix(kv.Value);
                 }
                 foreach (var tile in engine.Board.Values)
                 {

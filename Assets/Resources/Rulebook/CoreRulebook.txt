@@ -1,6 +1,6 @@
 ﻿Critters of Calamity
-Core Rulebook: Eight Faction Edition
-This edition covers eight factions: Curly Tail's Warband, the Horde of the Millions, the Platypus Papacy, the Trouble Making Tanukis, the Necro-mouser, the Firestarting Squirrels, the Capybara Caravan, and the Briared Flower. Three factions not included in this edition are kept in a separate file (see Appendix A).
+Core Rulebook: Nine Faction Edition
+This edition covers nine factions: Curly Tail's Warband, the Horde of the Millions, the Platypus Papacy, the Trouble Making Tanukis, the Necro-mouser, the Firestarting Squirrels, the Capybara Caravan, the Briared Flower, and the Goat Cabal. Two factions not included in this edition are kept in a separate file (see Appendix A).
 Game Description
 Long ago, the Continent was ruled by the Ananke, a prosperous civilization which used its riches to create striking art, intricate political treatises, bejeweled relics, and terrible weapons. Then, after prolonged infighting, a calamitous war caused the Ananke to disappear into history, leaving only the scattered remnants of their Anankian cultural accomplishments. Five hundred years later, new factions have risen from the forested Continent the Ananke left behind. Now these emerging factions all compete against one another to claim Authority over the Continent.
 Objective
@@ -57,7 +57,7 @@ When an effect says to gain a specific resource "from the resource deck," search
 If no Gold is left in the resource deck when you would gain Gold, roll a six-sided die instead: on an odd roll gain 1 Stone, on an even roll gain 1 Wood.
 If no Stone or no Wood is left when you would gain it, gain the other basic resource instead. If neither is left, gain nothing.
 Part 3: Picking a Faction
-Each faction is designed around a particular playstyle. All eight factions in this edition are recommended for new players.
+Each faction is designed around a particular playstyle. All nine factions in this edition are playable; the Goat Cabal is the hardest to learn.
 Horde of the Millions: mid game faction made up of an endless swarm of rabbits that wins by spreading plague and being impossible to remove. (Difficulty 2/10)
 Platypus Papacy: mid to late game faction that martyrs Pilgrims to fuel a Crusade that only grows stronger with time. (Difficulty 2/10)
 Curly Tail's Warband: snowballing early game faction led by a ferocious boar. Race to forge golden armor and secure supply lines to quickly cross the map. (Difficulty 4/10)
@@ -66,6 +66,7 @@ The Necro-mouser: late game faction that harvests the dead from every battle, ho
 Firestarting Squirrels: aggressive early game faction that burns down the forest and profits from the chaos, forcing enemies off tiles with fire and disrupting their resources. (Difficulty 6/10)
 Capybara Caravan: peaceful economic faction that expands the stream network and profits from enemy movements through hospitality and trade. (Difficulty 5/10)
 Briared Flower: explosive special unit faction that scores Authority by hurling thorns across the board and scattering seeds in its wake. (Difficulty 7/10)
+The Goat Cabal: occult faction that sacrifices its own flock, its treasure and even its Authority to summon demons that reshape the Continent, so long as it keeps paying. (Difficulty 9/10)
 Each player rolls 2 six-sided dice. The highest roll chooses a faction first, then the second highest, then third, then fourth. Reroll ties.
 Part 4: Faction Materials
 Each faction has some or all of the following materials. Each faction's full material list is at the end of its section in Part 17. Every faction's pieces have the same design on the back.
@@ -367,7 +368,7 @@ Forest Clearing (4 copies)
 Cost: Any 1 resource
 When Crafted: No effect.
 Disassemble: Gain 1 Stone and 1 Wood.
-Part 17: The Eight Factions
+Part 17: The Nine Factions
 Faction 1: Curly Tail's Warband
 Description
 Curly Tail, a boar warlord, stumbled upon the old political treatises of the Ananke and admired their indomitable warrior spirit. Seeking glory, Curly Tail means to rule through unmatched might. His loyal Warband pillages to forge golden arms from plundered wealth, stretching supply lines across the Continent like a closing fist. Every victory feeds Curly Tail's hunger, and his hunger feeds his glory. Strike first, win always, and take your Authority before anyone can stand up.
@@ -650,9 +651,9 @@ Trouble Making Tanukis Materials
 8 Prank Leaf Fallen Leaves Tiles
 5 Trap Leaf Fallen Leaves Tiles
 Appendix A: Content Not In This Edition
-The following was stripped from this rulebook because it belongs to factions outside the eight selected. The original text of those factions is kept in the separate file "Critters of Calamity - Excluded Factions."
-Excluded factions: The Carnivorous Queen, The Glacier Kingdom, The Goat Cabal.
-Removed component lists: Snowfall, Egg, Initiation Rite, and Effigy Tokens; Igloo, Frozen Harbor, Chrysalis, and Summoning Circle buildings; Glacier and Miasma tiles; Blizzard, Rage and Feeding Meters; Grimoire deck; equipment for the Carnivorous Queen.
+The following was stripped from this rulebook because it belongs to factions outside the nine selected. The original text of those factions is kept in the separate file "Critters of Calamity - Excluded Factions."
+Excluded factions: The Carnivorous Queen, The Glacier Kingdom.
+Removed component lists: Snowfall and Egg Tokens; Igloo, Frozen Harbor, and Chrysalis buildings; Glacier and Miasma tiles; Blizzard, Rage and Feeding Meters; equipment for the Carnivorous Queen.
 Removed rules: the Chrysalis battle exception in the building removal rules, and the faction pick note about Intermediate and Expert factions.
 Faction 5: The Necro-mouser
 Description: The Necromouser: The incarnate of death came to the Continent long before the other factions did, and the Necromouser has made a deal with death to make it his trade. Where armies clash he seeds his creeping miasma, and the fallen of every banner rise again in his service. Let the living wage their wars, the Necromouser hoards resources, harvests the dead, and spends the departed to raise horrors adorned in Anankian steel. Every soul in your cauldron and summon is Authority waiting to be claimed.
@@ -901,4 +902,106 @@ List of The Briared Flower's Faction Materials:
 1 Thorned Seed Unit Card
 4 Prickly Thicket Buildings
 6 Thorn Tokens (markers for the Blooming Briar's Thorned Body)
-
+Faction 9: The Goat Cabal
+Description: When the Ananke vanished, an older force whispered in the shadows. The Cabal traded their souls for its favor, and now they trade everything else. Sacrifice your own flock, your treasures, even your hard-won Authority to drag demons up from the dark. The demons are starving entities that reshape the Continent for you, so long as you can keep paying.
+Setup: Place 4 Goat units and a Summoning Circle on a forest or ruin tile that is 2 tiles away from all enemy pieces. During setup, other factions cannot place pieces within two tiles of a Goat Unit. Then place the Purgatory card in front of you and place 1 Goat unit on it. Place the 5 Demon Cards face-down in front of you (they are unsummoned and have no effects), shuffle the Grimoire deck and place it face down in front of you. Add 1 Gold to your resource pile. Start the game with 5 Authority.
+Building - Summoning Circle: Once during your excavation phase, if there are 5 or more Goat units on a tile, you can remove 1 Goat unit from that tile and place it onto the Purgatory card, then you can discard 2 Stone and 2 Wood from your resource pile to craft and place a Summoning Circle on that tile. When you recruit, summon 1 Goat unit at each Summoning Circle.
+Species Trait - Purgatory: When your Goat units are "Purged" they are placed onto the Purgatory card, a special off-board resource spot that only you have access to.
+Species Trait - Secrets of the Ancients: You start the game with a 14 card faction deck called the Grimoire. During your draw phase, after you draw for turn, you must mill the top card of the Grimoire, apply its effect, and discard it.
+(Note: do not place discarded Grimoire cards into the main or resource deck discard pile, instead place them face up next to the Grimoire.)
+(Note: reshuffle the Grimoire when empty.)
+(Note: If you cannot pay the effect of the Grimoire, the whole effect fizzles.)
+Species Trait - Kleptomancy: You can keep up to 10 Gold in your resource pile and 5 other resources in your resource pile without discarding during your end phase.
+Species Trait - Suspicion: Enemies cannot move onto a tile with a Summoning Circle unless the moving player brings an equal or larger number of units onto the tile than the Goat units already there.
+Species Trait - Sparagmos: Once during your main phase, you can remove 1 Goat Unit from a tile with a Summoning Circle and place it on the Purgatory card.
+Unit - Goat:
+Unit Stats: 0/1/1
+Goat Unit Ability - Invocation: During your main phase, you can remove 1 Goat unit from the board and place it into the Purgatory card, then discard 1 Wood, 1 Stone, and 1 Gold from your resource pile to place an Initiation Rite Token on a tile with a Summoning Circle.
+Goat Unit Ability - Canto Inferno: Once during your main phase, if there is an Initiation Rite Token on the board, you can remove the Initiation Rite Token and pay one of your special unit demon's summoning costs to flip that Demon's Special Unit Card face up (the Bound side), and then place that Demon's Special Unit piece on the tile where the Initiation Rite Token was removed.
+Goat Unit Ability - Effigy: Once during your excavation phase, you can remove 1 Purged and place it into your supply to place an Effigy Token on a tile with a Summoning Circle.
+Effigy Token Effect: During your draw phase, when there is an Effigy Token on the board, you can remove 1 Purged to either gain 1 Gold or lose 1 Authority.
+How to Use Demon Special Unit Cards:
+You can summon the same demon multiple times during the same game but you cannot have multiple of the same demon on the field at the same time.
+•	Each demon has its own Special Unit abilities listed on their Special Unit card.
+•	If the Goat Cabal player is unable to meet the binding requirement(s) of a Demon piece on the board during the end phase of their turn, that demon becomes unbound. Unbound demons then place a negative effect on the Goat player before the demon card flips back face-down.
+•	Demons that were summoned but became unbound can be rebound by paying only the Purged cost of their summoning condition. When that demon is rebound, its binding requirements must still be paid every end phase.
+•	When a demon is bound, flip the demon's unique card into faceup portrait orientation. When the demon's once per turn effect is used, put the demon's unique card faceup sideways in landscape orientation. If the demon becomes unbound, resolve the unbound penalty, then flip the demon card face down in portrait orientation.
+•	When a demon is removed, place their card face-down; they cannot be resummoned.
+•	Face down demon cards apply no effect.
+Special Units - The Five Demons:
+Demon 1 Special Unit - Faust:
+Unit Stats: 1/1/2
+Summoning Condition: Remove 2 Purged from Purgatory and place them into your supply. Discard 1 Wood and 1 Stone from your resource pile.
+•	Ability - In the Pursuit of Knowledge: When summoned, mill the top two cards of your Grimoire and apply the milled cards' effects sequentially.
+•	Ability - Bargain: Once during your turn, you can remove 1 Goat unit from the board and place it onto the Purgatory card to mill the top card of the Grimoire and apply its effect.
+Binding: 2 Purged must be on the Purgatory card during your end phase.
+Unbound: You lose 3 Gold.
+Demon 2 Special Unit - The Midian:
+Unit Stats: 0/2/2
+Summoning Condition: Remove 2 Purged from Purgatory and place them into your supply. Discard 2 Gold from your resource pile.
+•	Ability - A Gift: When summoned, gain 1 Authority for each Summoning Circle on the board.
+•	Ability - All Turns to Gold: Once during your turn, you can gain 2 Gold, and another player of your choosing draws 1 card from the resource deck.
+Binding: During your end phase, lose 2 Authority.
+Unbound: Roll a 6-sided die: if the roll is 1 lose 2 random resources, if 2-4 lose 2 Authority, if 5-6 gain 2 Gold.
+Demon 3 Special Unit - Serpentine Sovereign:
+Unit Stats: 1/2/2
+Summoning Condition: Remove 3 Purged from Purgatory and place them into your supply.
+•	Ability - Royal Decree: When the Serpentine Sovereign is summoned, choose one tile up to 4 tiles away from him and mark it. At the start of your next draw phase, remove every unit, token, building, and Unique Faction Tile still on that marked tile. Players have until then to move or remove their pieces from the tile to save them. Royal Decree does not trigger if the Serpentine Sovereign is unbound or has been removed from the board before your next draw phase.
+Binding: You must lose 2 Authority during your turn.
+Unbound: Lose 2 Gold or 3 resources of your choosing from your resource pile. If unable to lose the necessary resources, remove 2 Purged and place them in your supply.
+Demon 4 Special Unit - The Lord of War:
+Unit Stats: 3/1/2
+Summoning Condition: Remove 3 Purged from Purgatory and place them into your supply.
+•	Ability - Fear: When summoned, all non-Goat units on the tile with The Lord of War move to an adjacent tile.
+•	Ability - Onslaught: During your main phase you can initiate three free battles with this unit.
+•	Ability - Greed: When this unit participates in a battle, during the dice roll phase, roll a 6-sided die: if the roll is even gain 1 Authority, if odd lose 1 Gold.
+Binding: During the end phase, the tile with The Lord of War must have no enemy pieces.
+Unbound: Deal 1HP damage to any two of your units or special units.
+Demon 5 Special Unit - The Horned Beast:
+Unit Stats: 2/3/2
+Summoning Condition: Remove 5 Purged from Purgatory and place them into your supply.
+Ability - Subservience: When summoned, you choose one of the following restrictions to place on all players except you during their next two turns:
+•	Restriction 1: Movements cost 1 more action.
+•	Restriction 2: You cannot unearth, assemble, disassemble, or trade relic deck cards.
+•	Restriction 3: If you attack, you roll one die during the dice roll phase instead of two.
+•	Restriction 4: During your draw phase, give the Goat player 1 Gold or 3 random resources from your resource pile.
+Binding: During your end phase, discard 2 Gold from your resource pile, discard 1 random card from your hand, lose 1 Authority, and remove 1 Purged from the Purgatory Card and place it in your supply. Additionally, you must have three Summoning Circles on the board.
+Unbound: Lose 1 main phase action on your next turn.
+Grimoire Deck (14 Cards):
+Grimoire Card: When milled: Gain 1 Purged
+Grimoire Card: When milled: Lose 1 Purged, gain 1 Authority
+Grimoire Card: When milled: Lose 2 Authority, gain 2 Purged
+Grimoire Card: When milled: Discard 1 card from your hand, gain 2 Authority
+Grimoire Card: When milled: Draw 1 card, lose 2 Authority
+Grimoire Card: When milled: Discard 2 resources from your resource pile, gain 2 Purged
+Grimoire Card: When milled: Gain 2 Gold
+Grimoire Card: When milled: Lose 1 Gold, gain 2 Authority
+Grimoire Card: When milled: Draw 2 cards from the relic deck, then discard 1
+Grimoire Card: When milled: Gain 1 Gold
+Grimoire Card: When milled: Lose 2 Authority, gain 1 Gold
+Grimoire Card: When milled: Gain 3 Authority
+Grimoire Card: When milled: Gain 1 Authority, 1 Gold, 1 Purged
+Grimoire Card: When milled: Gain 3 Gold, lose 1 Authority, 1 Purged
+(Note: When the Grimoire deck is empty, place all discarded Grimoire cards into the deck and shuffle it.)
+Ways for enemies to get Authority:
+•	Removing a demon gives 2 Authority.
+•	Removing a Summoning Circle, Initiation Rite Token, or Effigy Token grants 1 Authority.
+List of Goat Cabal's Faction Materials:
+1 Goat Cabal Faction Board
+1 How to Use Demon Special Unit Cards Board
+1 Purgatory Card
+20 Goat Unit Pieces
+1 Faust Special Unit Piece
+1 The Midian Special Unit Piece
+1 Serpentine Sovereign Special Unit Piece
+1 The Lord of War Special Unit Piece
+1 The Horned Beast Special Unit Piece
+1 Faust Special Unit Card
+1 The Midian Special Unit Card
+1 Serpentine Sovereign Special Unit Card
+1 The Lord of War Special Unit Card
+1 The Horned Beast Special Unit Card
+2 Initiation Rite Tokens
+3 Effigy Tokens
+3 Summoning Circle Buildings
+14 Card Grimoire Deck

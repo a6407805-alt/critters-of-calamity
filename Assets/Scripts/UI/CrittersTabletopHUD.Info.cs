@@ -470,6 +470,13 @@ namespace CrittersOfCalamity.UI
                     return $"<color=#F2B83B>Thorns {p.BriaredFlowerThorns}/6" + (p.BriaredFlowerThorns == 0 ? " · FRENZIED BLOOM" : "") + "</color>";
                 case "necromouser":
                     return $"<color=#F2B83B>Cauldron: {p.NecromouserCauldronDeadCount} Dead · Special summons used {p.NecromouserSpecialSummonsUsed}/4</color>";
+                case "faust": return "<color=#D2462F>Binding: 2 Purged on Purgatory in your End phase · Unbound: lose 3 Gold</color>";
+                case "the_midian": return "<color=#D2462F>Binding: lose 2 Authority each End phase · Unbound: roll a die</color>";
+                case "serpentine_sovereign":
+                    return "<color=#D2462F>Binding: lose 2 Authority each turn · Unbound: lose 2 Gold or 3 resources" +
+                           (p.RoyalDecreeArmed ? $" · Royal Decree on {p.RoyalDecreeTile}" : "") + "</color>";
+                case "lord_of_war": return "<color=#D2462F>Binding: no enemy pieces on its tile in your End phase · Unbound: 1 HP to two of your units</color>";
+                case "horned_beast": return "<color=#D2462F>Binding: 2 Gold, 1 Hand card, 1 Authority, 1 Purged each End phase, and 3 Summoning Circles · Unbound: lose 1 Main action</color>";
             }
             return null;
         }
@@ -484,6 +491,8 @@ namespace CrittersOfCalamity.UI
                 case TokenType.SupplyLine: return "Linked War Parties and Supply Line Tokens let Curly Tail's units travel between them in one Move.";
                 case TokenType.Coin: return "Tanukis on this tile hold the coin and carry it when they move.";
                 case TokenType.TarPit: return "Fire Tiles here deal 1 extra HP. Enemies need two Main phase actions to leave this tile.";
+                case TokenType.InitiationRite: return "Canto Inferno removes it to summon a demon here.";
+                case TokenType.Effigy: return "In the Goat player's Draw phase: return 1 Purged to gain 1 Gold or lose 1 Authority.";
             }
             return "";
         }

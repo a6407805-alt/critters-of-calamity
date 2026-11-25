@@ -24,7 +24,8 @@ namespace CrittersOfCalamity.Model
         Necromouser = 4,
         FirestartingSquirrels = 5,
         CapybaraCaravan = 6,
-        BriaredFlower = 7
+        BriaredFlower = 7,
+        GoatCabal = 8
     }
 
     public enum FactionDifficultyTier
@@ -88,7 +89,8 @@ namespace CrittersOfCalamity.Model
         Shrine,          // Trouble Making Tanukis (3 pieces)
         Bunker,          // Firestarting Squirrels (3 pieces)
         Wallow,          // Capybara Caravan (5 pieces)
-        PricklyThicket   // The Briared Flower (4 pieces)
+        PricklyThicket,  // The Briared Flower (4 pieces)
+        SummoningCircle  // The Goat Cabal (3 pieces)
     }
 
     public enum TokenType
@@ -99,7 +101,9 @@ namespace CrittersOfCalamity.Model
         HolyRelic,       // Platypus Papacy (2 pieces, can be placed on stream with Citadel)
         SupplyLine,      // Curly Tail's Warband (8 pieces)
         Coin,            // Trouble Making Tanukis (20 pieces, 12 placed in setup after all players)
-        TarPit           // Firestarting Squirrels (3 pieces)
+        TarPit,          // Firestarting Squirrels (3 pieces)
+        InitiationRite,  // The Goat Cabal (2 pieces)
+        Effigy           // The Goat Cabal (3 pieces)
     }
 
     [Serializable]

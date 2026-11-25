@@ -34,6 +34,7 @@ namespace CrittersOfCalamity.Model
                 case BuildingType.Bunker: return 3;
                 case BuildingType.Wallow: return 5;
                 case BuildingType.PricklyThicket: return 4;
+                case BuildingType.SummoningCircle: return 3;
             }
             return 0;
         }
@@ -52,6 +53,10 @@ namespace CrittersOfCalamity.Model
                 case FactionId.PlatypusPapacy: list.Add(new KeyValuePair<TokenType, int>(TokenType.HolyRelic, 2)); break;
                 case FactionId.TroubleMakingTanukis: list.Add(new KeyValuePair<TokenType, int>(TokenType.Coin, 20)); break;
                 case FactionId.FirestartingSquirrels: list.Add(new KeyValuePair<TokenType, int>(TokenType.TarPit, 3)); break;
+                case FactionId.GoatCabal:
+                    list.Add(new KeyValuePair<TokenType, int>(TokenType.InitiationRite, 2));
+                    list.Add(new KeyValuePair<TokenType, int>(TokenType.Effigy, 3));
+                    break;
             }
             return list;
         }
@@ -77,6 +82,35 @@ namespace CrittersOfCalamity.Model
             for (int i = 0; i < 20; i++) deck.Add(ResourceType.Wood);
             for (int i = 0; i < 10; i++) deck.Add(ResourceType.Gold);
             return deck;
+        }
+
+        /// <summary>The Goat Cabal's 14-card Grimoire (Faction 9). Milled one at a time; see CrittersGameEngine.Goat.cs.</summary>
+        public static List<FactionSubDeckCardDef> BuildGoatGrimoire14()
+        {
+            var texts = new[]
+            {
+                "gr_purged_1|Gain 1 Purged",
+                "gr_trade_purged_auth|Lose 1 Purged, gain 1 Authority",
+                "gr_auth_for_purged|Lose 2 Authority, gain 2 Purged",
+                "gr_hand_for_auth|Discard 1 card from your hand, gain 2 Authority",
+                "gr_draw_for_auth|Draw 1 card, lose 2 Authority",
+                "gr_res_for_purged|Discard 2 resources from your resource pile, gain 2 Purged",
+                "gr_gold_2|Gain 2 Gold",
+                "gr_gold_for_auth|Lose 1 Gold, gain 2 Authority",
+                "gr_draw2_discard1|Draw 2 cards from the relic deck, then discard 1",
+                "gr_gold_1|Gain 1 Gold",
+                "gr_auth_for_gold|Lose 2 Authority, gain 1 Gold",
+                "gr_auth_3|Gain 3 Authority",
+                "gr_auth_gold_purged|Gain 1 Authority, 1 Gold, 1 Purged",
+                "gr_gold_3_cost|Gain 3 Gold, lose 1 Authority, 1 Purged"
+            };
+            var list = new List<FactionSubDeckCardDef>();
+            foreach (var t in texts)
+            {
+                var parts = t.Split('|');
+                list.Add(new FactionSubDeckCardDef { Id = parts[0], DeckName = "Grimoire", Title = "Grimoire", Copies = 1, EffectText = "When milled: " + parts[1] });
+            }
+            return list;
         }
 
         public static List<FactionSubDeckCardDef> BuildMillionsForageDeck8()
@@ -627,6 +661,53 @@ namespace CrittersOfCalamity.Model
                         new UnitDef { Id = "thorned_seed", Name = "Thorned Seed", Faction = FactionId.BriaredFlower, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at Prickly Thickets or spawned via Thistle Barrage / Propagation", AbilitiesText = "Bursting Into Bloom: During Main phase, remove up to 3 Thorned Seeds from the board, deal 1HP damage to 1 unit on each tile where a Seed was removed, then gain 1 Authority if you removed an enemy unit." },
                         new UnitDef { Id = "blooming_briar", Name = "Blooming Briar", Faction = FactionId.BriaredFlower, IsSpecialUnit = true, BaseAttack = 6, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 1, SummoningCondition = "Starts on board with 6 Thorns; respawns via In Half Bloom.", AbilitiesText = "With 1-6 Thorns: Thistle Barrage (up to 2x/Main phase, 4-6 tile range, 1 Thorn + 1 Res per unit -> 1HP each & spawn Seed; +1 Auth per 2HP dealt; or 1 Thorn to remove isolated enemy buildings/tokens within 3 tiles), Thorn Armor (1 Thorn blocks 1HP), Sun Eater (2 Seeds + 3 Res -> +2 Thorns). At 0 Thorns (Frenzied Bloom): Withered Blossom (+3 ATK, 2HP bypass), Furious Lashing (1HP AoE within 3 tiles), Propagation." }
                     }
+                },
+
+                // Faction 9: The Goat Cabal (Part 17 Faction 9)
+                new FactionDef
+                {
+                    Id = FactionId.GoatCabal,
+                    Name = "The Goat Cabal",
+                    Tier = FactionDifficultyTier.RecommendedForNewPlayers,
+                    DifficultyRatingOutOf10 = 9,
+                    ShortSummary = "Occult faction that sacrifices its own flock, treasure and Authority to summon demons that reshape the Continent, so long as it keeps paying.",
+                    HowToScoreAuthority = "Starts with 5 Authority. Grimoire cards, The Midian's A Gift, and The Lord of War's Greed. Remove enemy buildings, tokens and special units.",
+                    LoreDescription = "When the Ananke vanished, an older force whispered in the shadows. The Cabal traded their souls for its favor, and now they trade everything else.",
+                    SetupInstructions = "Place 4 Goat units and a Summoning Circle on a forest or ruin tile 2 tiles away from all enemy pieces. Place 1 Goat on the Purgatory card. Add 1 Gold to your resource pile and start with 5 Authority. Other factions cannot place pieces within 2 tiles of a Goat unit during setup.",
+                    PrimaryColor = Palette.FromHex("#4B3F5C"),
+                    SecondaryColor = Palette.FromHex("#D2462F"),
+                    PrimaryBuilding = BuildingType.SummoningCircle,
+                    PrimaryBuildingCost = new ResourceCost(wood: 2, stone: 2),
+                    BuildingRules = "Summoning Circle: Once during your Excavation phase, on a tile with 5 or more Goat units, Purge 1 of those Goats and discard 2 Stone and 2 Wood to craft a Summoning Circle there. Recruit summons 1 Goat at each Summoning Circle.",
+                    SpeciesTraits = new List<string>
+                    {
+                        "Purgatory: Purged Goats go onto the Purgatory card, an off-board spot only you use.",
+                        "Secrets of the Ancients: In your Draw phase, after you draw, mill the top Grimoire card and apply it. If you can't pay its cost, the whole card fizzles.",
+                        "Kleptomancy: Keep up to 10 Gold and 5 other resources at the end of your turn.",
+                        "Suspicion: Enemies can only move onto a Summoning Circle tile with at least as many units as there are Goats there.",
+                        "Sparagmos: Once per Main phase, Purge 1 Goat from a Summoning Circle tile."
+                    },
+                    EnemyAuthorityScoring = new List<string>
+                    {
+                        "Removing a demon: 2 Authority.",
+                        "Removing a Summoning Circle, Initiation Rite Token, or Effigy Token: 1 Authority."
+                    },
+                    MaterialsManifest = new List<string>
+                    {
+                        "1 Goat Cabal Faction Board", "1 How to Use Demon Special Unit Cards Board", "1 Purgatory Card",
+                        "20 Goat Unit Pieces", "5 Demon Special Unit Pieces & Cards (Faust, The Midian, Serpentine Sovereign, The Lord of War, The Horned Beast)",
+                        "2 Initiation Rite Tokens", "3 Effigy Tokens", "3 Summoning Circle Buildings", "14 Card Grimoire Deck"
+                    },
+                    Units = new List<UnitDef>
+                    {
+                        new UnitDef { Id = "goat", Name = "Goat", Faction = FactionId.GoatCabal, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at Summoning Circles", AbilitiesText = "Invocation: Purge 1 Goat and discard 1 Wood, 1 Stone, 1 Gold to place an Initiation Rite Token on a Summoning Circle. Canto Inferno: once per Main phase, remove an Initiation Rite Token and pay a demon's cost to summon it there. Effigy: once per Excavation phase, return 1 Purged to supply to place an Effigy Token on a Summoning Circle." },
+                        new UnitDef { Id = "faust", Name = "Faust", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 2 Purged to supply, 1 Wood and 1 Stone.", AbilitiesText = "In the Pursuit of Knowledge: when summoned, mill 2 Grimoire cards. Bargain: once per turn, Purge 1 Goat to mill 1 Grimoire card. Binding: 2 Purged on Purgatory in your End phase. Unbound: lose 3 Gold." },
+                        new UnitDef { Id = "the_midian", Name = "The Midian", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 2 Purged to supply and 2 Gold.", AbilitiesText = "A Gift: when summoned, gain 1 Authority per Summoning Circle. All Turns to Gold: once per turn, gain 2 Gold; another player draws 1 resource card. Binding: lose 2 Authority in your End phase. Unbound: roll a die (1: lose 2 random resources, 2-4: lose 2 Authority, 5-6: gain 2 Gold)." },
+                        new UnitDef { Id = "serpentine_sovereign", Name = "Serpentine Sovereign", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 3 Purged to supply.", AbilitiesText = "Royal Decree: when summoned, mark a tile up to 4 tiles away; at the start of your next Draw phase everything on it is removed. Binding: lose 2 Authority during your turn. Unbound: lose 2 Gold or 3 resources (else return 2 Purged to supply)." },
+                        new UnitDef { Id = "lord_of_war", Name = "The Lord of War", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 3, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 3 Purged to supply.", AbilitiesText = "Fear: when summoned, all non-Goat units on its tile move to an adjacent tile. Onslaught: 3 free battles per Main phase. Greed: in each of its battles roll a die (even: +1 Authority, odd: lose 1 Gold). Binding: no enemy pieces on its tile in your End phase. Unbound: 1 HP damage to two of your units." },
+                        new UnitDef { Id = "horned_beast", Name = "The Horned Beast", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 3, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 5 Purged to supply.", AbilitiesText = "Subservience: when summoned, choose a restriction on every other player for their next two turns. Binding: each End phase discard 2 Gold, 1 random Hand card, lose 1 Authority and return 1 Purged, and have 3 Summoning Circles on the board. Unbound: lose 1 Main phase action next turn." }
+                    },
+                    SubDeckCards = BuildGoatGrimoire14()
                 }
             };
         }

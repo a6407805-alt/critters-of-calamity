@@ -90,6 +90,8 @@ namespace CrittersOfCalamity.Engine
             var p = Players[c.PlayerIndex];
             bool skip = option == ChooseSkip;
 
+            if (ResolveGoatChoice(c, p, option, tile, skip)) { OpenNextQueuedChoice(); OnStateChanged?.Invoke(); return true; }
+
             switch (c.Kind)
             {
                 case "prophetic_vision":

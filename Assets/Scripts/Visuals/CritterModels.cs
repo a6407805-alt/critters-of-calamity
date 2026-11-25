@@ -105,6 +105,12 @@ namespace CrittersOfCalamity.Visuals
                 case "blooming_briar":
                     if (!SculptedModel(body, "Models/BloomingBriar", a, b, 0.72f, u, owner.BriaredFlowerThorns)) Briar(body, a, b, owner.BriaredFlowerThorns);
                     break;
+                case "goat": if (!SculptedModel(body, "Models/Goat", a, b, 0.48f, u)) Mouse(body, a, b, b); break;
+                case "faust": if (!SculptedModel(body, "Models/Faust", a, b, 0.68f, u)) Mouse(body, a, b, b); break;
+                case "the_midian": if (!SculptedModel(body, "Models/TheMidian", a, b, 0.66f, u)) Mouse(body, a, b, b); break;
+                case "serpentine_sovereign": if (!SculptedModel(body, "Models/SerpentineSovereign", a, b, 0.62f, u)) Mouse(body, a, b, b); break;
+                case "lord_of_war": if (!SculptedModel(body, "Models/LordOfWar", a, b, 0.80f, u)) Mouse(body, a, b, b); break;
+                case "horned_beast": if (!SculptedModel(body, "Models/HornedBeast", a, b, 0.80f, u)) Mouse(body, a, b, b); break;
                 default: Mouse(body, a, b, b); break;
             }
 
@@ -176,6 +182,8 @@ namespace CrittersOfCalamity.Visuals
                             : n.StartsWith("Flame") ? Palette.EmberYellow
                             : n.StartsWith("Ember") ? Palette.CarrotOrange
                             : n.StartsWith("Thorn") ? Palette.LeafRust
+                            : n.StartsWith("Fur") ? new Color(0.85f, 0.82f, 0.75f)
+                            : n.StartsWith("Hell") ? new Color(0.49f, 0.12f, 0.13f)
                             : n.StartsWith("Tar") ? Palette.TarBlack
                             : n.StartsWith("Stone") ? Palette.RuinStoneLight
                             : n.StartsWith("Earth") ? Color.Lerp(Palette.TableOak, Palette.CharredGround, 0.3f)

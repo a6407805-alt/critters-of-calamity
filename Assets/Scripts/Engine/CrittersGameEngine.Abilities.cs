@@ -188,7 +188,8 @@ namespace CrittersOfCalamity.Engine
         {
             var def = p.Faction.Units.FirstOrDefault(u => u.Id == unitId);
             if (def == null) return 0;
-            return Mathf.Max(0, def.SupplyCount - AllUnits.Count(u => u.OwnerPlayerIndex == p.PlayerIndex && u.Definition.Id == unitId));
+            return Mathf.Max(0, def.SupplyCount - AllUnits.Count(u => u.OwnerPlayerIndex == p.PlayerIndex && u.Definition.Id == unitId)
+                                 - (unitId == "goat" ? p.GoatPurged : 0));
         }
         private static bool IsMiasma(HexTileState t) => t.Overlay == FactionOverlayTileType.Miasma_Hidden || t.Overlay == FactionOverlayTileType.Miasma_Revealed;
         private static bool IsLeaves(HexTileState t) => t.Overlay == FactionOverlayTileType.FallenLeaf_Unflipped ||
@@ -367,6 +368,7 @@ namespace CrittersOfCalamity.Engine
                 case FactionId.FirestartingSquirrels: AddSquirrels(L, p, me); break;
                 case FactionId.CapybaraCaravan: AddCapybara(L, p, me); break;
                 case FactionId.BriaredFlower: AddBriar(L, p, me); break;
+                case FactionId.GoatCabal: AddGoat(L, p, me); break;
             }
             AddGeneral(L, p, me);
             AddTradedGoods(L, p, me);

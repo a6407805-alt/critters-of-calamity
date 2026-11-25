@@ -128,6 +128,19 @@ namespace CrittersOfCalamity.Engine
         // Faction 8: The Briared Flower
         public int BriaredFlowerThorns = 6;     // 0-6
         public int ThistleBarrageUsesThisTurn = 0;
+
+        // Faction 9: The Goat Cabal
+        public int GoatPurged = 0;                                   // Goats on the Purgatory card
+        public List<FactionSubDeckCardDef> Grimoire = new List<FactionSubDeckCardDef>();
+        public List<FactionSubDeckCardDef> GrimoireDiscard = new List<FactionSubDeckCardDef>();
+        public string LastGrimoireText;
+        public Dictionary<string, int> DemonStates = new Dictionary<string, int>(); // see CrittersGameEngine.Demon* constants
+        public bool RoyalDecreeArmed;
+        public HexCoord RoyalDecreeTile;
+        public bool LoseMainActionNextTurn;                           // The Horned Beast unbound
+        // A Horned Beast restriction placed on this player (Subservience): 1-4, for this many of their turns
+        public int SubservienceRestriction;
+        public int SubservienceTurnsLeft;
     }
 
     [Serializable]
@@ -640,6 +653,16 @@ namespace CrittersOfCalamity.Engine
                     SpawnUnit(homeCoord, "capybara_trader", p, 1, ignoreStackingLimit: true);
                     break;
 
+                case FactionId.GoatCabal:
+                    // 4 Goats and a Summoning Circle; 1 Goat on Purgatory; 1 Gold; 5 Authority; the Grimoire shuffled
+                    PlaceBuilding(homeCoord, BuildingType.SummoningCircle, p);
+                    SpawnUnit(homeCoord, "goat", p, 4, ignoreStackingLimit: true);
+                    p.GoatPurged = 1;
+                    GainSpecificResourceFromDeck(p, ResourceType.Gold);
+                    p.Authority = 5;
+                    SetupGrimoire(p);
+                    break;
+
                 case FactionId.BriaredFlower:
                     // Blooming Briar with 6 Thorns, 2 Thorned Seeds, and 1 Prickly Thicket on a forest tile with no enemy pieces within 4 tiles
                     p.BriaredFlowerThorns = 6;
@@ -666,7 +689,7 @@ namespace CrittersOfCalamity.Engine
                     if (coinCoords.Count >= 12) break;
                     bool hasEnemyUnits = tile.Units.Any(u => u.OwnerPlayerIndex != tanukiPlayer.PlayerIndex);
                     bool hasShrine = tile.Building != null && tile.Building.Type == BuildingType.Shrine;
-                    if (tile.EffectiveTerrain == TileTerrainType.Forest && !hasEnemyUnits && !hasShrine)
+                    if (tile.EffectiveTerrain == TileTerrainType.Forest && !hasEnemyUnits && !hasShrine && !NearGoatUnit(tanukiPlayer.PlayerIndex, tile.Coord))
                     {
                         if (coinCoords.All(c => HexCoord.Distance(c, tile.Coord) >= 2))
                         {
@@ -752,6 +775,7 @@ namespace CrittersOfCalamity.Engine
             // 1. Draw Phase (Part 6). Prophetic Vision happens first, before the normal draw.
             CurrentPhase = TurnPhase.DrawPhase;
             Log($"{p.DisplayName} began turn {TurnNumber} (1. Draw Phase).");
+            GoatStartOfDrawPhase(p);
             if (!OfferPropheticVision(p))
                 FinishDrawPhaseDraw(p);
             OnStateChanged?.Invoke();
@@ -766,6 +790,9 @@ namespace CrittersOfCalamity.Engine
                 p.RelicHand.Add(drawn);
                 Log($"{p.DisplayName} drew '{drawn.Name}'.");
             }
+            // Goat Cabal, Secrets of the Ancients: after drawing, mill the top Grimoire card (mandatory)
+            if (p.Faction.Id == FactionId.GoatCabal) MillGrimoire(p, 1);
+            if (PendingChoice != null) return;   // a Grimoire choice: the Draw phase continues after it
             if (!HasDrawPhaseOptions(p))
                 EnterExcavationPhase(p);
         }
@@ -785,6 +812,12 @@ namespace CrittersOfCalamity.Engine
             {
                 CurrentPhase = TurnPhase.MainPhase;
                 MainPhaseActionsRemaining = 3;
+                if (p.LoseMainActionNextTurn)
+                {
+                    p.LoseMainActionNextTurn = false;
+                    MainPhaseActionsRemaining = 2;
+                    Log($"{p.DisplayName} has only 2 Main phase actions (Unbound Horned Beast).");
+                }
 
                 // Horde of the Millions: Prolific Creatures triggers at start of the NEXT player's Main Phase (Part 17 Faction 2 Line 484)
                 int prevPlayerIndex = (CurrentTurnPlayerIndex - 1 + Players.Count) % Players.Count;
@@ -973,6 +1006,10 @@ namespace CrittersOfCalamity.Engine
                     if (guestOwners > 0) AwardAuthority(p.PlayerIndex, guestOwners, "Customary Greeting");
                     break;
 
+                case FactionId.GoatCabal:
+                    ResolveDemonBindings(p);
+                    break;
+
                 case FactionId.BriaredFlower:
                     // Pollination: 4+ different tiles with Thorned Seeds -> +1 Auth (7+ tiles -> +2 Auth)
                     int seedTiles = Board.Values.Count(t => t.Units.Any(u => u.Definition.Id == "thorned_seed"));
@@ -1008,6 +1045,13 @@ namespace CrittersOfCalamity.Engine
 
             // Step 3: Discard down to 5 cards in Hand and 5 cards in Resource Pile (Necro-mouser Hoarder keeps 8) (Part 6 Line 154)
             int maxResources = p.Faction.Id == FactionId.Necromouser ? 8 : 5;
+            if (p.Faction.Id == FactionId.GoatCabal)
+            {
+                // Kleptomancy: keep up to 10 Gold and 5 other resources
+                while (p.ResourcePile.Count(r => r == ResourceType.Gold) > 10) ReturnResourceToDeck(p.ResourcePile, p.ResourcePile.LastIndexOf(ResourceType.Gold));
+                while (p.ResourcePile.Count(r => r != ResourceType.Gold) > 5) ReturnResourceToDeck(p.ResourcePile, p.ResourcePile.FindLastIndex(r => r != ResourceType.Gold));
+            }
+            else
             while (p.ResourcePile.Count > maxResources)
             {
                 ReturnResourceToDeck(p.ResourcePile, p.ResourcePile.Count - 1);
@@ -1021,6 +1065,9 @@ namespace CrittersOfCalamity.Engine
 
             // Step 4: Refill the Excavation Area to 5 faceup cards (Part 6 Line 155)
             RefillExcavationArea();
+
+            // Subservience restrictions last for the restricted player's next two turns
+            if (p.SubservienceTurnsLeft > 0) p.SubservienceTurnsLeft--;
 
             // Advance to next player clockwise
             int nextPlayer = (CurrentTurnPlayerIndex + 1) % Players.Count;
@@ -1310,6 +1357,7 @@ namespace CrittersOfCalamity.Engine
         public bool TryUnearthRelic(int excavationIndex)
         {
             if (CurrentPhase != TurnPhase.ExcavationPhase || UsedUnearthThisTurn || PendingChoice != null) return false;
+            if (RelicActionsBlocked(Players[CurrentTurnPlayerIndex])) { Log("Subservience: no unearthing this turn."); return false; }
             if (excavationIndex < 0 || excavationIndex >= ExcavationArea.Count) return false;
 
             var p = Players[CurrentTurnPlayerIndex];
@@ -1330,6 +1378,7 @@ namespace CrittersOfCalamity.Engine
         public bool TryAssembleRelicFromHand(int handIndex)
         {
             if (CurrentPhase != TurnPhase.ExcavationPhase || UsedAssembleThisTurn || PendingChoice != null) return false;
+            if (RelicActionsBlocked(Players[CurrentTurnPlayerIndex])) { Log("Subservience: no assembling this turn."); return false; }
             var p = Players[CurrentTurnPlayerIndex];
             if (handIndex < 0 || handIndex >= p.RelicHand.Count) return false;
 
@@ -1354,6 +1403,7 @@ namespace CrittersOfCalamity.Engine
         public bool TryDisassembleRelicFromHand(int handIndex, bool fromTable = false, int woodOrStone = 0)
         {
             if (CurrentPhase != TurnPhase.ExcavationPhase || UsedDisassembleThisTurn || PendingChoice != null) return false;
+            if (RelicActionsBlocked(Players[CurrentTurnPlayerIndex])) { Log("Subservience: no disassembling this turn."); return false; }
             var p = Players[CurrentTurnPlayerIndex];
             var pile = fromTable ? p.TableRelics : p.RelicHand;
             if (handIndex < 0 || handIndex >= pile.Count) return false;
@@ -1432,6 +1482,9 @@ namespace CrittersOfCalamity.Engine
                     if (forest && Neighbors(t).Any(n => n.EffectiveTerrain == TileTerrainType.Stream && Has(n, p, "capybara"))) return true;
                     reason = "A Wallow goes on a stream tile with a Capybara, or a forest tile next to one.";
                     return false;
+                case BuildingType.SummoningCircle:
+                    if (t.Units.Count(u => u.OwnerPlayerIndex == me && u.Definition.Id == "goat") < 5) { reason = "A Summoning Circle needs 5 or more Goats on the tile."; return false; }
+                    return true;
                 case BuildingType.PricklyThicket:
                     if (!forest) { reason = "A Prickly Thicket goes on a forest tile."; return false; }
                     if (!Has(t, p, "thorned_seed") && !Has(t, p, "blooming_briar")) { reason = "A Prickly Thicket needs a Thorned Seed or the Briar on the tile."; return false; }
@@ -1482,6 +1535,7 @@ namespace CrittersOfCalamity.Engine
             else
             {
                 UsedFactionCraftThisTurn = true;
+                if (p.Faction.Id == FactionId.GoatCabal) PurgeGoatFrom(tile, p);   // one of the 5 Goats is purged
                 if (p.Faction.Id == FactionId.PlatypusPapacy)
                 {
                     // Rebuilding: also place 1 Pilgrim and 1 Crusader
@@ -1599,6 +1653,17 @@ namespace CrittersOfCalamity.Engine
             if (movableUnits.Count > maxMovable)
                 movableUnits = movableUnits.Take(maxMovable).ToList();
 
+            // Goat Cabal Suspicion: enemies need at least as many units as the Goats on a Summoning Circle tile
+            if (toTile.Building != null && toTile.Building.Type == BuildingType.SummoningCircle && toTile.Building.OwnerPlayerIndex != p.PlayerIndex)
+            {
+                int goats = toTile.Units.Count(u => u.OwnerPlayerIndex == toTile.Building.OwnerPlayerIndex && u.Definition.Id == "goat");
+                if (movableUnits.Count < goats)
+                {
+                    if (log) Log($"Suspicion: you need at least {goats} units to move onto that Summoning Circle.");
+                    return false;
+                }
+            }
+
             // Tar Pit Token check: costs 2 Main Phase actions for enemies to leave
             if (fromTile.Tokens.Any(t => t.Type == TokenType.TarPit) && p.Faction.Id != FactionId.FirestartingSquirrels)
             {
@@ -1647,6 +1712,16 @@ namespace CrittersOfCalamity.Engine
                 maxDist = 1;
 
             if (dist == 0 || dist > maxDist) return false;
+            // The Horned Beast's Subservience, restriction 1: movements cost 1 more action
+            if (HasRestriction(p, 1))
+            {
+                actionCost++;
+                if (MainPhaseActionsRemaining < actionCost)
+                {
+                    if (log) Log($"Subservience: moving costs {actionCost} actions this turn.");
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -2254,6 +2329,22 @@ namespace CrittersOfCalamity.Engine
                         // Phase 2: Dice Roll (2d6 each)
                         pb.AttackerRoll = Roll2D6(out report.AttackerDice1, out report.AttackerDice2);
                         pb.DefenderRoll = Roll2D6(out report.DefenderDice1, out report.DefenderDice2);
+                        if (HasRestriction(attacker, 3))
+                        {
+                            report.AttackerDice2 = 0;   // Subservience: attackers roll one die
+                            pb.AttackerRoll = report.AttackerDice1;
+                            Log($"Subservience: {attacker.DisplayName} rolls only one die.");
+                        }
+                        // The Lord of War's Greed: roll a die for each battle it is in
+                        foreach (var side in new[] { pb.AttackerUnits, pb.DefenderUnits })
+                        {
+                            var low = side.FirstOrDefault(u => u.Definition.Id == "lord_of_war");
+                            if (low == null) continue;
+                            var goatP = Players[low.OwnerPlayerIndex];
+                            int g = RollD6();
+                            if (g % 2 == 0) AwardAuthority(goatP.PlayerIndex, 1, $"Greed (rolled {g})");
+                            else { RemoveResources(goatP, ResourceType.Gold, 1); Log($"Greed rolled {g}: {goatP.DisplayName} lost 1 Gold."); }
+                        }
                         RecomputeBattlePoints(pb);
                         pb.Stage = PendingBattleStage.FigurineAttackerWindow;
                         break;
@@ -2806,6 +2897,11 @@ namespace CrittersOfCalamity.Engine
             }
 
             tile.Units.Remove(u);
+            if (owner.Faction.Id == FactionId.GoatCabal && DemonIds.Contains(u.Definition.Id))
+            {
+                owner.DemonStates[u.Definition.Id] = DemonRemoved;   // its card goes face down for good
+                if (u.Definition.Id == "serpentine_sovereign") owner.RoyalDecreeArmed = false;
+            }
 
             // Score Authority for removing other Special Units
             if (u.Definition.IsSpecialUnit && removerPlayerIndex >= 0 && removerPlayerIndex != u.OwnerPlayerIndex)
@@ -2976,6 +3072,7 @@ namespace CrittersOfCalamity.Engine
             if (def == null) return list;
 
             int onBoardSupplyUsed = Board.Values.SelectMany(t => t.Units).Count(u => u.OwnerPlayerIndex == owner.PlayerIndex && u.Definition.Id == unitId);
+            if (unitId == "goat") onBoardSupplyUsed += owner.GoatPurged;   // Purged Goats sit on the Purgatory card, not in the supply
             int availableSupply = Mathf.Max(0, def.SupplyCount - onBoardSupplyUsed);
 
             int sameFactionOnTile = tile.Units.Count(u => u.OwnerPlayerIndex == owner.PlayerIndex);

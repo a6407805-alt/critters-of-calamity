@@ -426,8 +426,9 @@ namespace CrittersOfCalamity.UI
             for (int fIdx = 0; fIdx < allFactions.Count; fIdx++)
             {
                 var fac = allFactions[fIdx];
-                float yMax = 0.80f - fIdx * 0.092f;
-                float yMin = yMax - 0.082f;
+                float step = 0.78f / allFactions.Count;
+                float yMax = 0.80f - fIdx * step;
+                float yMin = yMax - step * 0.9f;
                 CreateButton(modalRt, $"BtnFac_{fac.Id}",
                     $"{fac.Name} (Difficulty {fac.DifficultyRatingOutOf10}/10)",
                     new Vector2(0.02f, yMin), new Vector2(0.40f, yMax), fac.PrimaryColor * 0.78f, () =>
@@ -846,6 +847,21 @@ namespace CrittersOfCalamity.UI
                     return $"<b>Traded Goods Stall:</b> {_engine.TradedGoodsStall.Count}/3 cards faceup";
                 case FactionId.BriaredFlower:
                     return $"<b>Thorn Meter:</b> {p.BriaredFlowerThorns}/6 Thorns ({(p.BriaredFlowerThorns == 0 ? "FRENZIED BLOOM ACTIVE!" : "Thorned Body")})";
+                case FactionId.GoatCabal:
+                {
+                    var demons = string.Join(" | ", CrittersGameEngine.DemonIds.Select(id =>
+                    {
+                        string name = p.Faction.Units.First(u => u.Id == id).Name;
+                        int st = _engine.DemonState(p, id);
+                        string state = st == CrittersGameEngine.DemonBound ? "<color=#D2462F>BOUND</color>"
+                                     : st == CrittersGameEngine.DemonUnbound ? "unbound (rebind: Purged only)"
+                                     : st == CrittersGameEngine.DemonRemoved ? "removed" : "face down";
+                        return $"{name}: {state}";
+                    }));
+                    return $"<b>Purgatory:</b> {p.GoatPurged} Purged | <b>Grimoire:</b> {p.Grimoire.Count} left, {p.GrimoireDiscard.Count} milled" +
+                           (string.IsNullOrEmpty(p.LastGrimoireText) ? "" : $"\n<b>Last milled:</b> {p.LastGrimoireText}") +
+                           $"\n<b>Demons:</b> {demons}";
+                }
                 default:
                     return $"<b>Difficulty:</b> {p.Faction.DifficultyRatingOutOf10}/10";
             }
