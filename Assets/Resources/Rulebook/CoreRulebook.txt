@@ -822,7 +822,7 @@ Species Trait - Watering Hole: An enemy unit becomes a Guest in any of these cas
 4.	It is on a tile with the Riverkeeper.
 While a unit is a Guest, each player that controls a Guest unit draws 1 card from the resource deck during their end phase. 
 A unit loses Guest status in any of these cases:
-1.	It leaves a tile with a wallow.
+1.	It leaves its tile (a tile with a Wallow or with the Riverkeeper).
 2.	It attacks the Capybara Trader.
 3.	It attacks the Riverkeeper.
 4.	It destroys a Wallow.
@@ -835,7 +835,7 @@ Special Unit - The Riverkeeper:
 Unit Stats: 2/4/3
 Summoning Condition: During your main phase, when there are 2 or more Wallows on the board, you can discard 1 Stone and 2 Gold from your resource pile to summon the Riverkeeper on a tile with a Wallow.
 Riverkeeper Ability - Hospitality: Once during your main phase, if you have a guest on the Riverkeeper's tile the guest may draw 1 relic deck card; when they do, the Capybara player gains 1 Authority.
-Riverkeeper Ability - Commerce: During your main phase, you can discard 2 Gold to heal HP.
+Riverkeeper Ability - Rejuvenate: During your main phase, you can discard 2 Gold to heal the Riverkeeper 1HP. You can do this multiple times.
 Special Unit - Capybara Trader:
 Unit Stats: 0/2/2
 Summoning Condition: If the Capybara Trader is not on the board during your excavation phase, you can discard 2 relic deck cards from your hand to place the Capybara Trader at a Wallow.
@@ -849,8 +849,8 @@ When you purchase these cards from the Capybara Trader, place the purchased card
 •	Silver Spoon: During your excavation phase, you can add 2 relic cards from the discard pile to your hand; then both you and the Capybara player gain 1 Authority. Cost: 2 resources.
 •	Copper Figurine: After a die has been rolled, you can discard this card to re-roll 1 die (can be used during the battle dice roll phase). Cost: 2 resources.
 •	Broken Pickaxe: Add 1 relic card from the discard pile to your hand, then discard this card. Cost: 1 resource.
-•	Horse Hair Brush: During your main phase, you can discard this card. Your next unearth, assemble, or disassemble action costs 1 less resource of your choosing.
-•	Equipment – Healing Salve: During your main phase, you can equip this card to a unit, it gains 1HP, then discard this card. Cost: 2 resources.
+•	Horse Hair Brush: During your main phase, you can discard this card. Your next unearth, assemble, or disassemble action costs 1 less resource of your choosing. Cost: 2 resources.
+•	Equipment – Salve: During your main phase, you can equip this card to a unit; it gains +1 maximum HP and heals 1HP, then discard this card. Cost: 2 resources.
 Ways Enemies Can Score Authority From You:
 •	Buying a Traded Good Card gives 1 Authority to the Capybara player (see Traveling Caravan above).
 •	Removing the Capybara Trader gives 1 Authority.

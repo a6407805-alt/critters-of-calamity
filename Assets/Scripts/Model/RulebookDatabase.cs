@@ -105,7 +105,7 @@ namespace CrittersOfCalamity.Model
                 new FactionSubDeckCardDef { Id = "tg_copper_figurine", DeckName = "Traded Goods", Title = "Copper Figurine", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. After a die has been rolled, discard this card to re-roll 1 die (can be used during the battle dice roll phase)." },
                 new FactionSubDeckCardDef { Id = "tg_broken_pickaxe", DeckName = "Traded Goods", Title = "Broken Pickaxe", Copies = 1, Cost = new ResourceCost(any: 1), EffectText = "Cost: 1 Resource. Add 1 relic card from the discard pile to your hand, then discard this card." },
                 new FactionSubDeckCardDef { Id = "tg_horse_hair_brush", DeckName = "Traded Goods", Title = "Horse Hair Brush", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your main phase, you can discard this card. Your next unearth, assemble, or disassemble action costs 1 less resource of your choosing." },
-                new FactionSubDeckCardDef { Id = "tg_healing_salve", DeckName = "Traded Goods", Title = "Equipment - Healing Salve", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your main phase, equip this card to a unit; it gains 1HP, then discard this card." }
+                new FactionSubDeckCardDef { Id = "tg_salve", DeckName = "Traded Goods", Title = "Equipment - Salve", Copies = 1, Cost = new ResourceCost(any: 2), EffectText = "Cost: 2 Resources. During your main phase, equip this card to a unit; it gains +1 maximum HP and heals 1HP, then discard this card." }
             };
         }
 
@@ -564,7 +564,7 @@ namespace CrittersOfCalamity.Model
                     BuildingRules = "Wallow: Craft (1 Wood, 1 Stone) on a stream tile with a Capybara unit, or on a forest tile adjacent to a stream tile with a Capybara unit.",
                     SpeciesTraits = new List<string>
                     {
-                        "Watering Hole: An enemy unit becomes a Guest when it enters a tile with a Wallow and a Capybara unit, when a Wallow is built on its tile, when it is placed after buying from the Capybara Trader, or while it is on the Riverkeeper's tile. Each player with a Guest draws 1 resource card in their End phase. A Guest stops being one when it leaves the tile, attacks the Capybara Trader or the Riverkeeper, or destroys a Wallow.",
+                        "Watering Hole: An enemy unit becomes a Guest when it enters a tile with a Wallow and a Capybara unit, when a Wallow is built on its tile, when it is placed after buying from the Capybara Trader, or while it is on the Riverkeeper's tile. Each player with a Guest draws 1 resource card in their End phase. A Guest stops being one when it leaves its tile, attacks the Capybara Trader or the Riverkeeper, or destroys a Wallow.",
                         "Customary Greeting: Once during your End phase, gain 1 Authority for each player who has a Guest unit."
                     },
                     EnemyAuthorityScoring = new List<string>
@@ -583,7 +583,7 @@ namespace CrittersOfCalamity.Model
                     {
                         new UnitDef { Id = "capybara", Name = "Capybara", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 20, SummoningCondition = "Recruit at Wallows", AbilitiesText = "Forage: Once per Main phase on a stream tile, draw 1 relic deck card. Semiaquatic: For 1 Move action, move across 2 stream tiles." },
                         new UnitDef { Id = "capybara_trader", Name = "Capybara Trader", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Starts on board; if off board during Excavation phase, discard 2 relic cards from Hand to place at a Wallow.", AbilitiesText = "Traveling Caravan: Players with a unit on the Trader's tile can buy from the 3-card Traded Goods Stall (+1 Auth to buyer & Capybara, buyer places 1 basic unit as Guest at a Wallow). Peddling: 1 free Move action each turn (up to 2 land or 3 stream tiles)." },
-                        new UnitDef { Id = "riverkeeper", Name = "The Riverkeeper", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 4, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "During Main phase with 2+ Wallows on board: Discard 1 Stone + 2 Gold -> Summon at a Wallow.", AbilitiesText = "Hospitality: Once per Main phase, a Guest on its tile draws 1 relic -> Capybara gains 1 Authority. Commerce: During your Main phase, discard 2 Gold to heal 1 HP." }
+                        new UnitDef { Id = "riverkeeper", Name = "The Riverkeeper", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 4, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "During Main phase with 2+ Wallows on board: Discard 1 Stone + 2 Gold -> Summon at a Wallow.", AbilitiesText = "Hospitality: Once per Main phase, a Guest on its tile draws 1 relic -> Capybara gains 1 Authority. Rejuvenate: During your Main phase, discard 2 Gold to heal the Riverkeeper 1 HP (repeatable)." }
                     },
                     SubDeckCards = BuildCapybaraTradedGoodsDeck8()
                 },

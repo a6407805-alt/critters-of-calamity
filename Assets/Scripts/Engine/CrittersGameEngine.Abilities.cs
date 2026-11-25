@@ -1158,7 +1158,7 @@ namespace CrittersOfCalamity.Engine
 
             L.Add(new AbilitySpec
             {
-                Id = "riverkeeper_commerce", Name = "Commerce", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
+                Id = "riverkeeper_rejuvenate", Name = "Rejuvenate", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
                 Summary = "Riverkeeper, any number of times in your Main phase: discard 2 Gold to heal the Riverkeeper 1 HP.",
                 Check = pl =>
                 {
@@ -1172,7 +1172,7 @@ namespace CrittersOfCalamity.Engine
                     var rk = AllUnits.First(u => u.OwnerPlayerIndex == me && u.Definition.Id == "riverkeeper");
                     RemoveResources(pl, ResourceType.Gold, 2);
                     rk.CurrentHP = Mathf.Min(rk.MaxHP, rk.CurrentHP + 1);
-                    Log($"{pl.DisplayName} paid 2 Gold: the Riverkeeper healed to {rk.CurrentHP} HP (Commerce).");
+                    Log($"{pl.DisplayName} paid 2 Gold: the Riverkeeper healed to {rk.CurrentHP} HP (Rejuvenate).");
                     return true;
                 }
             });
@@ -1593,20 +1593,21 @@ namespace CrittersOfCalamity.Engine
                     }
                 });
 
-            if (has("tg_healing_salve"))
+            if (has("tg_salve"))
                 L.Add(new AbilitySpec
                 {
-                    Id = "tg_healing_salve", Name = "Healing Salve (Traded Good)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile, General = true,
-                    Summary = "Equip to one of your units: it heals 1 HP, then discard this card.",
-                    Prompt1 = "Click a tile with your hurt unit.",
-                    Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == me && u.CurrentHP < u.MaxHP),
+                    Id = "tg_salve", Name = "Salve (Traded Good)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile, General = true,
+                    Summary = "Equip to one of your units: it gains +1 maximum HP and heals 1 HP, then discard this card.",
+                    Prompt1 = "Click a tile with your unit.",
+                    Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == me),
                     Run = (pl, a, b, o) =>
                     {
-                        var u = Board[a].Units.Where(x => x.OwnerPlayerIndex == me && x.CurrentHP < x.MaxHP)
+                        var u = Board[a].Units.Where(x => x.OwnerPlayerIndex == me)
                                     .OrderByDescending(x => x.Definition.IsSpecialUnit).First();   // special units first
+                        u.MaxHP++;
                         u.CurrentHP++;
-                        spend("tg_healing_salve");
-                        Log($"{pl.DisplayName} used the Healing Salve: {u.Definition.Name} healed to {u.CurrentHP} HP.");
+                        spend("tg_salve");
+                        Log($"{pl.DisplayName} used the Salve: {u.Definition.Name} is now {u.CurrentHP}/{u.MaxHP} HP.");
                         return true;
                     }
                 });
