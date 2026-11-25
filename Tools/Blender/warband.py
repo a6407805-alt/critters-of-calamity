@@ -179,6 +179,7 @@ for name, objs in GROUPS.items():
     bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
     bpy.ops.object.join()
     m = bpy.context.object; m.name = name; m.data.name = name
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)  # identity rotation/scale: the game sets those itself
     scene.cursor.location = (0, 0, 0)
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     print(name, "tris:", sum(len(p.vertices) - 2 for p in m.data.polygons))
