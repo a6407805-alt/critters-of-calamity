@@ -82,9 +82,9 @@ namespace CrittersOfCalamity.Visuals
                 case "king_of_the_millions":
                     if (!SculptedModel(body, "Models/KingOfTheMillions", a, b, 0.68f, u)) { Rabbit(body, a, b); Crown(body, new Vector3(0f, 0.43f, -0.07f), 0.13f); }
                     break;
-                case "pilgrim": Platypus(body, a, b); Hood(body, b); break;
-                case "crusader": Platypus(body, a, b); Crusader(body, a, b); break;
-                case "platy_pope": Platypus(body, a, b); Mitre(body); break;
+                case "pilgrim": if (!SculptedModel(body, "Models/Pilgrim", a, b, 0.56f, u)) { Platypus(body, a, b); Hood(body, b); } break;
+                case "crusader": if (!SculptedModel(body, "Models/Crusader", a, b, 0.50f, u)) { Platypus(body, a, b); Crusader(body, a, b); } break;
+                case "platy_pope": if (!SculptedModel(body, "Models/PlatyPope", a, b, 0.72f, u)) { Platypus(body, a, b); Mitre(body); } break;
                 case "tanuki": Tanuki(body, a, b); break;
                 case "band_of_troublemakers": Tanuki(body, a, b); BellyDrum(body, b); break;
                 case "skeleton": Mouse(body, Palette.BoneWhite, Palette.BoneWhite, a); break;
@@ -155,6 +155,9 @@ namespace CrittersOfCalamity.Visuals
                             : n.StartsWith("Cloth") ? Color.Lerp(a, Palette.InkAccent, 0.55f)
                             : n.StartsWith("Leather") ? Color.Lerp(Palette.InkAccent, Palette.WoodPlank, 0.5f)
                             : n.StartsWith("Bone") ? Palette.BoneWhite
+                            : n.StartsWith("Robe") ? Palette.HolyWhite
+                            : n.StartsWith("Bill") ? Color.Lerp(Palette.InkAccent, Palette.ShadowSlate, 0.4f)
+                            : n.StartsWith("Iron") ? Palette.RuinStoneLight
                             : n.StartsWith("Nose") ? new Color(0.85f, 0.54f, 0.54f)
                             : n.StartsWith("Royal") ? Palette.TrapLeafRed
                             : n.StartsWith("Carrot") ? Palette.CarrotOrange
