@@ -13,7 +13,7 @@ using CrittersOfCalamity.Model;
 
 namespace CrittersOfCalamity.Multiplayer
 {
-    public enum PlayMode
+    public enum SessionMode
     {
         Menu,     // main menu, nothing running
         Local,    // everyone at one computer, taking turns
@@ -62,7 +62,7 @@ namespace CrittersOfCalamity.Multiplayer
         const string MsgToHost = "COC_C2H";
         const string MsgToClients = "COC_H2C";
 
-        public PlayMode Mode { get; private set; } = PlayMode.Menu;
+        public SessionMode Mode { get; private set; } = SessionMode.Menu;
         public ISession CurrentSession { get; private set; }
         public string ActiveJoinCode { get; private set; } = "";
         public string StatusMessage { get; private set; } = "";
@@ -70,7 +70,7 @@ namespace CrittersOfCalamity.Multiplayer
         public LobbySnapshot Lobby { get; private set; } = new LobbySnapshot();
         public int LocalSeat { get; private set; } = -1;
         public bool InMatch { get; private set; }
-        public bool IsOnline => Mode == PlayMode.Host || Mode == PlayMode.Client;
+        public bool IsOnline => Mode == SessionMode.Host || Mode == SessionMode.Client;
         public bool OutOfSync { get; private set; }
 
         public CrittersGameEngine Engine { get; private set; }
@@ -102,7 +102,7 @@ namespace CrittersOfCalamity.Multiplayer
         public void StartLocalLobby(int playerCount)
         {
             playerCount = Mathf.Clamp(playerCount, 2, 4);
-            Mode = PlayMode.Local;
+            Mode = SessionMode.Local;
             Lobby = new LobbySnapshot { Code = "", MaxSeats = playerCount };
             for (int i = 0; i < playerCount; i++)
                 Lobby.Seats.Add(new LobbySeat { Seat = i, Name = $"Player {i + 1}", Faction = FirstFreeFaction(i) });
@@ -132,7 +132,7 @@ namespace CrittersOfCalamity.Multiplayer
 
                 CurrentSession = await MultiplayerService.Instance.CreateSessionAsync(options);
                 ActiveJoinCode = CurrentSession.Code;
-                Mode = PlayMode.Host;
+                Mode = SessionMode.Host;
                 HookSessionEvents();
                 RegisterHandlers();
 
@@ -172,7 +172,7 @@ namespace CrittersOfCalamity.Multiplayer
 
                 CurrentSession = await MultiplayerService.Instance.JoinSessionByCodeAsync(code);
                 ActiveJoinCode = CurrentSession.Code;
-                Mode = PlayMode.Client;
+                Mode = SessionMode.Client;
                 HookSessionEvents();
                 RegisterHandlers();
                 Lobby = new LobbySnapshot { Code = ActiveJoinCode };
@@ -218,7 +218,7 @@ namespace CrittersOfCalamity.Multiplayer
 
         public void RenameLocalSeat(int seat, string name)
         {
-            if (Mode != PlayMode.Local || InMatch || seat < 0 || seat >= Lobby.Seats.Count) return;
+            if (Mode != SessionMode.Local || InMatch || seat < 0 || seat >= Lobby.Seats.Count) return;
             Lobby.Seats[seat].Name = string.IsNullOrWhiteSpace(name) ? $"Player {seat + 1}" : name.Trim();
             Changed();
         }
@@ -227,15 +227,15 @@ namespace CrittersOfCalamity.Multiplayer
         {
             switch (Mode)
             {
-                case PlayMode.Local:
+                case SessionMode.Local:
                     Lobby.Seats[seat].Faction = faction;
                     Changed();
                     break;
-                case PlayMode.Host:
+                case SessionMode.Host:
                     if (seat != LocalSeat) return;
                     TryAssignFaction(seat, faction);
                     break;
-                case PlayMode.Client:
+                case SessionMode.Client:
                     if (seat != LocalSeat) return;
                     SendToHost("PICK", faction.ToString());
                     break;
@@ -245,8 +245,8 @@ namespace CrittersOfCalamity.Multiplayer
         public bool CanStartMatch(out string reason)
         {
             reason = null;
-            if (Mode == PlayMode.Client) { reason = "Waiting for the host to start."; return false; }
-            if (Mode == PlayMode.Menu) { reason = ""; return false; }
+            if (Mode == SessionMode.Client) { reason = "Waiting for the host to start."; return false; }
+            if (Mode == SessionMode.Menu) { reason = ""; return false; }
             if (Lobby.Seats.Count < Lobby.MaxSeats) { reason = $"Waiting for players ({Lobby.Seats.Count}/{Lobby.MaxSeats})."; return false; }
             if (Lobby.Seats.Select(s => s.Faction).Distinct().Count() != Lobby.Seats.Count) { reason = "Each player needs a different faction."; return false; }
             return true;
@@ -263,7 +263,7 @@ namespace CrittersOfCalamity.Multiplayer
                 info.Names.Add(s.Name);
             }
             Lobby.Started = true;
-            if (Mode == PlayMode.Host)
+            if (Mode == SessionMode.Host)
             {
                 BroadcastLobby();
                 BroadcastToClients("START", JsonUtility.ToJson(info));
@@ -300,13 +300,13 @@ namespace CrittersOfCalamity.Multiplayer
 
             switch (Mode)
             {
-                case PlayMode.Local:
+                case SessionMode.Local:
                     ApplyCommand(cmd, -1);
                     break;
-                case PlayMode.Host:
+                case SessionMode.Host:
                     HostAcceptCommand(cmd);
                     break;
-                case PlayMode.Client:
+                case SessionMode.Client:
                     SendToHost("REQ", cmd.Encode());
                     break;
             }
@@ -400,7 +400,7 @@ namespace CrittersOfCalamity.Multiplayer
             if (nm == null || nm.CustomMessagingManager == null) return;
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(MsgToHost);
             nm.CustomMessagingManager.UnregisterNamedMessageHandler(MsgToClients);
-            if (Mode == PlayMode.Host)
+            if (Mode == SessionMode.Host)
             {
                 nm.CustomMessagingManager.RegisterNamedMessageHandler(MsgToHost, HandleMessageToHost);
                 nm.OnClientDisconnectCallback -= HandleClientDisconnected;
@@ -427,7 +427,7 @@ namespace CrittersOfCalamity.Multiplayer
         // ----- messages arriving at the host -----
         void HandleMessageToHost(ulong senderClientId, FastBufferReader reader)
         {
-            if (Mode != PlayMode.Host) return;
+            if (Mode != SessionMode.Host) return;
             reader.ReadValueSafe(out string payload);
             SplitMessage(payload, out var kind, out var body);
 
@@ -478,7 +478,7 @@ namespace CrittersOfCalamity.Multiplayer
         // ----- messages arriving at a client -----
         void HandleMessageToClient(ulong senderClientId, FastBufferReader reader)
         {
-            if (Mode != PlayMode.Client) return;
+            if (Mode != SessionMode.Client) return;
             reader.ReadValueSafe(out string payload);
             SplitMessage(payload, out var kind, out var body);
 
@@ -541,13 +541,13 @@ namespace CrittersOfCalamity.Multiplayer
         void HandleClientDisconnected(ulong clientId)
         {
             var nm = NetworkManager.Singleton;
-            if (Mode == PlayMode.Client)
+            if (Mode == SessionMode.Client)
             {
                 if (nm == null || clientId == nm.LocalClientId || clientId == NetworkManager.ServerClientId)
                     _ = ResetToMenuAsync("Lost connection to the host.");
                 return;
             }
-            if (Mode != PlayMode.Host) return;
+            if (Mode != SessionMode.Host) return;
             var seat = Lobby.Seats.FirstOrDefault(s => s.ClientId == clientId);
             if (seat == null) return;
             if (!Lobby.Started)
@@ -568,12 +568,12 @@ namespace CrittersOfCalamity.Multiplayer
 
         void HandleRemovedFromSession()
         {
-            if (Mode == PlayMode.Client) _ = ResetToMenuAsync("The host closed the room.");
+            if (Mode == SessionMode.Client) _ = ResetToMenuAsync("The host closed the room.");
         }
 
         void BroadcastLobby()
         {
-            if (Mode == PlayMode.Host)
+            if (Mode == SessionMode.Host)
                 BroadcastToClients("LOBBY", JsonUtility.ToJson(Lobby));
             Changed();
         }
@@ -647,7 +647,7 @@ namespace CrittersOfCalamity.Multiplayer
                 catch (Exception ex) { Debug.LogWarning($"[Multiplayer] Leave: {ex.Message}"); }
             }
 
-            Mode = PlayMode.Menu;
+            Mode = SessionMode.Menu;
             InMatch = false;
             Engine = null;
             LocalSeat = -1;

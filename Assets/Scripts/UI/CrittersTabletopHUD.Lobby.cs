@@ -161,14 +161,14 @@ namespace CrittersOfCalamity.UI
                 return;
             }
 
-            bool inLobby = _mpManager.Mode != PlayMode.Menu;
+            bool inLobby = _mpManager.Mode != SessionMode.Menu;
             _menuView.SetActive(!inLobby);
             _lobbyView.SetActive(inLobby);
             _menuStatusText.text = _mpManager.IsBusy ? _mpManager.StatusMessage + " ..." : _mpManager.StatusMessage;
             if (!inLobby) return;
 
             var lobby = _mpManager.Lobby;
-            _lobbyTitleText.text = _mpManager.Mode == PlayMode.Local
+            _lobbyTitleText.text = _mpManager.Mode == SessionMode.Local
                 ? $"LOCAL GAME ({lobby.MaxSeats} PLAYERS)"
                 : $"ONLINE GAME ({lobby.Seats.Count}/{lobby.MaxSeats} JOINED)";
             _lobbyCodeText.text = _mpManager.IsOnline && !string.IsNullOrEmpty(lobby.Code)
@@ -185,7 +185,7 @@ namespace CrittersOfCalamity.UI
             }
 
             bool canStart = _mpManager.CanStartMatch(out var reason);
-            _lobbyStartButton.gameObject.SetActive(_mpManager.Mode != PlayMode.Client);
+            _lobbyStartButton.gameObject.SetActive(_mpManager.Mode != SessionMode.Client);
             _lobbyStartButton.interactable = canStart;
             _lobbyStartHintText.text = canStart ? "Everyone's ready." : reason;
         }
@@ -210,11 +210,11 @@ namespace CrittersOfCalamity.UI
             var faction = allFactions.FirstOrDefault(f => (int)f.Id == seat.Faction) ?? allFactions[0];
             rowImg.color = faction.PrimaryColor * 0.45f + new Color(0.08f, 0.08f, 0.08f, 0.9f);
 
-            bool isMine = _mpManager.Mode == PlayMode.Local || seat.Seat == _mpManager.LocalSeat;
+            bool isMine = _mpManager.Mode == SessionMode.Local || seat.Seat == _mpManager.LocalSeat;
             string you = _mpManager.IsOnline && seat.Seat == _mpManager.LocalSeat ? " (you)" : "";
             string offline = seat.Connected ? "" : " [disconnected]";
 
-            if (_mpManager.Mode == PlayMode.Local)
+            if (_mpManager.Mode == SessionMode.Local)
             {
                 CreateText(rowRt, "SeatLabel", $"Seat {seatIdx + 1}", 14, TextAnchor.MiddleLeft,
                     new Vector2(0.02f, 0.55f), new Vector2(0.14f, 0.95f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
