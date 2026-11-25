@@ -78,8 +78,10 @@ namespace CrittersOfCalamity.Visuals
             {
                 case "warband": if (!SculptedModel(body, "Models/Warband", a, b, 0.55f, u)) Boar(body, a, b, false); break;
                 case "curly_tail": if (!SculptedModel(body, "Models/CurlyTail", a, b, 0.66f, u)) Boar(body, a, b, true); break;
-                case "millions": Rabbit(body, a, b); break;
-                case "king_of_the_millions": Rabbit(body, a, b); Crown(body, new Vector3(0f, 0.43f, -0.07f), 0.13f); break;
+                case "millions": if (!SculptedModel(body, "Models/Millions", a, b, 0.50f, u)) Rabbit(body, a, b); break;
+                case "king_of_the_millions":
+                    if (!SculptedModel(body, "Models/KingOfTheMillions", a, b, 0.68f, u)) { Rabbit(body, a, b); Crown(body, new Vector3(0f, 0.43f, -0.07f), 0.13f); }
+                    break;
                 case "pilgrim": Platypus(body, a, b); Hood(body, b); break;
                 case "crusader": Platypus(body, a, b); Crusader(body, a, b); break;
                 case "platy_pope": Platypus(body, a, b); Mitre(body); break;
@@ -153,6 +155,10 @@ namespace CrittersOfCalamity.Visuals
                             : n.StartsWith("Cloth") ? Color.Lerp(a, Palette.InkAccent, 0.55f)
                             : n.StartsWith("Leather") ? Color.Lerp(Palette.InkAccent, Palette.WoodPlank, 0.5f)
                             : n.StartsWith("Bone") ? Palette.BoneWhite
+                            : n.StartsWith("Nose") ? new Color(0.85f, 0.54f, 0.54f)
+                            : n.StartsWith("Royal") ? Palette.TrapLeafRed
+                            : n.StartsWith("Carrot") ? Palette.CarrotOrange
+                            : n.StartsWith("Leaf") ? Palette.LilyPad
                             : n.StartsWith("Wood") ? Palette.WoodPlank
                             : n.StartsWith("Rope") ? Palette.ParchmentMap
                             : n.StartsWith("Gold") ? Palette.AuthorityGold
