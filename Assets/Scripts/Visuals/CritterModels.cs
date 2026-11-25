@@ -120,10 +120,13 @@ namespace CrittersOfCalamity.Visuals
         {
             var prefab = Resources.Load<GameObject>(resource);
             if (prefab == null) return false;
-            var go = UnityEngine.Object.Instantiate(prefab, parent, false);
+            // The FBX root keeps whatever axis-conversion rotation/scale Unity gave it (a single-mesh FBX carries it on the
+            // root itself), so it goes under a holder that does the turning and sizing.
+            var holder = new GameObject(prefab.name);
+            holder.transform.SetParent(parent, false);
+            holder.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // modelled facing Blender -Y; turn to face the camera
+            var go = UnityEngine.Object.Instantiate(prefab, holder.transform, false);
             go.transform.localPosition = Vector3.zero;
-            go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // modelled facing Blender -Y; turn to face the camera
-            go.transform.localScale = Vector3.one;
             foreach (var col in go.GetComponentsInChildren<Collider>()) UnityEngine.Object.Destroy(col);
             // Equipment meshes are named "Gear_<equipment id>" and only show while that item is equipped
             foreach (Transform child in go.GetComponentsInChildren<Transform>(true))
@@ -141,7 +144,12 @@ namespace CrittersOfCalamity.Visuals
                 foreach (var r in rs) bounds.Encapsulate(r.bounds);
                 float parentScale = Mathf.Max(0.0001f, parent.lossyScale.x);
                 float longest = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z)) / parentScale;
-                if (longest > 0.0001f) go.transform.localScale = Vector3.one * (scale / longest);
+                if (longest > 0.0001f) holder.transform.localScale = Vector3.one * (scale / longest);
+                // stand it on the base: lowest point of the bare model at the holder's floor
+                float minY = float.MaxValue;
+                foreach (var r in rs) minY = Mathf.Min(minY, r.bounds.min.y);
+                float floor = parent.position.y;
+                holder.transform.position += Vector3.up * (floor - minY);
             }
             foreach (var r in go.GetComponentsInChildren<Renderer>())
             {
