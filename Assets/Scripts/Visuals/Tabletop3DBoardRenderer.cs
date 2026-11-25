@@ -525,6 +525,14 @@ namespace CrittersOfCalamity.Visuals
             Color a = owner.Faction.PrimaryColor, s = owner.Faction.SecondaryColor;
             Prop(t, PrimitiveType.Cylinder, new Vector3(0f, 0.02f, 0f), new Vector3(0.46f, 0.02f, 0.46f), Vector3.zero, a, 0.5f); // owner base
 
+            // Sculpted building (Tools/Blender/buildings.py) standing on the owner base; primitives below are the fallback
+            var model = new GameObject("Model").transform;
+            model.SetParent(t, false);
+            model.localPosition = new Vector3(0f, 0.04f, 0f);
+            if (CritterModels.SculptedModel(model, "Models/" + b.Type, a, s, b.Type == BuildingType.TheCitadel ? 0.56f : 0.52f))
+                return root;
+            UnityEngine.Object.Destroy(model.gameObject);
+
             switch (b.Type)
             {
                 case BuildingType.WarParty: // war tent with banner

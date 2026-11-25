@@ -122,7 +122,7 @@ namespace CrittersOfCalamity.Visuals
         /// Its materials are named by role and recolored here, so the model still wears the owner's faction colors
         /// and the Palette accents. Returns false if the model isn't in the project.
         /// </summary>
-        static bool SculptedModel(Transform parent, string resource, Color a, Color b, float scale, UnitInstance unit = null, int count = 0)
+        internal static bool SculptedModel(Transform parent, string resource, Color a, Color b, float scale, UnitInstance unit = null, int count = 0)
         {
             var prefab = Resources.Load<GameObject>(resource);
             if (prefab == null) return false;
@@ -176,6 +176,11 @@ namespace CrittersOfCalamity.Visuals
                             : n.StartsWith("Flame") ? Palette.EmberYellow
                             : n.StartsWith("Ember") ? Palette.CarrotOrange
                             : n.StartsWith("Thorn") ? Palette.LeafRust
+                            : n.StartsWith("Stone") ? Palette.RuinStoneLight
+                            : n.StartsWith("Earth") ? Color.Lerp(Palette.TableOak, Palette.CharredGround, 0.3f)
+                            : n.StartsWith("Grass") ? Palette.CanopyLight
+                            : n.StartsWith("Water") ? Palette.RiverTile
+                            : n.StartsWith("Mud") ? Color.Lerp(Palette.TableOak, Palette.CharredGround, 0.15f)
                             : n.StartsWith("Rot") ? new Color(0.62f, 0.66f, 0.55f)
                             : n.StartsWith("Robe") ? Palette.HolyWhite
                             : n.StartsWith("Bill") ? Color.Lerp(Palette.InkAccent, Palette.ShadowSlate, 0.4f)
