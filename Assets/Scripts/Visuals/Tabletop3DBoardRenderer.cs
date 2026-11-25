@@ -9,10 +9,11 @@ using CrittersOfCalamity.Engine;
 namespace CrittersOfCalamity.Visuals
 {
     /// <summary>
-    /// Full-Scale Procedural 3D Tabletop Hexagonal Board Renderer using URP Lit materials from Palette.cs.
-    /// Renders the 217-Hex Continent Map (Radius 8) with carved oak table & parchment plinth,
-    /// Forest pine groves, Anankian ruin pillars, sunken blue river channels, Unique Faction Overlay Tiles,
-    /// 3D Iceberg Walls, Royal Decree beacons, Buildings, Tokens, and stylized multi-part 3D Critter Miniatures.
+    /// Procedural 3D Tabletop Hexagonal Board Renderer using URP Lit materials from Palette.cs.
+    /// Renders the canonical 108-Tile Continent Map (90 Forest, 14 Stream, 4 Ruin - Part 2 Line 43)
+    /// with water surrounding the island, a 0-30 Authority Score Track around the edge,
+    /// Forest pine groves, Anankian ruin pillars, light-blue Stream channels, Unique Faction Overlay Tiles
+    /// (Fallen Leaves, Fire, Miasma, Capybara Stream), Buildings, Tokens, and stylized 3D Critter Miniatures.
     /// </summary>
     public class Tabletop3DBoardRenderer : MonoBehaviour
     {
@@ -31,10 +32,10 @@ namespace CrittersOfCalamity.Visuals
         private Dictionary<HexCoord, GameObject> _tileObjects = new Dictionary<HexCoord, GameObject>();
         private GameObject _selectionRing;
 
-        // Camera orbit / pan state sized for the massive 217-hex Continent map
+        // Camera orbit / pan state sized for the 108-tile Continent board
         private float _camYaw = 0f;
         private float _camPitch = 52f;
-        private float _camDistance = 26f;
+        private float _camDistance = 21f;
         private Vector3 _camPivot = Vector3.zero;
 
         public void BindEngine(CrittersGameEngine engine)
@@ -50,17 +51,17 @@ namespace CrittersOfCalamity.Visuals
             RebuildPieces();
         }
 
-        public void FocusCameraOnCoord(HexCoord coord, float targetDistance = 16f)
+        public void FocusCameraOnCoord(HexCoord coord, float targetDistance = 13f)
         {
             _camPivot = coord.ToWorldPosition(HexRadius);
-            _camDistance = Mathf.Clamp(targetDistance, 6f, 45f);
+            _camDistance = Mathf.Clamp(targetDistance, 6f, 38f);
         }
 
         public void ResetCameraToOverview()
         {
             _camPivot = Vector3.zero;
-            _camPitch = 54f;
-            _camDistance = 28f;
+            _camPitch = 53f;
+            _camDistance = 21f;
         }
 
         void Update()
@@ -82,7 +83,7 @@ namespace CrittersOfCalamity.Visuals
             {
                 Vector3 forward = Quaternion.Euler(0f, _camYaw, 0f) * Vector3.forward;
                 Vector3 right = Quaternion.Euler(0f, _camYaw, 0f) * Vector3.right;
-                float panSpeed = Mathf.Lerp(10f, 24f, (_camDistance - 6f) / 39f);
+                float panSpeed = Mathf.Lerp(9f, 20f, (_camDistance - 6f) / 32f);
 
                 if (kb.wKey.isPressed || kb.upArrowKey.isPressed) _camPivot += forward * (panSpeed * dt);
                 if (kb.sKey.isPressed || kb.downArrowKey.isPressed) _camPivot -= forward * (panSpeed * dt);
@@ -115,13 +116,13 @@ namespace CrittersOfCalamity.Visuals
                     float scroll = mouse.scroll.ReadValue().y;
                     if (Mathf.Abs(scroll) > 0.01f)
                     {
-                        _camDistance = Mathf.Clamp(_camDistance - Mathf.Sign(scroll) * 1.8f, 6f, 45f);
+                        _camDistance = Mathf.Clamp(_camDistance - Mathf.Sign(scroll) * 1.6f, 6f, 38f);
                     }
                 }
             }
 
-            _camPivot.x = Mathf.Clamp(_camPivot.x, -26f, 26f);
-            _camPivot.z = Mathf.Clamp(_camPivot.z, -26f, 26f);
+            _camPivot.x = Mathf.Clamp(_camPivot.x, -18f, 18f);
+            _camPivot.z = Mathf.Clamp(_camPivot.z, -18f, 18f);
 
             Quaternion rot = Quaternion.Euler(_camPitch, _camYaw, 0f);
             cam.transform.position = _camPivot - (rot * Vector3.forward * _camDistance);
@@ -133,8 +134,6 @@ namespace CrittersOfCalamity.Visuals
             var mouse = Mouse.current;
             if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
 
-            // Use EventSystem.IsPointerOverGameObject() so UI panels/modals cleanly block board clicks,
-            // while any visible 3D hex anywhere on screen is clickable!
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
                 return;
 
@@ -206,22 +205,43 @@ namespace CrittersOfCalamity.Visuals
             _boardRoot.SetParent(transform, false);
             _tileObjects.Clear();
 
-            // 1. Carved Oak Tabletop & Parchment Map Plinth sized for the 217-Hex Continent (Radius 8)
+            // 1. Carved Oak Tabletop, 0-30 Authority Score Track Rim, and Ocean Water around the Continent (Part 1 Line 20 & Part 2 Line 43)
             var table = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Destroy(table.GetComponent<Collider>());
             table.name = "AnankianOakTable";
             table.transform.SetParent(_boardRoot, false);
-            table.transform.localPosition = new Vector3(0f, -0.36f, 0f);
-            table.transform.localScale = new Vector3(48f, 0.25f, 48f);
+            table.transform.localPosition = new Vector3(0f, -0.38f, 0f);
+            table.transform.localScale = new Vector3(36f, 0.25f, 36f);
             table.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.TableOak, 0.4f);
 
-            var parchment = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(parchment.GetComponent<Collider>());
-            parchment.name = "ContinentMapPlinth";
-            parchment.transform.SetParent(_boardRoot, false);
-            parchment.transform.localPosition = new Vector3(0f, -0.06f, 0f);
-            parchment.transform.localScale = new Vector3(38f, 0.06f, 38f);
-            parchment.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.ParchmentMap, 0.25f);
+            var scoreTrackRim = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Destroy(scoreTrackRim.GetComponent<Collider>());
+            scoreTrackRim.name = "AuthorityScoreTrack0To30";
+            scoreTrackRim.transform.SetParent(_boardRoot, false);
+            scoreTrackRim.transform.localPosition = new Vector3(0f, -0.10f, 0f);
+            scoreTrackRim.transform.localScale = new Vector3(28.5f, 0.06f, 28.5f);
+            scoreTrackRim.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.ParchmentMap, 0.3f);
+
+            var oceanWater = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Destroy(oceanWater.GetComponent<Collider>());
+            oceanWater.name = "SurroundingWater";
+            oceanWater.transform.SetParent(_boardRoot, false);
+            oceanWater.transform.localPosition = new Vector3(0f, -0.04f, 0f);
+            oceanWater.transform.localScale = new Vector3(26.2f, 0.05f, 26.2f);
+            oceanWater.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.FromHex("#2E5D7B"), 0.8f);
+
+            // 30 Authority Score Track Markers around the perimeter of the board (0 to 30)
+            for (int a = 0; a <= 30; a++)
+            {
+                float angle = (a / 31f) * Mathf.PI * 2f;
+                var pip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(pip.GetComponent<Collider>());
+                pip.name = $"ScorePip_{a}";
+                pip.transform.SetParent(_boardRoot, false);
+                pip.transform.localPosition = new Vector3(Mathf.Cos(angle) * 13.6f, 0.02f, Mathf.Sin(angle) * 13.6f);
+                pip.transform.localScale = (a % 5 == 0) ? new Vector3(0.32f, 0.08f, 0.32f) : new Vector3(0.18f, 0.05f, 0.18f);
+                pip.GetComponent<Renderer>().sharedMaterial = GetMaterial((a == 30) ? Palette.AuthorityGold : Palette.TableOak, 0.6f);
+            }
 
             // 2. Selection Highlight Ring
             _selectionRing = new GameObject("HexSelectionRing");
@@ -232,7 +252,7 @@ namespace CrittersOfCalamity.Visuals
             ringRenderer.sharedMaterial = GetMaterial(Palette.AuthorityGold, 0.8f);
             _selectionRing.SetActive(false);
 
-            // 3. Build 3D Hex Tiles for the Continent (217 Hexes)
+            // 3. Build 3D Hex Tiles for the 108-Tile Continent
             foreach (var kvp in _engine.Board)
             {
                 var coord = kvp.Key;
@@ -321,7 +341,7 @@ namespace CrittersOfCalamity.Visuals
                 var tile = kvp.Value;
                 Vector3 tileCenter = coord.ToWorldPosition(HexRadius) + new Vector3(0f, TileThickness, 0f);
 
-                // 1. Unique Faction Overlay Tile (Rulebook Material 6)
+                // 1. Unique Faction Overlay Tile (Part 4 Line 98)
                 if (tile.Overlay != FactionOverlayTileType.None)
                 {
                     var overlayGo = new GameObject($"Overlay_{tile.Overlay}");
@@ -334,38 +354,14 @@ namespace CrittersOfCalamity.Visuals
                     tileCenter.y += 0.055f;
                 }
 
-                // 1b. Glacier Kingdom Iceberg Wall (0/0/2 hex-edge wall, Line 1206)
-                if (tile.HasIcebergWall)
-                {
-                    var wallGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    Destroy(wallGo.GetComponent<Collider>());
-                    wallGo.name = "IcebergWall";
-                    wallGo.transform.SetParent(_piecesRoot, false);
-                    wallGo.transform.localPosition = tileCenter + new Vector3(0f, 0.22f, -0.78f);
-                    wallGo.transform.localScale = new Vector3(0.85f, 0.42f, 0.14f);
-                    wallGo.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.GlacierTile, 0.9f);
-                }
-
-                // 1c. Serpentine Sovereign Royal Decree Mark
-                if (tile.MarkedByRoyalDecree)
-                {
-                    var mark = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                    Destroy(mark.GetComponent<Collider>());
-                    mark.name = "RoyalDecreeMark";
-                    mark.transform.SetParent(_piecesRoot, false);
-                    mark.transform.localPosition = tileCenter + new Vector3(0f, 0.04f, 0f);
-                    mark.transform.localScale = new Vector3(0.95f, 0.03f, 0.95f);
-                    mark.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.FromHex("#D92332"), 0.8f);
-                }
-
-                // 2. Building (Max 1 per tile, Rulebook Material 5)
+                // 2. Building (Max 1 per tile, Part 4 Line 97)
                 if (tile.Building != null)
                 {
                     var owner = _engine.Players[tile.Building.OwnerPlayerIndex];
                     CreateBuildingMiniature(tileCenter + new Vector3(0f, 0f, 0.36f), tile.Building, owner);
                 }
 
-                // 3. Tokens (Max 2 per tile, Rulebook Material 4)
+                // 3. Tokens (Max 2 per tile, Part 4 Line 97)
                 for (int tIdx = 0; tIdx < tile.Tokens.Count; tIdx++)
                 {
                     var tk = tile.Tokens[tIdx];
@@ -373,7 +369,7 @@ namespace CrittersOfCalamity.Visuals
                     CreateTokenMiniature(tileCenter + new Vector3(xOff, 0.03f, -0.36f), tk);
                 }
 
-                // 4. Units & Special Units (Rulebook Material 2 & 8)
+                // 4. Units & Special Units (Max 6 per faction per tile, Part 10 Line 175)
                 int unitCount = tile.Units.Count;
                 for (int uIdx = 0; uIdx < unitCount; uIdx++)
                 {
@@ -437,9 +433,7 @@ namespace CrittersOfCalamity.Visuals
             anim.BaseY = pos.y;
             anim.PhaseOffset = idxOnTile * 1.3f + pos.x;
 
-            // Pedestal Base (Cyan tint if Frozen, Gold if Special Unit, Emerald if Guest)
-            Color pedestalCol = u.IsFrozen ? Palette.GlacierTile :
-                                (u.Definition.IsSpecialUnit ? Palette.AuthorityGold : Palette.ShadowSlate);
+            Color pedestalCol = u.Definition.IsSpecialUnit ? Palette.AuthorityGold : Palette.ShadowSlate;
             var pedestal = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Destroy(pedestal.GetComponent<Collider>());
             pedestal.transform.SetParent(root.transform, false);
@@ -447,15 +441,13 @@ namespace CrittersOfCalamity.Visuals
             pedestal.transform.localScale = new Vector3(0.26f, 0.03f, 0.26f);
             pedestal.GetComponent<Renderer>().sharedMaterial = GetMaterial(pedestalCol, 0.6f);
 
-            Color primaryCol = u.IsHidden ? Color.Lerp(owner.Faction.PrimaryColor, Palette.ShadowSlate, 0.55f) : owner.Faction.PrimaryColor;
-
             // Body
             var body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             Destroy(body.GetComponent<Collider>());
             body.transform.SetParent(root.transform, false);
             body.transform.localPosition = new Vector3(0f, 0.16f, 0f);
             body.transform.localScale = new Vector3(0.20f, 0.22f, 0.24f);
-            body.GetComponent<Renderer>().sharedMaterial = GetMaterial(primaryCol);
+            body.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.PrimaryColor);
 
             // Chest / Belly
             var chest = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -471,7 +463,7 @@ namespace CrittersOfCalamity.Visuals
             head.transform.SetParent(root.transform, false);
             head.transform.localPosition = new Vector3(0f, 0.31f, 0.03f);
             head.transform.localScale = new Vector3(0.16f, 0.15f, 0.16f);
-            head.GetComponent<Renderer>().sharedMaterial = GetMaterial(primaryCol);
+            head.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.PrimaryColor);
 
             // Exaggerated Silhouette Ears / Crest
             for (int side = -1; side <= 1; side += 2)
@@ -485,7 +477,7 @@ namespace CrittersOfCalamity.Visuals
                 ear.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.SecondaryColor);
             }
 
-            // Rulebook Part 11 Line 296: Tracking Unit Damage with HP Pips above Special Units
+            // Part 11 Line 185: Tracking damage on Special Units & multi-HP units
             if (u.Definition.IsSpecialUnit || u.MaxHP > 1)
             {
                 for (int hp = 0; hp < u.CurrentHP; hp++)
@@ -507,7 +499,7 @@ namespace CrittersOfCalamity.Visuals
             {
                 case TileTerrainType.Forest: return GetMaterial(Palette.ForestTile, 0.3f);
                 case TileTerrainType.Ruin:   return GetMaterial(Palette.RuinTile, 0.25f);
-                case TileTerrainType.River:  return GetMaterial(Palette.RiverTile, 0.7f);
+                case TileTerrainType.Stream: return GetMaterial(Palette.RiverTile, 0.7f);
                 default:                     return GetMaterial(Palette.ForestTile);
             }
         }
@@ -522,15 +514,13 @@ namespace CrittersOfCalamity.Visuals
                     return GetMaterial(Palette.MiasmaTile, 0.55f);
                 case FactionOverlayTileType.Fire:
                     return GetMaterial(Palette.FireTile, 0.6f);
-                case FactionOverlayTileType.Glacier:
-                    return GetMaterial(Palette.GlacierTile, 0.85f);
                 case FactionOverlayTileType.FallenLeaf_Unflipped:
                     return GetMaterial(Palette.FallenLeafTile, 0.3f);
                 case FactionOverlayTileType.FallenLeaf_Trap:
                     return GetMaterial(Palette.FromHex("#9E2A2B"), 0.4f);
                 case FactionOverlayTileType.FallenLeaf_Prank:
                     return GetMaterial(Palette.AuthorityGold, 0.7f);
-                case FactionOverlayTileType.CapybaraRiver:
+                case FactionOverlayTileType.CapybaraStream:
                     return GetMaterial(Palette.RiverTile, 0.75f);
                 default:
                     return GetMaterial(Palette.ParchmentMap);

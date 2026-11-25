@@ -1,0 +1,902 @@
+﻿Critters of Calamity
+Core Rulebook: Eight Faction Edition
+This edition covers eight factions: Curly Tail's Warband, the Horde of the Millions, the Platypus Papacy, the Trouble Making Tanukis, the Necro-mouser, the Firestarting Squirrels, the Capybara Caravan, and the Briared Flower. Three factions not included in this edition are kept in a separate file (see Appendix A).
+Game Description
+Long ago, the Continent was ruled by the Ananke, a prosperous civilization which used its riches to create striking art, intricate political treatises, bejeweled relics, and terrible weapons. Then, after prolonged infighting, a calamitous war caused the Ananke to disappear into history, leaving only the scattered remnants of their Anankian cultural accomplishments. Five hundred years later, new factions have risen from the forested Continent the Ananke left behind. Now these emerging factions all compete against one another to claim Authority over the Continent.
+Objective
+Critters of Calamity is a four player asymmetrical board game. Each player controls a unique faction with its own buildings, abilities, and units on the same hexagonal gameboard. To win, gather resources and relics and use your faction's unique strengths to be the first player to reach 30 Authority.
+Part 1: Key Terms
+These terms have exact meanings everywhere in this rulebook.
+Pieces
+Piece: anything a faction puts on the board. Units, buildings, tokens, and unique faction tiles are all pieces. All tokens are pieces, including Coin Tokens.
+Enemy piece / enemy unit: a piece or unit that belongs to another player.
+Unit: any basic unit or special unit. Special units count as units for every rule unless a rule says "basic unit" or "special unit."
+Basic unit: Warband (Curly Tail), Millions (Horde), Pilgrim and Crusader (Platypus Papacy), Tanuki (Trouble Making Tanukis), Skeleton (Necro-mouser), Squirrel (Firestarting Squirrels), Capybara (Capybara Caravan), and Thorned Seed (Briared Flower).
+Special unit: Curly Tail, the King of the Millions, the Platy-Pope, A Band of Troublemakers, the Necromouser, the Bloat, the Vanguard, the Brute, the Pyromaniac, the Riverkeeper, the Capybara Trader, and the Blooming Briar.
+Recruitment building: War Party, Burrow, Citadel, Shrine, Bunker, Wallow, and Prickly Thicket. A recruitment building can only place its faction's basic units, never special units.
+Supply: your pieces that are not on the board.
+Isolated: a building, token, or unique faction tile is isolated when none of its owner's units are on its tile.
+Board and distance
+Tile: one hexagon on the board. Tile types are forest (green), ruin (gray), stream (light blue), and unique faction tiles (Fallen Leaves). The water around the board is not a tile.
+Adjacent: two tiles are adjacent when they share an edge. A tile in the middle of the board has six adjacent tiles, one on each side. A tile on the edge of the board has fewer, because the water around the board is not a tile.
+Distance: the number of steps it takes to get from one tile to another, stepping only from a tile to an adjacent tile. Do not count the starting tile. An adjacent tile is at distance 1.
+X tiles away: at a distance of exactly X. There are X minus 1 tiles between them. For example, "2 tiles away" means there is exactly one tile between the two tiles. "At least 2 tiles away" means there is at least one tile between them.
+Within X tiles: at a distance of X or less, where X is the number given by the rule. "Within 2 tiles" includes the tile itself, every adjacent tile, and every tile 2 tiles away.
+Straight line: a path that always leaves each tile through the edge directly opposite the edge it entered. On a hex board there are six straight-line directions from any tile.
+Removing pieces
+Remove: take a piece off the board and return it to its owner's supply. This single term replaces the older words "destroy" and "kill." A unit reduced to 0 HP is removed. A piece that has been removed can be placed or recruited again later unless a rule says otherwise.
+Removed by an enemy: when another player's battle, card, or ability removes your piece, that player scores any Authority listed for that piece. When you remove your own piece (for example, with Martyrdom or Burrow upkeep), nobody scores Authority for it unless the rule says so.
+Cards and zones
+Hand: the relic cards you hold. Other players cannot see your Hand.
+Resource Pile: your resource cards (Wood, Stone, Gold), kept facedown in front of you. Other players cannot see it.
+Table: cards in front of you that stay in play, such as relic cards with an "Effect" and equipment. Crafted cards on your Table are kept facedown; only you may look at them. When you use a card's effect, flip it faceup and resolve the effect. Everyone can see faceup cards on your Table.
+Discard: relic cards that are discarded go faceup to the Discard Area. Resource cards that are spent, discarded, or used for crafting are shuffled back into the resource deck.
+Actions and effects
+Action: one of the limited choices in a phase (the four Excavation actions or the three Main Phase actions).
+Free action: species traits, unit abilities, special unit abilities, and unit traits are free actions. They do not use up any of your phase actions unless the rule says otherwise.
+Craft: pay a cost to make a faction item (building, token, card, equipment, or tile) and place it. Crafting is an Excavation phase action. You can also craft at another time only if an effect allows it.
+Free craft: a craft that an effect allows without using your Excavation phase Craft action.
+Debuff: any effect that hinders a unit's movement. This includes effects that stop a unit from moving, make leaving or entering a tile cost extra actions, or stop a unit from being moved. Examples: Gluttony Token, Trap Leaf.
+Part 2: Setting Up the Game
+Place the game board in the center of the table.
+
+The board has about 108 tiles: roughly 90 forest tiles, 14 stream tiles, and 4 ruin tiles. The score track around the edge measures Authority and runs from 0 to 30.
+Shuffle the relic deck and resource deck, then place the following beside the board:
+The 40 card Relic Deck and its Discard Area
+The 50 card Resource Deck
+The Excavation Area
+Relic Deck
+The relic deck contains 40 cards with a variety of effects. The full list is in Part 16: Relic Deck Card List.
+Resource Deck
+The resource deck contains 50 cards:
+20 Stone
+20 Wood
+10 Gold
+Gaining a specific resource
+When an effect says to gain a specific resource "from the resource deck," search the resource deck for that card, add it to your Resource Pile, and shuffle the deck.
+If no Gold is left in the resource deck when you would gain Gold, roll a six-sided die instead: on an odd roll gain 1 Stone, on an even roll gain 1 Wood.
+If no Stone or no Wood is left when you would gain it, gain the other basic resource instead. If neither is left, gain nothing.
+Part 3: Picking a Faction
+Each faction is designed around a particular playstyle. All eight factions in this edition are recommended for new players.
+Horde of the Millions: mid game faction made up of an endless swarm of rabbits that wins by spreading plague and being impossible to remove. (Difficulty 2/10)
+Platypus Papacy: mid to late game faction that martyrs Pilgrims to fuel a Crusade that only grows stronger with time. (Difficulty 2/10)
+Curly Tail's Warband: snowballing early game faction led by a ferocious boar. Race to forge golden armor and secure supply lines to quickly cross the map. (Difficulty 4/10)
+Trouble Making Tanukis: mid game faction that scampers around the board collecting coins while hiding pranks and traps beneath fallen leaves. (Difficulty 4/10)
+The Necro-mouser: late game faction that harvests the dead from every battle, hoards resources, and spends fallen units to summon powerful undead horrors. (Difficulty 6/10)
+Firestarting Squirrels: aggressive early game faction that burns down the forest and profits from the chaos, forcing enemies off tiles with fire and disrupting their resources. (Difficulty 6/10)
+Capybara Caravan: peaceful economic faction that expands the stream network and profits from enemy movements through hospitality and trade. (Difficulty 5/10)
+Briared Flower: explosive special unit faction that scores Authority by hurling thorns across the board and scattering seeds in its wake. (Difficulty 7/10)
+Each player rolls 2 six-sided dice. The highest roll chooses a faction first, then the second highest, then third, then fourth. Reroll ties.
+Part 4: Faction Materials
+Each faction has some or all of the following materials. Each faction's full material list is at the end of its section in Part 17. Every faction's pieces have the same design on the back.
+Faction Board
+Every faction has a faction board that lists its:
+Description: background and how the faction scores Authority.
+Setup: where its pieces go before the first turn.
+Buildings: how to craft and place its buildings, and any building effects.
+Species Traits: passive abilities. You do not need units on the board to use Species Traits.
+Ways Enemies Can Score Authority: how other players score Authority from this faction.
+Unit and Special Unit Cards
+These cards list each unit's:
+Summoning Condition: how a special unit is placed on the board. Basic units are placed by the Recruit action.
+Stats: Attack / Defense / HP.
+Abilities and Traits: what the unit can do.
+Equipment Cards
+Only Curly Tail's Warband has equipment cards in this edition. Equipment cards list their cost, which unit can equip them, and their effects. Place an equipped card on top of the unit's card.
+Tokens
+Tokens are round pieces that apply an effect to a tile.
+A token does not change the tile type. A forest tile with a token on it is still a forest tile.
+You can only use the effects of your own tokens unless a token says otherwise.
+Tokens cannot be placed on stream tiles. Exceptions: Coin Tokens, and Holy Relic Tokens placed on a stream tile with the Citadel.
+Tokens in this edition: Gluttony Token and Catapult Token (Horde of the Millions), Holy Relic Token (Platypus Papacy), Supply Line Token (Curly Tail's Warband), Coin Token (Trouble Making Tanukis), Tar Pit Token (Firestarting Squirrels).
+Buildings
+When you Recruit, place 1 of your basic units from your supply on the tile of each of your recruitment buildings.
+Buildings must be crafted and placed on a legal tile.
+Buildings cannot be placed on stream tiles. Exception: the Citadel.
+Buildings in this edition: Burrow (Horde of the Millions), Citadel (Platypus Papacy), War Party (Curly Tail's Warband), Shrine (Trouble Making Tanukis), Bunker (Firestarting Squirrels), Wallow (Capybara Caravan), Prickly Thicket (Briared Flower).
+Tile limit: each tile can hold at most 1 building and 2 tokens in total.
+Unique Faction Tiles
+Unique faction tiles are hexagonal tiles that a faction places on the board.
+A unique faction tile replaces the tile it is placed on. All units and pieces on that tile stay where they are, unless an effect says otherwise. The new tile's rules replace the old tile's rules.
+When a unique faction tile is removed, the original tile returns.
+A unique faction tile cannot replace another unique faction tile.
+Unique faction tiles in this edition: Fallen Leaves Tile (Trouble Making Tanukis), Fire Tile (Firestarting Squirrels), Miasma Tile (Necro-mouser).
+Meter Boards
+Meters track an ability whose strength changes during the game.
+Faith Meter and Platy-Pope Level Meter (Platypus Papacy)
+Thirst for Glory, Hunger, and Momentum Meters (Curly Tail's Warband)
+Thorn Meter (Briared Flower)
+Unit Supply
+Your unit pieces that are not on the board. When you recruit or summon a unit, take it from your supply.
+Faction Specific Decks
+Forage Deck (Horde of the Millions)
+Traded Goods Deck (Capybara Caravan)
+Part 5: Starting the Game and Turn Order
+Once all players have chosen factions and gathered their materials, every player:
+Draws 2 cards from the resource deck into their Resource Pile.
+Draws 1 card from the relic deck into their Hand.
+Then place the top 5 cards of the relic deck faceup in the Excavation Area.
+Turn order
+All players roll 2 six-sided dice. The highest roll takes the first turn, and play continues clockwise. Reroll ties.
+Setup happens in reverse turn order
+To reduce first player advantage, setup happens in reverse turn order. The player who will go last sets up first, then setup continues counterclockwise, and the player who will go first sets up last.
+Each player follows the Setup on their faction board.
+Setup restrictions only care about enemy units. Enemy buildings, tokens, and tiles never block a setup placement.
+The stacking limit (Part 10) is ignored during setup.
+Exception: if the Trouble Making Tanukis are in the game, the Tanuki player places their Coin Tokens after all other players have finished their setup entirely. See the Tanukis' Setup in Part 17 for details.
+After all players finish setup (including any Coin Token placement), the first player begins their first turn.
+Part 6: How to Play Your Turn
+Each turn has four phases, played in this order. You cannot skip a phase.
+1. Draw Phase
+Draw 1 card from the relic deck into your Hand.
+2. Excavation Phase
+You may take each of the following actions once, in any order:
+Unearth: buy 1 of the 5 relic cards in the Excavation Area by paying the resource cost in its top left corner. The card is crafted immediately (see "When Crafted" and "Effect" in Part 16).
+Craft: craft one of your faction's buildings, tokens, cards, equipment, or tiles by paying its cost, then place it on a legal tile.
+Assemble: craft 1 relic card from your Hand by paying the resource cost in its top left corner.
+Disassemble: discard 1 relic card from your Hand or your Table to gain the resources listed under "Disassemble" on that card.
+Free crafts allowed by your faction's abilities do not use up your Craft action. Free crafts happen during the Excavation phase unless the ability says otherwise.
+3. Main Phase
+Take up to three Main Phase actions. You can choose any combination, including the same action more than once.
+Move: choose one tile with your units. Choose any number of your units on that tile to move together to the same adjacent tile. All units moved by one Move action must end on the same tile. Units must always be on a tile, never between tiles.
+Battle: start a battle against another faction's units on a tile where you have units (Part 12), or remove isolated enemy buildings, tokens, and removable tiles (Part 13).
+Loot: choose a tile that has at least one of your units and no enemy pieces. Each tile can only be looted once per turn.
+Forest tile: draw the top card of the resource deck into your Resource Pile.
+Stream tile: roll a six-sided die. Odd: gain 1 Stone. Even: gain 1 Gold.
+Ruin tile: roll a six-sided die. Odd: draw the top card of the relic deck into your Hand. Even: gain 1 Gold.
+Fallen Leaves tile: gain 1 Wood (only Wood).
+Recruit: place 1 of your faction's basic units at each of your recruitment buildings.
+Note: when every resource card is in the deck, looting a forest tile has a 20% chance of Gold. Stream and ruin tiles each have a 50% chance of Gold.
+4. End Phase
+Resolve the End phase in this order:
+1.	Resolve all of your "start of your end phase" effects.
+2.	Resolve all of your other "during your end phase" effects, in the order you choose.
+3.	Discard down to 5 cards in your Hand and, separately, down to 5 cards in your Resource Pile. Some factions change these limits.
+4.	Refill the Excavation Area from the relic deck until it has 5 faceup cards.
+There is no limit to your Hand or Resource Pile size during the rest of your turn.
+Timing: when effects happen at the same time
+When two or more effects would happen at the same time, the turn player's effects resolve first, in the order the turn player chooses. Then each other player's effects resolve, going clockwise from the turn player.
+Part 7: How to Win
+Each faction board's Description explains how that faction scores Authority. Each faction board also lists the ways enemies can score Authority from that faction.
+Removing an enemy building or token gives you 1 Authority. This is the same 1 Authority listed on the faction boards, not an extra one.
+Removing enemy special units gives the Authority listed on that faction's board.
+When any player reaches 30 Authority, the game ends immediately and that player wins.
+Ties: if two or more players reach 30 Authority at the same time, the turn player wins if they are one of them. If the turn player is not one of them, the tied player closest clockwise to the turn player wins.
+Authority floor: Authority cannot go below 0. If an effect would reduce your Authority below 0, it stops at 0 instead.
+Resource floor: Resource cards in your Resource Pile cannot go below 0. If an effect would force you to discard more resources than you have, discard what you can and discard nothing further.
+Part 8: If All Your Pieces Are Removed
+Comeback Mechanic
+At the start of your Excavation phase, if you have no units and no buildings on the board, you may use a free craft: pay the cost of your faction's recruitment building, then place that building and 2 of your basic units on a forest tile with no enemy units.
+The Platypus Papacy cannot use the comeback mechanic. It uses its own Citadel rule instead.
+Part 9: If a Deck Is Empty
+If the relic deck is empty when the Excavation Area needs to be refilled, when a player needs to draw, or when an effect uses the top of the deck, shuffle the Discard Area to form a new relic deck, then finish the action.
+The resource deck works the same way, although spent resources are shuffled back into it as they are used. The Forage deck is reshuffled after every card drawn from it, so it never runs out.
+Part 10: Stacking Limit and Overflow
+Each tile can hold at most 6 units from the same faction. Special units count toward this limit. Buildings, tokens, and tiles do not. Units from different factions do not count against each other's limit.
+Overflow rules:
+Moving: you cannot move units onto a tile if it would put more than 6 of your units there.
+Recruiting and placing: if a recruit, summon, or placement would put more than 6 of your units on a tile, that unit is not placed. Any other placements from the same effect still happen.
+Forced movement: if an effect would move a unit and there is no legal tile for it (because of the stacking limit or the effect's own restrictions), the unit stays where it is.
+Setup: the stacking limit is ignored during setup.
+Part 11: Unit Stats
+All units have three stats written on their card as Attack / Defense / HP. For example, Curly Tail is 3/2/2: 3 Attack, 2 Defense, and 2 HP.
+All basic units have 1 HP unless an effect raises it. Special units often have more.
+Equipment, abilities, and relic cards can change a unit's Attack, Defense, or HP.
+Tracking damage: put a die on a special unit's card showing its current HP. If a basic unit has more than 1 HP, mark damage on it with a damage marker. Damage stays until healed.
+Part 12: How to Battle
+During your Main phase you can use a Battle action if your units and another faction's units are on the same tile. Follow these phases in order.
+Phase 1: Attack Declaration
+Declare an attack against one faction that has units on the same tile as your units. A battle can only target one faction. Any other factions on the tile do not take part.
+The turn player is the Attacker. The player being attacked is the Defender.
+The Attacker chooses which of their units on the tile participate (at least one). Units with 0 Attack may participate.
+The Defender must include all of their units on that tile.
+Buildings and tokens do not take part in battles between units. To remove them, see Part 13.
+Phase 2: Dice Roll
+The Attacker and the Defender each roll 2 six-sided dice and total them. This is their dice roll.
+Phase 3: Attack and Defense Points
+Each side totals two numbers for its participating units:
+Attack Points: the total Attack of its participating units.
+Defense Points: the total Defense of its participating units.
+Then:
+Attacker's Total = Attacker's dice roll + Attacker's Attack Points.
+Defender's Total = Defender's dice roll + Defender's Defense Points.
+The higher Total wins the battle. The lower Total loses.
+Tie: if the Totals are equal, each side takes 1 HP of damage, assigned by its owner to one of its participating units. Skip Phase 4 and go to Phase 5.
+Phase 4: Damage Calculation
+Damage Dealt = the winner's Attack Points minus the loser's Defense Points.
+Minimum: if Damage Dealt is less than 1, the winner still deals 1 HP of damage.
+Damage cap: Damage Dealt cannot be more than the number of the winner's participating units. Ignore any excess.
+One HP per unit: each unit can take at most 1 HP of damage per battle unless an effect says otherwise. Ignore damage that cannot be assigned.
+Mandatory loser damage: the loser always deals 1 HP of damage back to the winner. Exception: the Horde of the Millions (Oblivious to Danger).
+Each player assigns the damage their own units take among their participating units.
+All damage is applied at the same time at the end of this phase.
+Phase 5: Battle Resolution
+1.	Remove every unit at 0 HP and return it to its owner's supply.
+2.	Resolve effects that care about winning or losing the battle (for example, Momentum).
+3.	Resolve "after a battle" effects (for example, Spoils of War and Pillage).
+The battle is over. If you have Main Phase actions left, you may take another action.
+Battle Reference Card
+Attacker's Total: dice roll + Attack Points.
+Defender's Total: dice roll + Defense Points.
+Winner: higher Total. Tie: each side takes 1 HP, battle ends.
+Damage: winner's Attack Points minus loser's Defense Points (minimum 1, maximum 1 per winning unit).
+Loser damage: loser deals 1 HP to the winner (not the Horde).
+Limit: each unit takes at most 1 HP per battle.
+Resolution: remove all 0 HP units, then resolve win/loss effects, then after-battle effects.
+Part 13: Removing Buildings, Tokens, and Tiles
+Enemy buildings, tokens, and removable unique faction tiles can only be attacked while they are isolated (none of their owner's units are on the tile).
+As a Battle action, choose a tile where you have units. Remove a number of isolated enemy buildings, tokens, and removable tiles on that tile equal to the number of your units on that tile. This works even if your units have 0 Attack.
+No dice are rolled. Buildings, tokens, and tiles have no Attack, Defense, or HP, so they never deal damage or mandatory loser damage.
+Each building or token you remove gives you 1 Authority. Removable tiles give the Authority listed on their faction board.
+Coin Tokens can never be removed this way. Unflipped Fallen Leaves tiles cannot be removed.
+Part 14: Full Battle Example
+This example uses the rules in Part 12 and the faction rules in Part 17.
+Groundwork: it is the Curly Tail player's second turn. Curly Tail is at Thirst for Glory Level 1 (+1 Attack) and has a Golden Sword equipped (+1 Attack), so his stats are 5/2/2. Two Warband units (1/1/1 each) are with him. On the same tile are 3 Millions units (0/0/1 each) and 1 Tanuki unit. The Curly Tail player declares an attack on the Horde of the Millions, so the Tanuki unit takes no part.
+Phase 1: Attack Declaration
+The Curly Tail player is the Attacker and the Horde player is the Defender. The Attacker chooses Curly Tail and both Warband units. The Defender must include all 3 Millions units.
+Phase 2: Dice Roll
+The Attacker rolls 3 and 5, a dice roll of 8. The Defender rolls 2 and 4, a dice roll of 6.
+Phase 3: Attack and Defense Points
+Attacker's Attack Points: 5 (Curly Tail) + 1 + 1 (Warband) = 7. Attacker's Defense Points: 2 + 1 + 1 = 4.
+Defender's Attack Points: 0. Defender's Defense Points: 0.
+Attacker's Total: 8 + 7 = 15. Defender's Total: 6 + 0 = 6.
+15 is higher than 6, so the Curly Tail player wins.
+Phase 4: Damage Calculation
+Damage Dealt: 7 (winner's Attack Points) minus 0 (loser's Defense Points) = 7.
+Damage cap: the winner had 3 participating units, so the damage is reduced to 3.
+The Horde player assigns 1 HP to each Millions unit.
+Mandatory loser damage: the Horde's Oblivious to Danger trait means it deals no loser damage.
+Phase 5: Battle Resolution
+1.	All 3 Millions units are at 0 HP and are removed to the Horde player's supply.
+2.	Curly Tail's side attacked and won, so Momentum rises from 0 to 1.
+3.	After-battle effects, in the order the Curly Tail player chooses:
+Spoils of War (first win this turn): the player gains 1 Stone from the resource deck.
+Pillager: Curly Tail won, so he takes a free Pillage. The top card of the resource deck is a Gold. Because Momentum is now Level 1, the Pillage also draws 1 relic card (a War Horn) into the player's Hand.
+What if the Horde had won?
+Suppose instead the Attacker rolled 1 and 1 (dice roll 2) and the Defender rolled 6 and 6 (dice roll 12). The Attacker's Total would be 2 + 7 = 9 and the Defender's Total would be 12 + 0 = 12, so the Horde wins.
+Damage Dealt: the Horde's Attack Points (0) minus the Attacker's Defense Points (4) = -4, which becomes the minimum of 1.
+The Curly Tail player assigns that 1 HP to a Warband unit, which is removed.
+Mandatory loser damage: the Curly Tail player (the loser) deals 1 HP to the Horde, removing 1 Millions unit.
+Curly Tail's side attacked and lost, so Momentum drops by 2, Hunger by 2, and Thirst for Glory by 1. No meter can go below 0. There is no Spoils of War and no Pillage.
+Part 15: Full Turn Example
+This is the same Curly Tail player's second turn from start to finish. The Horde player sits just before the Curly Tail player in turn order.
+Starting state:
+Last turn, the Curly Tail player crafted a second War Party. At the end of last turn's Main phase, Thirst for Glory rose from 0 to 1, the player paid Hunger Level 0 (draw 1 resource), and Hunger rose from 0 to 1. Momentum is 0.
+Authority: 0.
+Resource Pile: 2 Gold, 1 Wood, 1 Stone.
+Hand: 1 Marble Aqueduct.
+Curly Tail (3/2/2, +1 Attack from Thirst for Glory) and 4 Warband units are on the tile with their first War Party.
+Draw Phase
+The player draws 1 relic card: a Dilapidated Bridge. Hand: Marble Aqueduct, Dilapidated Bridge.
+Excavation Phase
+Forge (free craft): the player pays 1 Gold to craft the Golden Sword and equips it to Curly Tail. When Crafted: gain 2 Authority (Authority is now 2). Curly Tail is now 5/2/2.
+Forge is a free craft, so the Craft action is still available. The player decides not to Unearth, Craft, Assemble, or Disassemble this turn.
+Resource Pile: 1 Gold, 1 Wood, 1 Stone.
+Main Phase
+Start of the Main phase: the Horde's Prolific Creatures triggers because the Curly Tail player is the next player after the Horde. The tile with 3 Millions units and the Tanuki unit already has 3 Millions units, so nothing is added there.
+Action 1, Move: Curly Tail and 2 Warband units move together from their War Party tile to the adjacent forest tile with the 3 Millions units and 1 Tanuki unit. That tile now has 3 Curly Tail units, under the limit of 6.
+Free action, Supply Line: the player discards 1 Wood to place a Supply Line Token on a forest tile within 2 tiles of their first War Party. Resource Pile: 1 Gold, 1 Stone.
+Action 2, Battle: the player attacks the Horde. This is the battle in Part 14. The Curly Tail player wins, all 3 Millions units are removed, Momentum rises to 1, Spoils of War gives 1 Stone, and the Pillage gives 1 Gold plus a War Horn. Resource Pile: 2 Gold, 2 Stone. Hand: Marble Aqueduct, Dilapidated Bridge, War Horn.
+Action 3, Recruit: the player places 1 Warband unit at each of their 2 War Parties.
+End of the Main Phase (Curly Tail's meters)
+1.	Thirst for Glory rises from 1 to 2. Curly Tail now has Level 1 (+1 Attack) and Level 2 (extra tile of movement).
+2.	Hunger is at Level 1, so the player pays its effect: discard 1 resource. They discard 1 Stone. Resource Pile: 2 Gold, 1 Stone.
+3.	Hunger rises from 1 to 2.
+End Phase
+1.	Momentum Level 0: the player draws 1 card from the resource deck, a Wood. Resource Pile: 2 Gold, 1 Stone, 1 Wood. Momentum Level 2 has not been reached, so no Authority from it.
+2.	Forage does not trigger: no Curly Tail units share a tile with a Millions unit.
+3.	Hand limit: 3 cards, so nothing is discarded. Resource Pile limit: 4 cards, so nothing is discarded.
+4.	The player refills the Excavation Area to 5 cards.
+Results
+The Curly Tail player gained 2 Authority, removed 3 Millions units, added 2 Warband units, and extended their supply line. Next turn Curly Tail is 5/2/2 with an extra tile of movement, his next Pillage still draws a relic card, and the 2 Gold in the Resource Pile can forge a Golden War Axe or Golden Chest Plate. The Warband is beginning to snowball.
+Part 16: Relic Deck Card List
+How to read relic cards
+When Crafted: happens once, as soon as the card is unearthed or assembled. If the card has no "Effect," discard it right after.
+Effect: the card stays faceup on your Table. Use it at the time it describes. When it says "discard this card," discard it from your Table.
+Disassemble: discard the card from your Hand or your Table to gain the listed resources.
+One fifth of the relic deck (8 cards) can be disassembled for Gold. There are two copies of every card except the three resource cards with no effect.
+Locked Chest (2 copies)
+Cost: 1 Wood, 1 Stone
+When Crafted: Gain 2 Authority.
+Disassemble: Gain 1 Wood.
+Damaged Anankian Chariot (2 copies)
+Cost: 2 Stone, 2 Wood
+When Crafted: Recruit 1 basic unit at each of your recruitment buildings. Those units cannot move this turn, but they can loot and battle.
+Disassemble: Gain 2 Stone.
+War Horn (2 copies)
+Cost: 3 Wood
+Effect: When you are the Defender, at the end of the Attack Declaration phase, you may discard this card to place 1 of your basic units from your supply on the battle tile. It participates in the battle.
+Disassemble: Gain 2 Wood.
+Iron Halberd (2 copies)
+Cost: 1 Stone
+Effect: When you are the Attacker, at the start of the Attack and Defense Points phase, you may discard this card to add 2 to your dice roll.
+Disassemble: Gain 1 Stone.
+Brass Shield (2 copies)
+Cost: 2 Stone, 1 Wood
+Effect: During the Damage Calculation phase, after the damage cap is applied, you may discard this card to reduce the damage your units take in this battle by 2 (to a minimum of 0).
+Disassemble: Gain 1 Wood.
+Statue of the Goddess (2 copies)
+Cost: 2 Stone, 1 Gold
+When Crafted: Choose 1 tile with your units. Those units gain +1 Attack in their next battle. Until that battle, they can only move together.
+Disassemble: Gain 1 Gold.
+Overgrown Wall (2 copies)
+Cost: 1 Wood, 1 Gold
+Effect: When you are the Defender, at the start of the Dice Roll phase, you may discard this card. The Attacker subtracts 2 from their dice roll.
+Disassemble: Gain 1 Gold.
+Abandoned Road (2 copies)
+Cost: 1 Wood, 1 Gold
+Effect: During your Main phase, you may discard this card to take 1 extra Battle action. It does not count toward your three Main Phase actions.
+Disassemble: Gain 1 Gold.
+Bejeweled Chalice (2 copies)
+Cost: 1 Wood, 1 Stone
+When Crafted: Gain 1 Gold and draw 1 relic card into your Hand.
+Disassemble: Gain 1 Stone.
+Political Treatise (2 copies)
+Cost: 1 Wood
+Effect: When you are the Defender, at the start of the Attack and Defense Points phase, you may discard this card to add 2 to your dice roll.
+Disassemble: Gain 1 Wood.
+Marble Aqueduct (2 copies)
+Cost: 1 Wood, 1 Stone
+When Crafted: Choose one effect: (A) discard 1 card from your Hand to draw 2 cards from the resource deck; or (B) return any 2 burned resource cards from the burned area to your Resource Pile.
+Disassemble: Gain 1 Wood.
+Looted Vault (2 copies)
+Cost: 1 Wood, 1 Stone
+When Crafted: Draw 2 relic cards into your Hand.
+Disassemble: Gain 1 Wood or 1 Stone (your choice).
+Underground Passage (2 copies)
+Cost: 1 Stone, 1 Wood
+When Crafted: Choose another player. Take 1 random resource card from their Resource Pile. If they have 5 or more resource cards, take 2 instead.
+Disassemble: Gain 1 Wood and 1 Stone.
+Hallowed Ground (2 copies)
+Cost: 1 Gold
+When Crafted: Remove 1 basic unit from the board.
+Disassemble: Gain 1 Gold.
+Ceremonial Bow and Arrow (2 copies)
+Cost: 1 Wood, 1 Stone
+Effect: During your turn, you may discard this card to choose 1 relic card on another player's Table. That player discards it.
+Disassemble: Gain 1 Wood.
+Dilapidated Bridge (3 copies)
+Cost: 1 Wood
+When Crafted: No effect.
+Disassemble: Gain 2 Wood.
+Abandoned Well (3 copies)
+Cost: 1 Stone
+When Crafted: No effect.
+Disassemble: Gain 2 Stone.
+Forest Clearing (4 copies)
+Cost: Any 1 resource
+When Crafted: No effect.
+Disassemble: Gain 1 Stone and 1 Wood.
+Part 17: The Eight Factions
+Faction 1: Curly Tail's Warband
+Description
+Curly Tail, a boar warlord, stumbled upon the old political treatises of the Ananke and admired their indomitable warrior spirit. Seeking glory, Curly Tail means to rule through unmatched might. His loyal Warband pillages to forge golden arms from plundered wealth, stretching supply lines across the Continent like a closing fist. Every victory feeds Curly Tail's hunger, and his hunger feeds his glory. Strike first, win always, and take your Authority before anyone can stand up.
+How Curly Tail scores Authority: forging Golden Arms and Armor (2 Authority each), Momentum Level 2 (1 Authority in any end phase after a turn where you won a battle), and removing enemy buildings, tokens, and special units.
+Setup
+Place Curly Tail, 4 Warband units, and 1 War Party on a forest or ruin tile with no enemy units that is at least 2 tiles away from every enemy unit. Set all three meters to Level 0.
+Building: War Party
+Craft (Excavation phase Craft action): discard 1 Wood and 1 Stone to place a War Party on a tile with a Warband unit.
+Recruit: place 1 Warband unit at each War Party.
+Species Trait: Spoils of War
+The first time you win a battle each turn, after the battle gain 1 Wood or 1 Stone (your choice) from the resource deck.
+Unit: Warband
+Stats: 1/1/1
+Warband Ability: Supply Line (free action). Up to twice during your Main phase, discard 1 Wood to place a Supply Line Token on a tile within 2 tiles of one of your War Parties, Supply Line Tokens, or Warband units. Supply Line Tokens cannot be placed on stream tiles.
+Supply Line Network: your War Parties and Supply Line Tokens are linked to each other when they are within 2 tiles of each other. Everything linked together, directly or through a chain of links, forms one network.
+Supply Line Effect: when you take a Move action with a group that starts on a tile with a War Party or Supply Line Token, Curly Tail and your Warband units in that group may move to any other tile in the same network that has a War Party or Supply Line Token, instead of moving 1 tile. The stacking limit still applies.
+Warband Ability: Forge (free craft). Once during your Excavation phase, while Curly Tail is on the board, pay the cost of 1 Golden Arms or Armor equipment card and equip it to Curly Tail.
+Special Unit: Curly Tail, the Tyrannical
+Stats: 3/2/2
+Curly Tail's Meters
+Curly Tail has three meters: Thirst for Glory, Hunger, and Momentum.
+Each meter runs from Level 0 to Level 4. Level 4 is the cap. A meter cannot go above 4 or below 0.
+All three meters are cumulative: you gain the effects of your current level and every level below it.
+End of your Main phase, in this order:
+1.	Raise Thirst for Glory by 1.
+2.	Pay the effect of your current Hunger level.
+3.	Raise Hunger by 1.
+If you cannot fully pay a Hunger effect, pay what you can, then lose 1 Momentum level and 1 Thirst for Glory level.
+Meter 1: Thirst for Glory
+Thirst for Glory only affects Curly Tail (and the Warband units moving with him at Level 2).
+Level 0: no bonus. (Curly Tail can always equip Golden Arms and Armor.)
+Level 1: Curly Tail gains +1 Attack.
+Level 2: when Curly Tail moves, he and any Warband units moving with him may move 1 extra tile (up to 2 tiles in one Move action). They stay together.
+Level 3: Curly Tail gains +1 Defense and can use Taunt.
+Level 4: once per turn, after a battle Curly Tail took part in, you may start one more battle that includes Curly Tail without using a Main Phase action.
+Curly Tail Ability: Taunt (Thirst for Glory Level 3 or higher). Once during your Main phase, choose 1 enemy unit within 2 tiles of Curly Tail and move it 1 tile closer to Curly Tail. If it ends on Curly Tail's tile, start a free battle as the Attacker against that unit's faction, with Curly Tail and any Warband units on that tile. All of the defending faction's units on the tile defend as normal.
+Meter 2: Hunger
+Level 0: draw 1 card from the resource deck.
+Level 1: discard 1 resource from your Resource Pile.
+Level 2: discard 2 resources from your Resource Pile.
+Level 3: discard 2 resources from your Resource Pile.
+Level 4: discard 2 resources from your Resource Pile and 1 card from your Hand.
+Meter 3: Momentum
+Momentum only changes from battles where your faction is the Attacker.
+Your attack wins: raise Momentum by 1.
+Your attack loses (the enemy successfully defends): lose 2 Momentum levels, 2 Hunger levels, and 1 Thirst for Glory level.
+Tie: no change.
+You are the Defender: no change, win or lose.
+Momentum levels:
+Level 0: during your End phase, draw 1 card from the resource deck.
+Level 1: when you Pillage, also draw 1 relic card into your Hand.
+Level 2: Curly Tail and all Warband units gain +1 Attack. During your End phase, gain 1 Authority if you won a battle this turn.
+Level 3: Curly Tail and all Warband units gain +1 maximum HP. When you lose Level 3, each unit loses that extra HP, but this cannot reduce a unit below 1 HP.
+Level 4: Curly Tail and all Warband units gain +1 Attack.
+Curly Tail Trait: Pillager. After Curly Tail wins a battle he took part in, take a free Pillage.
+Curly Tail Ability: Pillage. Draw the top card of the resource deck into your Resource Pile. Pillage does not count as the tile's once per turn Loot and can be done while enemy units are on the tile.
+Curly Tail Ability: Strategic Retreat. When Curly Tail would be removed:
+1.	The player who removed him gains 2 Authority.
+2.	Discard 2 random resources from your Resource Pile.
+3.	Choose 2 of Curly Tail's equipped Golden Arms and Armor (or all of them, if he has fewer than 2) and return them to supply. He keeps the rest. Returned items can be forged again, but you only gain an item's "When Crafted" Authority the first time you craft it in a game.
+4.	Place Curly Tail at 1 HP on a War Party tile of your choice, with 1 Warband unit from your supply. His meters do not change.
+5.	If you have no War Party on the board, set Curly Tail aside. The next time you Recruit with a War Party on the board, also place Curly Tail at 1 HP at one of your War Parties.
+Equipment: Golden Arms and Armor
+Each item can only be equipped to Curly Tail, and Curly Tail can only have one of each.
+Golden Sword
+Cost: 1 Gold
+When Crafted: Gain 2 Authority.
+Effect: Curly Tail gains +1 Attack.
+Golden War Axe
+Cost: 2 Gold
+When Crafted: Gain 2 Authority.
+Effect: Once per turn, take 1 free Battle action that includes Curly Tail. Curly Tail cannot be moved by enemy effects.
+Golden Gauntlet
+Cost: 2 Gold
+When Crafted: Gain 2 Authority.
+Effect: When Curly Tail wins a battle, you may choose one enemy special unit in that battle to take 2 HP of the damage dealt, ignoring the 1 HP per unit limit for that unit only. The rest of the damage is assigned as normal.
+Golden Chest Plate
+Cost: 2 Gold
+When Crafted: Gain 2 Authority.
+Effect: Curly Tail gains +2 Defense.
+Tyrant's Crown
+Cost: 2 Gold
+When Crafted: Gain 2 Authority.
+Effect: Curly Tail gains +2 maximum HP and heals 2 HP when it is equipped.
+Ways Enemies Can Score Authority
+Removing a Supply Line Token: 1 Authority.
+Removing a War Party: 1 Authority.
+Removing Curly Tail (Strategic Retreat): 2 Authority.
+Curly Tail's Warband Materials
+1 Curly Tail's Warband Faction Board
+20 Warband Unit Pieces
+1 Curly Tail Special Unit Piece
+1 Warband Unit Card
+1 Curly Tail Special Unit Card
+5 War Party Buildings
+8 Supply Line Tokens
+1 Thirst for Glory Meter
+1 Hunger Meter
+1 Momentum Meter
+1 Golden Sword, 1 Golden War Axe, 1 Golden Gauntlet, 1 Golden Chest Plate, and 1 Tyrant's Crown Equipment Card
+Faction 2: Horde of the Millions
+Description
+The Millions are a horde of hungry rabbits that do not seek to conquer the Continent so much as fill it. Burrow by burrow they multiply, and while rummaging for food they accidentally spread sickness. Flood the forests with the horde and squat on your rivals' tiles to spread disease.
+How the Horde scores Authority: Burrows (1 Authority per 2 Burrows each turn), On the Search for Food, Plague cards in the Forage deck, and removing enemy buildings, tokens, and special units.
+Setup
+Place 2 Burrows on 2 separate forest tiles with no enemy units. Then place 2 Millions units on each of those tiles.
+Building: Burrow
+Craft (Excavation phase Craft action): discard 1 Wood to place a Burrow on a tile with a Millions unit that has no enemy buildings and fewer than 3 enemy units.
+Recruit: place 1 Millions unit at each Burrow.
+Burrow Effect (start of your End phase): gain 1 Authority for every 2 Burrows on the board (rounded down).
+Burrow Upkeep (during your End phase): discard 1 Wood for every 2 Burrows on the board (rounded down). For each Wood you cannot pay, remove 2 of your Burrows of your choice. Nobody scores Authority for Burrows removed this way.
+Species Traits
+Out of Hibernation. During your End phase, at each Burrow tile with fewer than 3 Millions units, place 1 Millions unit.
+Prolific Creatures. At the start of the next player's Main phase, place 1 Millions unit on every tile that has at least one Millions unit and at least one enemy unit, token, or building, unless that tile already has 3 or more Millions units.
+On the Search for Food. During your End phase, gain 1 Authority for every 3 Millions units on each tile that has one or more enemy pieces (maximum 2 Authority per turn).
+Oblivious to Danger. When the Horde loses a battle, it does not deal mandatory loser damage.
+Unit: Millions
+Stats: 0/0/1
+Millions Trait: Forage. During each other player's End phase, if that player has 1 or more units on a tile with a Millions unit, they draw 1 card from the Forage deck and apply its effect. Then return the card to the Forage deck and shuffle it. Each player draws at most 1 Forage card from this trait per End phase. The Horde player never draws Forage cards.
+Millions Ability: Other People's Gluttony (free craft). During your Excavation phase, discard 1 Gold to place 1 Gluttony Token on a tile with a Millions unit.
+Gluttony Token Effect: while a Millions unit is on this tile, enemy units on this tile cannot use a Move action to leave it (including Supply Line movement). They can still be moved off by effects. This is a debuff.
+Forage Deck (8 cards)
+After a Forage card is used, it goes back into the Forage deck and the deck is shuffled. "You" means the player who drew the card.
+3 Plague Cards
+1 card: You lose 1 Authority and the Horde player gains 1 Authority.
+1 card: Place 1 Millions unit from the Horde player's supply on a tile with one of your pieces, then discard 1 resource from your Resource Pile.
+1 card: If you have units on a tile with a Millions unit, one of those units (your choice) loses 1 HP.
+5 Rummage Cards
+2 cards: The Horde player gains 2 Stone from the resource deck.
+2 cards: The Horde player gains 2 Wood from the resource deck.
+1 card: The Horde player gains 1 Gold from the resource deck.
+Catapult Tokens
+There are 2 Catapult Tokens in the game. Any player may craft one while one is in the supply.
+Craft (free craft, during that player's Excavation phase): discard 2 Stone and 1 Wood to place a Catapult Token on a tile with a Millions unit and at least one of your units.
+Ownership: the player who crafted a Catapult owns it. Mark it with a cube of your color. Only its owner can use it.
+Uses: each Catapult has 2 uses. It can be used the turn it is crafted and on later turns, at most once per turn. Flip it after the first use. After the second use, return it to supply (nobody scores Authority).
+Catapult Effect (free action, during the owner's Main phase): on the Catapult's tile, choose up to 3 units from the Millions units and the King of the Millions there. Move them together up to 3 tiles in a straight line. Only Millions units and the King of the Millions can be catapulted. Then every player except the Horde player with a piece on the landing tile draws 1 Forage card. If the owner is not the Horde player, the owner gains 1 Authority.
+Removing a Catapult: while isolated (none of its owner's units are on the tile), a Catapult can be removed with a Battle action (Part 13) for 1 Authority.
+Special Unit: King of the Millions
+Stats: 0/0/4
+Summoning Condition: once per game, discard 1 Gold, 1 Stone, and 1 Wood to place the King of the Millions on a tile with a Burrow. If the King is removed, he cannot be summoned again.
+King of the Millions Ability: Spread the Fun. When the King is summoned, every other player draws 1 Forage card and applies it.
+King of the Millions Ability: King of the Rabbit Hill. Once during your Main phase, place 1 Millions unit on the King's tile.
+Ways Enemies Can Score Authority
+Removing a Burrow: 1 Authority.
+Removing a Gluttony Token: 1 Authority.
+Removing a Catapult Token: 1 Authority.
+Using your own Catapult (non-Horde players): 1 Authority per use.
+Removing the King of the Millions: 2 Authority.
+Horde of the Millions Materials
+1 Horde of the Millions Faction Board
+30 Millions Unit Pieces
+1 King of the Millions Special Unit Piece
+1 Millions Unit Card
+1 King of the Millions Special Unit Card
+2 Catapult Tokens
+3 Gluttony Tokens
+3 Burrow Buildings
+8 Card Forage Deck
+Faction 3: Platypus Papacy
+Description
+The platypus: no creature so impossible could be an accident. The Papacy holds the platypus to be the divinely inspired creation of a divine being. Turning away from the heresy of the Ananke, the Platypus Pilgrims carry their gospel into hostile lands and die for it gladly. Through death, faith grows, and more Platypi take up the cause as Crusaders. Enshrine your holy relics, grow the Platy-Pope's holiness, crusade, and reclaim the Continent for its rightful heirs.
+How the Papacy scores Authority: Martyrdom (1 Authority each), Holy Relic Tokens (1 Authority when crafted), Alms (1 Authority per Platy-Pope level), Level 5 Faith conversion, and removing enemy buildings, tokens, and special units (extra Authority during a Crusade).
+Setup
+Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units. Set the Faith Meter and the Platy-Pope Level Meter to 0.
+Building: The Citadel
+The Papacy has only 1 building, the Citadel. The Citadel can be placed on a forest or stream tile.
+Recruit: place basic units at the Citadel as shown on the Platy-Pope Level Meter.
+Rebuilding: if the Citadel is not on the board during your Excavation phase, you may use your Craft action to discard 2 Stone and 2 Wood and place the Citadel on a forest or stream tile with no enemy units. Then place 1 Pilgrim and 1 Crusader on that tile.
+The Papacy cannot use the comeback mechanic.
+Species Traits
+Prophetic Vision. At the start of your Draw phase, before you draw, you may look at the top 3 cards of the relic deck. Add 1 of them to your Hand and put the other 2 on the bottom of the relic deck.
+Alms. Once during your Main phase, while the Platy-Pope is on the board and you have 5 Faith, raise the Platy-Pope's level by 1, gain 1 Authority, and reset the Faith Meter to 0. Faith above 5 is lost.
+Indulgences. During your Main phase, you may discard 1 Gold to gain 2 Faith.
+Unit: Pilgrim
+Stats: 0/0/1
+Pilgrim Ability: Martyrdom. When a Pilgrim ends a Move action on a tile with enemy units, you may remove that Pilgrim to gain 1 Faith and 1 Authority. Martyrdom does not trigger when another faction moves onto the Pilgrim's tile.
+Unit: Crusader
+Stats: 1/1/1
+Crusader Ability: Holy Relic Token. Once during your Main phase, while you have a Crusader on the board, discard 1 Wood, 1 Stone, and 1 Gold to place 1 Holy Relic Token on the Citadel's tile and immediately gain 1 Authority. Holy Relic Tokens may be placed on a stream tile with the Citadel.
+Holy Relic Token Effect: during your End phase, gain 1 Faith for each Holy Relic Token on the board.
+Special Unit: The Platy-Pope
+Stats: 0/3/3
+Platy-Pope Ability: Unyielding. The Platy-Pope cannot move or be moved.
+Platy-Pope Ability: Crusade. When the Platy-Pope reaches Level 1, and each time it levels up after that, enter a Crusade for your next 2 turns. If Crusades overlap, add the Crusade turns together.
+During a Crusade:
+Crusaders gain +1 Attack.
+When you remove an enemy building, token, or special unit, gain 1 extra Authority.
+When you win a battle, gain 1 Faith.
+When the Platy-Pope is removed by an enemy: you lose 1 Authority and that player gains 2 Authority.
+Platy-Pope Return. At the start of your Excavation phase, if the Platy-Pope is not on the board and the Citadel is, place the Platy-Pope on the Citadel's tile at full HP. Set the Platy-Pope Level Meter to Level 1 (or Level 0, if it was at Level 0 when removed) and the Faith Meter to 0. You lose every bonus from the levels above that. Returning does not start a Crusade. While the Platy-Pope is off the board you can still gain Faith, but you cannot use Alms.
+Platy-Pope Level Meter
+All levels stack. You gain the effects of your current level and every level below it.
+Level 0
+When you Recruit, place 1 Pilgrim at the Citadel.
+Level 1
+When you Recruit, also place 1 Crusader at the Citadel.
+Gain the Crusade ability.
+Level 2
+All Crusaders gain +1 Attack and +1 Defense for the rest of the game.
+Once per turn, you may discard 1 Gold to remove all debuffs from your Crusaders on one tile.
+Level 3
+When you Recruit, also place 2 more Crusaders at the Citadel.
+You may spend 2 Faith to remove 1 enemy basic unit on a tile with a Crusader, then place a Pilgrim on that tile.
+A Move action made only with Crusaders may move them up to 2 tiles.
+Level 4
+All Crusaders gain +1 Attack and +1 Defense for the rest of the game.
+During a Crusade, when one of your Crusaders removes an enemy unit, gain 1 Authority. When an enemy removes one of your Crusaders during a Crusade, that enemy player gains 1 Authority.
+Level 5
+Once per turn during your Main phase, you may remove 3 Faith from your Faith Meter to gain 1 Authority.
+Ways Enemies Can Score Authority
+Removing 2 or more Crusaders in one battle: 1 Authority.
+Removing a Holy Relic Token: 1 Authority.
+Removing the Citadel: 1 Authority.
+Removing the Platy-Pope: 2 Authority.
+Platypus Papacy Materials
+1 Platypus Papacy Faction Board
+5 Pilgrim Unit Pieces
+13 Crusader Unit Pieces
+1 Platy-Pope Special Unit Piece
+1 Pilgrim Unit Card
+1 Crusader Unit Card
+1 Platy-Pope Special Unit Card
+2 Holy Relic Tokens
+1 Citadel Building
+1 Faith Meter and Platy-Pope Level Meter Board
+Faction 4: Trouble Making Tanukis
+Description
+Five hundred years ago, at the start of the War of Calamity, the last of the Anankian holy texts was unveiled, and with the Ananke's disappearance no more revelations were made. Then the Tanukis stumbled upon those religious works. Inspired, they scamper across the Continent gathering the Ananke's scattered coins and dropping them off at shrines. And if a few travelers stumble into the traps they leave along the way, that is enjoyment for the gods.
+How the Tanukis score Authority: delivering Coin Tokens to Shrines (2 Authority each) and removing enemy buildings, tokens, and special units.
+Setup
+1.	Place 3 Tanuki units and 1 Shrine on a forest tile with no enemy units.
+2.	After all other players have finished their setup, the Tanuki player places 12 Coin Tokens on 12 different forest tiles with no enemy units. Each Coin Token must be at least 2 tiles away from every other Coin Token. The Tanuki player places Coin Tokens last so that all other faction starting positions are known before the tokens are distributed.
+Coin Tokens
+Coin Tokens are tokens, so they are pieces and count toward the 2 token limit on a tile.
+Coin Tokens may be on any tile, including stream tiles.
+Two Coin Tokens can never be on the same tile.
+Coin Tokens cannot be removed by battles, cards, or abilities. They leave the board only by being scored at a Shrine.
+Building: Shrine
+Craft (Excavation phase Craft action): discard 2 Wood to place 1 Shrine on a forest or Fallen Leaves tile with a Tanuki unit or A Band of Troublemakers.
+Recruit: place 1 Tanuki unit at each Shrine.
+Scoring Coins: whenever a Coin Token is moved or placed onto a tile with a Shrine, return the Coin Token to supply and gain 2 Authority.
+Species Traits
+The Coin Hunt (compulsory). A Coin Token on the same tile as one or more of your Tanuki units or A Band of Troublemakers is being held. Coins always follow the movement of the Tanukis holding them:
+When units holding a coin move off its tile, the coin moves with them. This happens for every kind of movement, including Quick Feet, No Honor Amongst Troublemakers, and movement caused by other players' effects.
+If your units on that tile split up (some move, some stay, or they go to different tiles), you choose which unit holds the coin, and the coin goes with that unit.
+If the destination tile already has a Coin Token, the coin stays behind.
+Quick Feet. When a player deals 1 or more HP of damage to your Tanuki units on a tile with 2 or more of your Tanuki units, after the battle's 0 HP units are removed you may move any of your remaining units on that tile to adjacent tiles with no enemy units. Each unit may go to a different tile. Then place 1 Fallen Leaves tile on one forest tile a unit moved to. If there are no adjacent tiles without enemy units, the units do not move.
+Rustling in the Trees. Once during your Draw phase, place 1 Fallen Leaves tile on a forest tile with a Shrine, or a forest tile adjacent to a Shrine, that has no enemy units.
+Unique Faction Tile: Fallen Leaves
+There are 13 Fallen Leaves tiles: 8 Prank Leaves and 5 Trap Leaves. All of them have identical backs.
+Keep the Fallen Leaves tiles in a shuffled facedown stack. When you place one, take the top tile, look at it privately, then place it facedown. Only the Tanuki player knows whether each placed tile is a Prank Leaf or a Trap Leaf. Other players do not know what an unflipped tile is until it is flipped.
+A Fallen Leaves tile can only replace a forest tile. All pieces on that tile stay where they are.
+Any player can Loot a Fallen Leaves tile (flipped or unflipped) for 1 Wood, and only Wood.
+Unflipped Fallen Leaves tiles cannot be removed.
+Flipping: when an enemy group ends a Move action on an unflipped Fallen Leaves tile, flip it and resolve it:
+Trap Leaf: all enemy units on this tile cannot move, and cannot be moved by effects, for the rest of this turn and during that enemy's next turn. This is a debuff.
+Prank Leaf: place 1 Coin Token from supply on this tile, unless it already has a Coin Token or the token limit is full.
+After flipping: the tile stays faceup and has no further effect. While isolated (none of your Tanuki units or the Band are on it), a flipped Fallen Leaves tile can be removed with a Battle action (Part 13) for 1 Authority. When it is removed, the forest tile returns and the Fallen Leaves tile is shuffled back into the facedown stack.
+Unit: Tanuki
+Stats: 1/1/1
+Tanuki Ability: Running Amok. Once during your Main phase, place 1 Fallen Leaves tile on a forest tile with a Tanuki unit.
+Special Unit: A Band of Troublemakers
+Stats: 2/2/3
+Summoning Condition: during your Main phase, if 3 or more Tanuki units are on the same tile, you may remove 3 of those Tanuki units and discard 1 Gold to place A Band of Troublemakers on that tile. Only one Band can be on the board at a time. The Band can hold, carry, and score Coin Tokens just like a Tanuki unit.
+Band Ability: Belly Drums. Once during your Draw phase, you may place a Fallen Leaves tile on up to 2 forest tiles that have a Coin Token and no enemy units.
+Band Ability: No Honor Amongst Troublemakers. When the Band would be reduced to 0 HP, return it to supply and place 1 Tanuki unit on each of up to 3 adjacent forest or Fallen Leaves tiles. The player who removed the Band gains 2 Authority. If the Band was holding a coin, choose which of the new Tanuki units holds it. You can summon the Band again any number of times by meeting its Summoning Condition.
+Ways Enemies Can Score Authority
+Removing a flipped Fallen Leaves tile: 1 Authority.
+Removing a Shrine: 1 Authority.
+Removing A Band of Troublemakers: 2 Authority.
+Trouble Making Tanukis Materials
+1 Trouble Making Tanukis Faction Board
+18 Tanuki Unit Pieces
+1 A Band of Troublemakers Special Unit Piece
+1 Tanuki Unit Card
+1 A Band of Troublemakers Special Unit Card
+3 Shrine Buildings
+20 Coin Tokens
+8 Prank Leaf Fallen Leaves Tiles
+5 Trap Leaf Fallen Leaves Tiles
+Appendix A: Content Not In This Edition
+The following was stripped from this rulebook because it belongs to factions outside the eight selected. The original text of those factions is kept in the separate file "Critters of Calamity - Excluded Factions."
+Excluded factions: The Carnivorous Queen, The Glacier Kingdom, The Goat Cabal.
+Removed component lists: Snowfall, Egg, Initiation Rite, and Effigy Tokens; Igloo, Frozen Harbor, Chrysalis, and Summoning Circle buildings; Glacier and Miasma tiles; Blizzard, Rage and Feeding Meters; Grimoire deck; equipment for the Carnivorous Queen.
+Removed rules: the Chrysalis battle exception in the building removal rules, and the faction pick note about Intermediate and Expert factions.
+Faction 5: The Necro-mouser
+Description: The Necromouser: The incarnate of death came to the Continent long before the other factions did, and the Necromouser has made a deal with death to make it his trade. Where armies clash he seeds his creeping miasma, and the fallen of every banner rise again in his service. Let the living wage their wars, the Necromouser hoards resources, harvests the dead, and spends the departed to raise horrors adorned in Anankian steel. Every soul in your cauldron and summon is Authority waiting to be claimed.
+Setup: During the Necromouser's setup turn, place three Miasma Tiles facedown (Necromouser side) on the gameboard in any pattern as long as they are not directly adjacent to each other or on the same tile. Miasma Tiles determine where the Necromouser can spawn at the start of the game so place them carefully. The Necromouser starts with 3 Skeleton Units on the Cauldron, units on the Cauldron are called "dead" units." These dead units can be used to summon your special units.
+Building: The Necromouser has no building and cannot use the recruitment main phase action or the comeback mechanic.
+Species Trait - Hoarder: You can keep 8 resource cards in your resource pile during your end phase instead of 5.
+Species Trait - Plague: When you spend Gold on equipment, you can place one Miasma Tile directly adjacent to one Miasma Tile on the field of your choosing.
+Species Trait - Undead Shackles: Once during your end phase, gain 1 Authority per 2 Dead in the Cauldron (cap 2 Authority per turn).
+Species Trait - Cauldron: Begin the game with the Cauldron card, all units that are placed onto this card by a Miasma Tile become a "Dead" unit. Dead units discarded from the cauldron for a summon go back to their player's supply.
+Species Trait - Arise: Once per turn, you can spend 1 Dead from the Cauldron to summon 1 Skeleton Unit on a Miasma Tile.
+Unique Faction Tile - Miasma:
+When a unit is removed from the board on a Miasma Tile or an adjacent tile, place 1 of those removed units from each faction onto the Cauldron.
+Miasma Tiles without any of your units can be attacked. If the attacker wins, remove that tile; the attacker gains 1 Authority, then the Necromouser adds 1 Skeleton Unit from their supply to the Cauldron.
+Unit - Skeleton:
+Unit Stats: 1/0/1
+Skeleton Ability - Spread the Bad News: Once during your main phase, you can remove 1 Skeleton Unit from the board (does not go to Cauldron) to place a Miasma Tile on the tile where the Skeleton Unit was removed.
+Special Unit - The Necromouser
+Unit Stats: 0/0/1
+Summoning Condition:
+The first time in the game that a unit is removed from a tile with a Miasma Tile or its adjacent tiles, flip all miasma tiles over and summon the Necromouser and 1 Skeleton Unit on that tile.
+When the Necromouser is on the field, you gain access to the following abilities:
+Ability - Necromancy: During your main phase, you can spend units in the Cauldron to summon one special unit per turn. You can summon up to four special units per game, in any ratio across the three types (cap 4 special unit summons across the entire game). Each special unit has two equipment cards that can be crafted and equipped to the correct special unit.
+Ability - Cowardice: The Necromouser cannot be part of a battle or attacked if there are any skeletons or special units on his tile. However, skeletons and special units can be attacked. When isolated, the Necromouser can be attacked. When he would be removed in battle, lose 3 Authority and place the Necromouser two tiles away from the battle in a direction of your choosing. Then place 3 Miasma Tiles on tiles adjacent to the Necromouser, using Miasma Tiles from the board or your supply.
+Special Unit - The Bloat:
+The Bloat Unit Stats: 1/2/1
+Summoning Condition: While the Necromouser is on the field, you can remove 1 Dead from the Cauldron, gain 1 Authority, and then summon this unit on the Necromouser's tile.
+During your main phase: you can equip the Bloat with a "Ring of Favor" and/or a "Locket of Memory." Each Bloat can only be equipped with 1 Ring of Favor and 1 Locket of Memory.
+Ability - Necrosis: During your draw phase, you can explode The Bloat. When the Bloat explodes it deals 2HP damage to all enemy units on his tile (this bypasses the 1HP damage cap). If The Bloat is removed from the board before exploding, the removing player gains 1 Authority and draws 1 card from the resource deck.
+Special Unit - The Vanguard:
+Vanguard Unit Stats: 0/2/2
+Summoning Condition: While the Necromouser is on the field, you can remove 3 Dead from the Cauldron, gain 3 Authority, and then summon this unit on the Necromouser's tile.
+During your main phase: You may equip only one Helmet or Shield to each Vanguard per turn.
+Unit Trait - Devotion: If the Necromouser is the defender in battle and the Vanguard is on an adjacent tile, the Vanguard and any other of your units on that tile participate in the defending battle (shield and helmet buffs apply to this defending battle).
+Special Unit - The Brute:
+Brute Unit Stats: 2/0/2
+Summoning Condition: While the Necromouser is on the field, you can remove 4 Dead from the Cauldron, gain 4 Authority, and summon this unit on the Necromouser's tile.
+During your main phase: you can equip each Brute with 1 Sword and/or 1 Boots.
+Equipment Cards:
+Equipment - Locket of Memory:
+Crafting Cost: 2 Stone
+Effect: When a Bloat equipped with a Locket of Memory explodes, the explosion gains a 1 tile radius.
+Can only be equipped to the Bloat.
+Only one Locket of Memory can be equipped to each Bloat.
+Equipment - Ring of Favor:
+Crafting Cost: 2 Stone
+Effect: When the Bloat with the Ring of Favor explodes, gain 2 more Authority and place a Miasma Tile on that tile.
+Can only be equipped to the Bloat.
+Only one Ring of Favor can be equipped to each Bloat.
+Equipment - Anankian Helmet:
+Crafting Cost: 1 Stone 1 Wood
+Effect: +2 Defense to the equipped Vanguard.
+Can only be equipped to a Vanguard.
+Only one helmet can be equipped to each Vanguard.
+Equipment - Anankian Shield:
+Crafting Cost: 1 Wood 1 Stone 1 Gold
+Effect: +1 Defense to the equipped Vanguard and any other of your units or special units on the same tile as the Vanguard.
+Can only be equipped to the Vanguard.
+Only one Shield can be equipped to each Vanguard.
+Equipment - Anankian Sword:
+Crafting Cost: 1 Wood 1 Stone 1 Gold
+Effect: +1 Attack to the equipped Brute.
+Can only be equipped to The Brute.
+Each Brute can be equipped with 2 Swords.
+Equipment - Leather Boots:
+Crafting Cost: 2 Wood
+Effect: The equipped Brute gains +1 tile movement per movement action.
+Can only be equipped to the Brute.
+Only one pair of Boots can be equipped to each Brute.
+Ways for enemies to get Authority:
+When an attacker removes a Necromouser special unit they gain Authority equal to that unit's summoning cost. Additionally, the attacker can as a free action loot to receive one of the materials used for the equipped equipment that was on that summon. If the attacker loots, the Necromouser adds 1 Skeleton Unit from their supply to the Cauldron.
+Miasma Tiles without any of your units can be attacked. If the attacker wins, remove the tile; the attacker gains 1 Authority, then the Necromouser adds 1 Skeleton Unit from their supply to the Cauldron.
+List of Necromouser's Faction Materials:
+1 Necromouser Faction Board
+1 Necromouser Special Unit Piece
+3 Bloat Special Unit Pieces
+3 Vanguard Special Unit Pieces
+3 Brute Special Unit Pieces
+18 Skeleton Unit Pieces
+6 Miasma Tiles
+1 Necromouser Special Unit Card
+1 Skeleton Unit Card
+1 Bloat Special Unit Card
+1 Vanguard Special Unit Card
+1 Brute Special Unit Card
+1 Cauldron Card
+6 Sword Equipment Cards
+3 Helmet Equipment Cards
+3 Shield Equipment Cards
+3 Boots Equipment Cards
+3 Locket of Memory Equipment Cards
+3 Ring of Favor Equipment Cards
+Faction 6: Firestarting Squirrels
+Description: Strong early game faction, the Squirrels use Acorn Firestarters to create Fire Tiles that damage enemy units, move enemy units, and lower the total amount of available resources from the game. Place Tar Pit Tokens to increase the damage of Fire Tiles and further restrict enemy movements. Build Bunkers to recruit and protect your units from fire while gaining Authority. Use the Pyromaniac to move Fire Tiles and Tar Pit Tokens to desired locations. Remove enemy special units, tokens, and buildings for Authority.
+Setup: Place 1 Squirrel Unit each on 3 adjacent forest tiles without any enemy pieces. Then place 1 Bunker on one of those forest tiles. Place 2 Charcoal resource cards in your resource pile. Then add 1 crafted Acorn Firestarter card faceup on the table in front of you. Place the burned area on the table in front of you.
+Building - Bunker: During your excavation phase, you can craft and place a Bunker on a tile with a Squirrel unit by discarding 2 Stone from your resource pile. When you recruit, summon 1 Squirrel unit at each Bunker.
+Bunker Effect: Squirrel units on a tile with a Bunker cannot take damage from or be moved by a Fire Tile.
+Species Trait - Unquenchable Spirit: Once during your main phase, a Squirrel unit adjacent to a Fire Tile can use a main phase action to loot the Fire Tile for 1 Charcoal resource card; add that card to your resource pile instead of gaining a card from the resource deck.
+Species Trait - Flames of War: At the end of each of your Fire Tile end phase resolutions, gain 1 Authority for every 2HP damage your Fire Tiles dealt to enemy units (rounded down), and 1 Authority for every 2 enemy units a Fire Tile moved this end phase. You can only gain a maximum of 4 Authority from Flames of War per end phase.
+Species Trait - Forest Fire: During your end phase, gain 1 Authority for every Fire Tile adjacent to another faction's pieces (cap 2).
+Species Trait - Ignite: During your end phase, you may burn 1 card from your hand to remove 1 Fire Tile from the board, then place a Fire Tile on a forest tile that is adjacent to an enemy unit or special unit and is within 3 tiles of a Squirrel unit.
+Species Trait - Disruption: Once during your main phase, you can burn 2 cards in your resource pile to burn 1 card from the excavation area and 1 card from each player's resource pile. If you burn a Gold resource card or a relic deck card that gives Gold when disassembled, gain 1 Authority.
+Unit - Squirrel:
+Unit Stats: 1/0/1
+Squirrel Ability - Tar Pit Token: During your excavation phase you can discard 2 Charcoal resource cards from your resource pile to craft and place a Tar Pit Token on a tile with a Squirrel unit or on an adjacent tile.
+Tar Pit Token Effect:
+Add 1HP damage done by a Fire Tile with a Tar Pit Token; this extra damage bypasses the Fire Tile end phase damage cap.
+If an enemy wants to move their units off a tile with a Tar Pit Token during their main phase they must use two main phase actions to leave that tile.
+Squirrel Ability - Acorn Firestarter: Once during your main phase, you can discard 1 Charcoal and 1 Wood from your resource pile to craft an Acorn Firestarter. Once during your main phase, you can discard 1 Crafted Acorn Firestarter card to place a Fire Tile on a tile with a Squirrel Unit.
+(Note: discarded Acorn Firestarters can be re-crafted.)
+Unique Faction Tile - Fire Tile:
+Fire Tiles are hexagonal overlay tiles placed on top of forest tiles. Only Tar Pit Tokens may be placed on a Fire Tile; no other building, token, or tile can be placed on a Fire Tile. Tar Pit Tokens cannot be removed by Fire Tiles.
+End Phase Resolution:
+During your end phase, resolve your Fire Tiles one at a time. On each Fire Tile, take these steps in order:
+1.	Clear Squirrels: Return all of your Squirrel units on this Fire Tile to your supply. Gain 1 Charcoal card to your resource pile for each one returned.
+2.	Burn structures: Remove 1 building or token of your choice on this Fire Tile. Then roll two dice; if you roll doubles, remove every building and token on every Fire Tile on the board (Tar Pit Tokens cannot be removed by Fire Tiles).
+3.	Drive out enemies: Each enemy unit on this Fire Tile is moved by its controller to an adjacent tile of their choice. A unit moved onto a forest tile takes 1HP; a unit moved onto a stream or ruin tile takes none.
+4.	Spread: Roll one die. If you roll a 1 or 6, place a new Fire Tile on a forest tile holding one of the enemies you just drove out, and deal 1HP to every unit on that new Fire Tile. (Spread is not considered entering a Fire Tile, as the units are not moving onto it.)
+5.	Burn the Deck: Burn the top card of the resource deck. If it is Gold, gain 1 Authority.
+Rules That Apply For Fire Tiles Throughout the End Phase:
+End phase damage cap: No unit can take more than 1HP total from your end phase Fire Tile resolution (steps 1-5) during a single end phase, no matter how many Fire Tiles or steps would damage it.
+A unit can only be driven out (step 3) once per end phase. If it is later forced back onto a Fire Tile, it still takes the 1HP (if on a forest tile, and if it has not already reached the cap) but is not moved again.
+Burned cards go to the burned area and cannot return to any deck or pile except through the relic deck card Marble Aqueduct.
+Other Fire Tile Effects:
+Entering a Fire Tile (In-Movement Damage):
+Whenever an enemy unit moves onto a Fire Tile during any player's turn, 1 of the moving player's units on that tile takes 1HP.
+(Note: a unit driven onto an existing Fire Tile in step 3 counts as entering it. A unit that a new Fire Tile is placed beneath in step 4 does not.)
+The entering a Fire Tile damage is dealt once each time a unit enters a Fire Tile. It is separate from the end phase resolution above and is not limited by the end phase damage cap, meaning a unit can take 1HP entering a Fire Tile on its own turn and a further 1HP from your end phase resolution.
+Removing a Fire Tile:
+If another faction has a unit on a Fire Tile, during their main phase they may discard 2 Stone from their resource pile to remove that Fire Tile from the field and gain 1 Authority.
+Special Unit - Pyromaniac:
+Unit Stats: 1/2/3
+Summoning Condition: Once per game during your main phase, you can burn 1 Wood, 1 Stone, 1 Gold, and 1 Charcoal from your resource pile to summon the Pyromaniac on a Fire Tile.
+Special Trait - Affinity: This special unit is immune to being moved by or taking damage from Fire Tiles.
+Ability - Flameweaver: Once during your main phase, you can burn 2 cards from your hand to move 1 Fire Tile to an adjacent forest tile (this is not counted as enemy units moving onto the tile).
+Ability - Pyromancy: Burn 1 Wood and 1 Gold from your resource pile, then place 1 Fire Tile on the tile with the Pyromaniac.
+Ability - Oil Spill: Burn 1 Charcoal resource card to place 1 Tar Pit Token adjacent to a Fire Tile or a Tar Pit Token.
+Ways Enemies Can Score Authority From You:
+Removing a Bunker gives 1 Authority.
+Removing a Fire Tile gives 1 Authority.
+Removing a Tar Pit Token gives 1 Authority.
+Removing the Pyromaniac gives 2 Authority.
+List of Firestarting Squirrels' Faction Materials:
+1 Firestarting Squirrels Faction Board
+15 Squirrel Unit Pieces
+1 Pyromaniac Special Unit Piece
+1 Squirrel Unit Card
+1 Pyromaniac Special Unit Card
+6 Fire Tiles
+3 Tar Pit Tokens
+3 Bunker Buildings
+6 Charcoal Resource Cards
+3 Acorn Firestarter Cards
+Faction 7: The Capybara Caravan
+Description: At the bottom of the stream are remnants of the Ananke, and the capybaras dredge that memory up one relic at a time and sell those relics using their merchants. The Capybaras are a peaceful empire on the Continent that seeks to gain Authority through their caravan of unbothered merchants who carve the waterways and welcome every weary traveler to their wallows.
+Special Setup: Complete the special setup before any other player sets up any pieces on the board. Take the 8 Stream Tiles from your supply and place them one at a time onto the game board following the below rules for Stream Tile placement.
+Stream Tile Placement Rules:
+Stream Tiles can only be placed on forest tiles.
+Each Stream Tile must be placed adjacent to another Stream Tile.
+Stream Tiles replace and overrule the forest tile underneath.
+After you complete the special setup, continue the setup phase as usual.
+Setup: Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile.
+Building - Wallow: Once during your excavation phase, you can discard 1 Wood and 1 Stone from your resource pile to place 1 Wallow on a stream tile with a Capybara unit or on a forest tile that is adjacent to a stream tile with a Capybara unit on it. When you recruit, summon 1 Capybara unit at each Wallow.
+Species Trait - Watering Hole: An enemy unit becomes a Guest in any of these cases:
+1.	It enters a tile with a Wallow and its controller chooses not to attack on that tile.
+2.	The Capybara builds a Wallow on a tile that already has an enemy unit on it.
+3.	When a player purchases a card from the Capybara Trader.
+4.	The Riverkeeper is on a tile with enemy units on it.
+While a unit is a Guest, each player that controls a Guest unit draws 1 card from the resource deck during their end phase. A unit loses Guest status when it moves out of, or is moved out of, the tile with the Wallow (or, for case 4, the tile with the Riverkeeper).
+Species Trait - Selfless Nature: When a guest would take damage in battle, a Capybara unit on that tile absorbs 1HP damage from that battle.
+Species Trait - Customary Greeting: Once during your end phase, gain 1 Authority for each player who has a guest unit (cap 2 Authority per turn).
+Species Trait - Exchange Rate: Once during your main phase, you can discard three of the same type of resource card to add 2 of the same type of resource card from the resource deck to your resource pile.
+Unit - Capybara:
+Unit Stats: 1/1/2
+Capybara Ability - Forage: Once during your main phase, when a Capybara is on a stream tile, you can take 1 Gold or 1 Stone from the resource deck and add it to your resource pile.
+Capybara Ability - Semiaquatic: For 1 movement action, a Capybara unit or units can move across 2 stream tiles.
+Special Unit - The Riverkeeper:
+Unit Stats: 1/4/3
+Summoning Condition: During your main phase, when there are 2 or more Wallows on the board, you can discard any 2 resource cards and 1 Gold from your resource pile to summon the Riverkeeper on a tile with a Wallow.
+Riverkeeper Ability - Hospitality: Once during your main phase, if you have a guest on the Riverkeeper's tile the guest may draw 1 relic deck card; when they do, the Capybara player gains 1 Authority and adds 1 card from the discard pile to their hand.
+Riverkeeper Ability - Immovable: The Riverkeeper cannot be moved by an enemy effect but they can be moved by a tile effect.
+Riverkeeper Ability - Commerce: While the Riverkeeper is on the board, guests can purchase Traded Good Cards as if they were on a tile with the Capybara Trader.
+Special Unit - Capybara Trader:
+Unit Stats: 0/2/2
+Summoning Condition: If the Capybara Trader is not on the board during your excavation phase, you can discard 2 relic deck cards from your hand to place the Capybara Trader at a Wallow.
+Capybara Trader Ability - Traveling Caravan: During any player's main phase, when they have a unit on the tile with the Capybara Trader or their unit is on an adjacent tile, they can purchase 1 of the Trader's faceup Traded Goods cards from the stall by paying the resource cost to the Capybara player. The purchasing player then gains 1 Authority, the Capybara player gains 1 Authority, and the purchasing player places 1 of their basic units from their supply onto a tile with a Wallow as a guest. During each end phase, refill the stall to 3 cards.
+Capybara Trader Ability - Peddling: The Capybara Trader receives 1 free movement action during each of your turns. During each movement action, the Capybara Trader can move up to 2 land tiles or up to 3 stream tiles.
+Faction Deck - Traded Goods Cards:
+When you purchase these cards from the Capybara Trader, place the purchased card faceup in front of you. You can use the effect of the card during an appropriate time and then discard the card.
+Rusty Shovel: The next time you use the looting action, you can draw 3 cards from the resource deck and end the looting action, then discard this card. Cost: 3 resource cards.
+Equipment - Clay Edict: You can equip this card to 1 of your special units; it gains +1 tile movement for the next three turns. Cost: 3 resource cards.
+Prayer Beads: During your excavation phase, you can draw the top 2 cards from the relic deck, then discard this card. Cost: 3 resources.
+Silver Spoon: During your excavation phase, you can add 2 relic cards from the discard pile to your hand; then both you and the Capybara player gain 1 Authority. Cost: 2 resources.
+Copper Figurine: After a die has been rolled, you can discard this card to re-roll 1 die (can be used during the battle dice roll phase). Cost: 3 resources.
+Broken Sickle: Add 1 relic card from the discard pile to your hand, then discard this card. Cost: 1 resource.
+Horse Hair Brush: Your next unearth, assemble, or disassemble action costs 1 less resource of your choosing, then discard this card. Cost: 2 resources.
+Old Jug: During your main phase, you can heal a special unit for 1HP, then discard this card. Cost: 2 resources.
+Ways Enemies Can Score Authority From You:
+Buying a Traded Good Card gives 1 Authority to the Capybara player (see Traveling Caravan above).
+Removing the Capybara Trader gives 1 Authority.
+Removing the Riverkeeper gives 2 Authority.
+List of The Capybara Caravan's Faction Materials:
+5 Wallows
+Traded Goods Deck (8 cards)
+1 Riverkeeper Special Unit Piece
+1 Capybara Trader Special Unit Piece
+20 Capybara Unit Pieces
+1 Riverkeeper Special Unit Card
+1 Capybara Trader Special Unit Card
+1 Capybara Unit Card
+8 Stream Tiles
+Faction 8: The Briared Flower
+Description: There is a legend that in the farthest corner of the Continent, a flower once sought to grow so high it could touch the sun. But the higher it climbed, the more attention it drew from those who coveted its beautiful petals, and slowly, those petals metamorphosed into fiery thorns. When at last the flower was cut down, it bloomed one final time in an act of defiance. Now one of its seedlings has flowered, born with an instinctual hatred of other creatures. It hurls its spines across the Continent so that it might be left alone and its seedlings might take root, and when it is stripped bare, it thrashes out one last fury to protect what it has sown. Bloom violently, spend yourself utterly, and rise again from your own scattered seed. Claim Authority through everything you remove.
+Setup: Place the Blooming Briar with 6 Thorns, 2 Thorned Seeds, and 1 Prickly Thicket on a forest tile with no enemy pieces within 4 tiles. Other factions cannot place their pieces within 4 tiles of any Briared Flower pieces during setup.
+Building - Prickly Thicket: Once during your excavation phase, you can discard 2 Wood to place 1 Prickly Thicket on a forest tile with a Thorned Seed or the Blooming Briar. When you recruit, place 1 Thorned Seed at each Prickly Thicket.
+Effect: Once during your main phase, if the Blooming Briar is on a tile with a Prickly Thicket, you can remove the Prickly Thicket and give the Blooming Briar 1 Thorn.
+Species Trait - In Half Bloom: During your main phase, you can remove 2 resources from your resource pile and 3 Thorned Seeds from the board to place 1 Blooming Briar with 2 Thorns on a tile with a Prickly Thicket.
+Species Trait - Branching Out: Thistle Barrage gains +1 tile range for each Thorned Seed on the tile with the Blooming Briar (cap +2 tile range).
+Species Trait - Rooted In Place: During your turn, the Blooming Briar can only move 1 tile for the entire turn.
+Species Trait - Pollination: During your end phase, gain 1 Authority if you have Thorned Seeds on 4 or more different tiles (gain 2 Authority if there are 7 or more Thorned Seeds on different tiles).
+Unit - Thorned Seed:
+Unit Stats: 0/0/1
+Thorned Seed Ability - Bursting Into Bloom: During your main phase, you can remove up to 3 Thorned Seeds from the board, deal 1HP damage to 1 unit on each tile where a Thorned Seed was removed, then gain 1 Authority if you removed an enemy unit.
+Special Unit - Blooming Briar:
+Unit Stats: 6/1/1
+Blooming Briar Trait - Thorned Body:
+The Blooming Briar carries Thorns (0 to 6). While the Blooming Briar has 1 or more Thorns you can activate the following three abilities:
+1.	Thistle Barrage: Up to twice during your main phase, if enemy units are within 4 tiles of the Blooming Briar, you can target any number of enemy units or special units on that tile, then spend 1 Thorn and 1 resource from your resource pile for each targeted unit or special unit on that tile to deal 1HP damage to each. Then place 1 Thorned Seed per discarded Thorn on an adjacent forest tile to the tile with the targeted unit(s) or special unit(s). Alternatively, you can spend 1 Thorn to remove all enemy buildings and tokens on a tile within 3 tiles of the Blooming Briar if that faction's units or special units are not on that tile. Gain 1 Authority for every 2HP damage dealt by Thistle Barrage.
+(Note: This does not initiate a battle.)
+2.	Thorn Armor: When the Blooming Briar would take HP damage, you can remove 1 Thorn per 1HP damage instead (this follows the unit damage cap).
+3.	Sun Eater: Once per turn during your main phase, you can remove 2 Thorned Seeds on the tile with the Blooming Briar or its adjacent tiles and 3 resources from your resource pile to gain 2 Thorns.
+Blooming Briar Ability - Frenzied Bloom: When the Blooming Briar is at 0 Thorns, gain the following three abilities:
+1.	Ability - Withered Blossom: Gain +3 attack. The Blooming Briar can deal 2HP damage to a single unit, bypassing the unit damage cap limit.
+2.	Ability - Furious Lashing: Once during your main phase, deal 1HP damage to all enemy units within 3 tiles. Gain 1 Authority for every 2HP damage dealt by this ability.
+3.	Ability - Propagation: When the Blooming Briar is removed from the board, one of the enemy units on that tile takes 1HP damage, then you place 1 Thorned Seed on an adjacent forest tile, and the removing player gains 2 Authority.
+Ways Enemies Can Score Authority:
+Removing a Prickly Thicket gives 1 Authority.
+Removing the Blooming Briar gives 2 Authority.
+List of The Briared Flower's Faction Materials:
+1 Briared Flower Faction Board
+1 Thorn Meter
+1 Blooming Briar Special Unit Piece
+20 Thorned Seed Unit Pieces
+1 Blooming Briar Special Unit Card
+1 Thorned Seed Unit Card
+4 Prickly Thicket Buildings
+6 Thorn Tokens (markers for the Blooming Briar's Thorned Body)
+

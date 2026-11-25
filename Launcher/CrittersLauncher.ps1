@@ -10,7 +10,7 @@ if (-not (Test-Path (Join-Path $RepoRoot "ProjectSettings\ProjectVersion.txt")))
 
 $UnityExe = "C:\Program Files\Unity\Hub\Editor\6000.6.8f1\Editor\Unity.exe"
 $BuiltGameExe = Join-Path $RepoRoot "Builds\Windows\CrittersOfCalamity.exe"
-$RulebookDocx = Join-Path $RepoRoot "Docs\Critters_of_Calamity_Rulebook.docx"
+$RulebookDocx = Join-Path $RepoRoot "Docs\Critters_of_Calamity_Core_Rulebook_Eight_Factions.docx"
 $GitHubUrl = "https://github.com/a6407805-alt/critters-of-calamity"
 
 $form = New-Object System.Windows.Forms.Form
@@ -36,7 +36,7 @@ $lblTitle.Size = New-Object System.Drawing.Size(700, 38)
 $form.Controls.Add($lblTitle)
 
 $lblSub = New-Object System.Windows.Forms.Label
-$lblSub.Text = "4-Player Asymmetrical 3D Hex Board Game  |  11 Factions  |  40 Relics  |  50 Resources  |  30 Authority to Win"
+$lblSub.Text = "Core Rulebook: Eight Faction Edition  |  108-Tile Board (90 Forest, 14 Stream, 4 Ruin)  |  30 Authority to Win"
 $lblSub.Font = $fontSub
 $lblSub.ForeColor = [System.Drawing.Color]::FromArgb(190, 205, 220)
 $lblSub.Location = New-Object System.Drawing.Point(26, 56)

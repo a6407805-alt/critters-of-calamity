@@ -13,16 +13,11 @@ using CrittersOfCalamity.Multiplayer;
 namespace CrittersOfCalamity.UI
 {
     /// <summary>
-    /// Full uGUI Tabletop Interface (no OnGUI) for Eben's Critters of Calamity:
-    /// - Top Bar: 4-Player Authority Scoreboard (click any player badge to focus camera on their stronghold), Turn/Phase Banner, Faction Actions Drawer toggle, Trading & Capybara Stall toggle, 11-Faction Codex & Room Lobby toggle
-    /// - Left Panel (Collapsible): 5-Card Excavation Area (Unearth button per slot), Relic & Resource Deck counters, Selected Hex Inspector
-    /// - Right Panel (Collapsible): Active Player's Faction Board (Meters, Species Traits, Units, Materials, Battle Log)
-    /// - Bottom Bar: Active Player's Resource Pile, Relic Hand with SEPARATE [Assemble] and [Disassemble] buttons per card, and Phase Actions (Craft Building, Move, Battle, Loot, Recruit, Faction Actions Drawer, Next Phase)
-    /// - Modals:
-    ///   1. 11-Faction Codex, 4-Seat Draft & Multiplayer Room Lobby (Host Room, Join by Code, Map Scale selector: 127 / 217 / 331 Hexes)
-    ///   2. Faction Special Abilities, Tokens, Tiles, Equipment & Summons Drawer
-    ///   3. Trading & Capybara Caravan Traded Goods Stall Modal
-    ///   4. 5-Phase 2d6 Battle Resolution Popup
+    /// Full uGUI Tabletop Interface (no OnGUI) for Eben's Critters of Calamity - Core Rulebook: Eight Faction Edition:
+    /// - Top Bar: 4-Player Authority Scoreboard (click any player badge to focus camera on their stronghold), Turn/Phase Banner, Capybara Stall toggle, 8-Faction Codex & Room Lobby toggle
+    /// - Left Panel (Collapsible): 5-Card Excavation Area (Unearth button per slot), Relic & Resource Deck counters, Selected Hex Inspector (showing 6-unit stacking limit)
+    /// - Right Panel (Collapsible): Active Player's Faction Board (Meters, Species Traits, Table Relics, Battle Log)
+    /// - Bottom Bar: Active Player's Resource Pile, Relic Hand with SEPARATE [Assemble] and [Disassemble] buttons per card, and Phase Actions (Craft Building, Move, Battle, Loot, Recruit, Faction Abilities Drawer, Next Phase)
     /// </summary>
     public class CrittersTabletopHUD : MonoBehaviour
     {
@@ -54,9 +49,8 @@ namespace CrittersOfCalamity.UI
         private Transform _factionActionsListRoot;
         private Text _factionActionsHeaderText;
 
-        private GameObject _tradeAndStallModal;
+        private GameObject _stallModal;
         private Transform _stallButtonsRoot;
-        private Transform _tradeButtonsRoot;
 
         private GameObject _battlePopupModal;
         private Text _battlePopupText;
@@ -65,14 +59,13 @@ namespace CrittersOfCalamity.UI
         private bool _awaitingMoveDestination = false;
         private HexCoord _moveOriginCoord;
 
-        // Map scale & Faction draft slots for 4 players
-        private int _selectedMapRadius = CrittersGameEngine.DefaultContinentMapRadius; // Radius 8 = 217 Hexes
+        // Faction draft slots for 4 players (defaulting to the first 4 Core Factions)
         private FactionId[] _draftedFactions = new FactionId[4]
         {
             FactionId.CurlyTail,
             FactionId.HordeOfTheMillions,
             FactionId.PlatypusPapacy,
-            FactionId.BriaredFlower
+            FactionId.TroubleMakingTanukis
         };
         private int _editingPlayerSlot = 0;
 
@@ -136,7 +129,7 @@ namespace CrittersOfCalamity.UI
             _engine.StartNewMatch(_draftedFactions.ToList(), new List<string>
             {
                 "Player 1", "Player 2", "Player 3", "Player 4"
-            }, mapRadius: _selectedMapRadius);
+            });
             _boardRenderer.BindEngine(_engine);
             _boardRenderer.ResetCameraToOverview();
             RefreshHUD();
@@ -184,7 +177,7 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, 0f), new Vector2(0f, 78f), new Color(0.10f, 0.13f, 0.18f, 0.95f));
 
-            _topStatusText = CreateText(topBar, "TopStatusText", "CRITTERS OF CALAMITY — Race to 30 Authority", 14, TextAnchor.MiddleLeft,
+            _topStatusText = CreateText(topBar, "TopStatusText", "CRITTERS OF CALAMITY — Core Rulebook (8 Factions)", 14, TextAnchor.MiddleLeft,
                 new Vector2(0f, 0f), new Vector2(0.28f, 1f), new Vector2(14f, 0f), new Vector2(-6f, 0f), Palette.AuthorityGold);
 
             for (int i = 0; i < 4; i++)
@@ -206,14 +199,14 @@ namespace CrittersOfCalamity.UI
                     _boardRenderer.ResetCameraToOverview();
                 });
 
-            CreateButton(topBar, "BtnTradeStall", "Trade & Capybara Stall",
+            CreateButton(topBar, "BtnCapybaraStall", "Capybara Trader Stall",
                 new Vector2(0.83f, 0.15f), new Vector2(0.905f, 0.85f), Palette.FromHex("#2E7D6B"), () =>
                 {
-                    ToggleModal(_tradeAndStallModal);
-                    RefreshTradeAndStallModal();
+                    ToggleModal(_stallModal);
+                    RefreshStallModal();
                 });
 
-            CreateButton(topBar, "BtnLobbyCodex", "11 Factions / Room Lobby",
+            CreateButton(topBar, "BtnLobbyCodex", "8 Factions / Room Lobby",
                 new Vector2(0.91f, 0.15f), new Vector2(0.995f, 0.85f), Palette.FromHex("#8C5328"), () =>
                 {
                     ToggleModal(_lobbyCodexModal);
@@ -282,7 +275,7 @@ namespace CrittersOfCalamity.UI
             _handButtonsRoot = handRootGo.transform;
 
             // Phase Action Buttons (Excavation & Main Phase)
-            CreateButton(bottomBar, "BtnCraftBuilding", "2nd Phase: Craft Building",
+            CreateButton(bottomBar, "BtnCraftBuilding", "2. Excavation: Craft Building",
                 new Vector2(0.56f, 0.53f), new Vector2(0.665f, 0.93f), Palette.FromHex("#4A6B48"), () =>
                 {
                     if (_boardRenderer.SelectedCoord.HasValue)
@@ -292,7 +285,7 @@ namespace CrittersOfCalamity.UI
                     RefreshHUD();
                 });
 
-            CreateButton(bottomBar, "BtnMove", "3rd Phase: Move Units",
+            CreateButton(bottomBar, "BtnMove", "3. Main: Move Units",
                 new Vector2(0.67f, 0.53f), new Vector2(0.775f, 0.93f), Palette.FromHex("#35688C"), () =>
                 {
                     if (_boardRenderer.SelectedCoord.HasValue)
@@ -309,7 +302,7 @@ namespace CrittersOfCalamity.UI
                     }
                 });
 
-            CreateButton(bottomBar, "BtnBattle", "3rd Phase: Battle (2d6)",
+            CreateButton(bottomBar, "BtnBattle", "3. Main: Battle (2d6)",
                 new Vector2(0.78f, 0.53f), new Vector2(0.885f, 0.93f), Palette.FromHex("#9C2F2F"), () =>
                 {
                     if (_boardRenderer.SelectedCoord.HasValue)
@@ -327,7 +320,7 @@ namespace CrittersOfCalamity.UI
                     _rightPanelRt.gameObject.SetActive(show);
                 });
 
-            CreateButton(bottomBar, "BtnLoot", "3rd Phase: Loot Tile",
+            CreateButton(bottomBar, "BtnLoot", "3. Main: Loot Tile",
                 new Vector2(0.56f, 0.07f), new Vector2(0.665f, 0.47f), Palette.FromHex("#8A6E2F"), () =>
                 {
                     if (_boardRenderer.SelectedCoord.HasValue)
@@ -337,7 +330,7 @@ namespace CrittersOfCalamity.UI
                     RefreshHUD();
                 });
 
-            CreateButton(bottomBar, "BtnRecruit", "3rd Phase: Recruit Units",
+            CreateButton(bottomBar, "BtnRecruit", "3. Main: Recruit Units",
                 new Vector2(0.67f, 0.07f), new Vector2(0.775f, 0.47f), Palette.FromHex("#4E568C"), () =>
                 {
                     _engine.TryRecruit();
@@ -362,7 +355,7 @@ namespace CrittersOfCalamity.UI
             // 5. MODALS
             BuildLobbyCodexModal(canvasGo.transform);
             BuildFactionActionsModal(canvasGo.transform);
-            BuildTradeAndStallModal(canvasGo.transform);
+            BuildStallModal(canvasGo.transform);
             BuildBattlePopupModal(canvasGo.transform);
         }
 
@@ -371,7 +364,7 @@ namespace CrittersOfCalamity.UI
             bool nextState = !targetModal.activeSelf;
             if (_lobbyCodexModal != null) _lobbyCodexModal.SetActive(false);
             if (_factionActionsModal != null) _factionActionsModal.SetActive(false);
-            if (_tradeAndStallModal != null) _tradeAndStallModal.SetActive(false);
+            if (_stallModal != null) _stallModal.SetActive(false);
             if (_battlePopupModal != null) _battlePopupModal.SetActive(false);
             targetModal.SetActive(nextState);
         }
@@ -385,7 +378,7 @@ namespace CrittersOfCalamity.UI
             if (tile != null)
             {
                 _boardRenderer.SelectHex(tile.Coord);
-                _boardRenderer.FocusCameraOnCoord(tile.Coord, 14f);
+                _boardRenderer.FocusCameraOnCoord(tile.Coord, 13f);
             }
         }
 
@@ -397,7 +390,7 @@ namespace CrittersOfCalamity.UI
             _lobbyCodexModal = modalRt.gameObject;
 
             CreateText(modalRt, "ModalTitle",
-                "CRITTERS OF CALAMITY — 11-FACTION CODEX, MAP SCALE & MULTIPLAYER GROUP LOBBY",
+                "CRITTERS OF CALAMITY — CORE RULEBOOK: EIGHT FACTION EDITION (108-TILE BOARD)",
                 16, TextAnchor.MiddleLeft, new Vector2(0.02f, 0.92f), new Vector2(0.55f, 0.99f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
             CreateButton(modalRt, "BtnHostRoom", "Host Online Room",
@@ -429,7 +422,7 @@ namespace CrittersOfCalamity.UI
                     RefreshCodexModal();
                 });
 
-            CreateButton(modalRt, "BtnStartNewMatch", "Start Match on 3D Board",
+            CreateButton(modalRt, "BtnStartNewMatch", "Start Match on 108-Tile Board",
                 new Vector2(0.77f, 0.925f), new Vector2(0.915f, 0.985f), Palette.FromHex("#B86B28"), () =>
                 {
                     StartMatchWithDraftedFactions();
@@ -442,7 +435,7 @@ namespace CrittersOfCalamity.UI
                     _lobbyCodexModal.SetActive(false);
                 });
 
-            // Player slot selector buttons (P1..P4) + Map Scale Buttons (127 / 217 / 331 Hexes)
+            // Player slot selector buttons (P1..P4) + Roll 2d6 Draft Order
             for (int pSlot = 0; pSlot < 4; pSlot++)
             {
                 int capturedSlot = pSlot;
@@ -455,47 +448,23 @@ namespace CrittersOfCalamity.UI
                     });
             }
 
-            CreateButton(modalRt, "BtnRollDraftOrder", "Roll 2d6 Draft Order",
-                new Vector2(0.43f, 0.84f), new Vector2(0.56f, 0.90f), Palette.FromHex("#6B4E8C"), () =>
+            CreateButton(modalRt, "BtnRollDraftOrder", "Roll 2d6 Draft & Turn Order",
+                new Vector2(0.43f, 0.84f), new Vector2(0.62f, 0.90f), Palette.FromHex("#6B4E8C"), () =>
                 {
-                    _engine.Log("Rolled 2d6 for Faction Draft Order!");
+                    _engine.Log("Rolled 2d6 for Faction Draft & Turn Order (Reverse Setup Order Active)!");
                     RefreshCodexModal();
                 });
 
-            CreateButton(modalRt, "BtnMap127", "Map: 127 Hexes (R6)",
-                new Vector2(0.57f, 0.84f), new Vector2(0.70f, 0.90f), Palette.FromHex("#3D5A45"), () =>
-                {
-                    _selectedMapRadius = 6;
-                    StartMatchWithDraftedFactions();
-                    RefreshCodexModal();
-                });
-
-            CreateButton(modalRt, "BtnMap217", "Map: 217 Hexes (R8)",
-                new Vector2(0.71f, 0.84f), new Vector2(0.84f, 0.90f), Palette.FromHex("#4E7C48"), () =>
-                {
-                    _selectedMapRadius = 8;
-                    StartMatchWithDraftedFactions();
-                    RefreshCodexModal();
-                });
-
-            CreateButton(modalRt, "BtnMap331", "Map: 331 Hexes (R10)",
-                new Vector2(0.85f, 0.84f), new Vector2(0.985f, 0.90f), Palette.FromHex("#5E8C31"), () =>
-                {
-                    _selectedMapRadius = 10;
-                    StartMatchWithDraftedFactions();
-                    RefreshCodexModal();
-                });
-
-            // 11 Faction Picker Buttons on Left of Modal
+            // 8 Core Faction Picker Buttons on Left of Modal
             var allFactions = RulebookDatabase.GetAllFactions();
             for (int fIdx = 0; fIdx < allFactions.Count; fIdx++)
             {
                 var fac = allFactions[fIdx];
-                float yMax = 0.81f - fIdx * 0.070f;
-                float yMin = yMax - 0.064f;
+                float yMax = 0.80f - fIdx * 0.092f;
+                float yMin = yMax - 0.082f;
                 CreateButton(modalRt, $"BtnFac_{fac.Id}",
-                    $"{fac.Name} ({fac.DifficultyRatingOutOf10}/10 - {fac.Tier})",
-                    new Vector2(0.02f, yMin), new Vector2(0.40f, yMax), fac.PrimaryColor * 0.75f, () =>
+                    $"{fac.Name} (Difficulty {fac.DifficultyRatingOutOf10}/10)",
+                    new Vector2(0.02f, yMin), new Vector2(0.40f, yMax), fac.PrimaryColor * 0.78f, () =>
                     {
                         _draftedFactions[_editingPlayerSlot] = fac.Id;
                         RefreshCodexModal(fac);
@@ -515,7 +484,7 @@ namespace CrittersOfCalamity.UI
                 Vector2.zero, Vector2.zero, new Color(0.10f, 0.12f, 0.17f, 0.98f));
             _factionActionsModal = modalRt.gameObject;
 
-            _factionActionsHeaderText = CreateText(modalRt, "Header", "FACTION ABILITIES, TOKENS, OVERLAY TILES, EQUIPMENT & SUMMONS",
+            _factionActionsHeaderText = CreateText(modalRt, "Header", "FACTION ABILITIES, TOKENS, TILES, EQUIPMENT & SUMMONS",
                 15, TextAnchor.MiddleLeft, new Vector2(0.03f, 0.88f), new Vector2(0.84f, 0.98f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
             CreateButton(modalRt, "BtnClose", "Close [X]",
@@ -567,7 +536,6 @@ namespace CrittersOfCalamity.UI
                     });
             }
 
-            // Also list faction equipment crafting if available
             foreach (var eq in p.Faction.Equipment)
             {
                 var capturedEq = eq;
@@ -583,97 +551,56 @@ namespace CrittersOfCalamity.UI
             }
         }
 
-        private void BuildTradeAndStallModal(Transform canvasParent)
+        private void BuildStallModal(Transform canvasParent)
         {
-            var modalRt = CreatePanel(canvasParent, "TradeAndStallModal",
-                new Vector2(0.20f, 0.20f), new Vector2(0.80f, 0.84f), new Vector2(0.5f, 0.5f),
+            var modalRt = CreatePanel(canvasParent, "CapybaraStallModal",
+                new Vector2(0.22f, 0.26f), new Vector2(0.78f, 0.78f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero, new Color(0.10f, 0.13f, 0.17f, 0.98f));
-            _tradeAndStallModal = modalRt.gameObject;
+            _stallModal = modalRt.gameObject;
 
-            CreateText(modalRt, "Header", "PLAYER-TO-PLAYER TRADING & CAPYBARA CARAVAN TRADED GOODS STALL",
-                15, TextAnchor.MiddleLeft, new Vector2(0.03f, 0.89f), new Vector2(0.85f, 0.98f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
+            CreateText(modalRt, "Header", "THE CAPYBARA CARAVAN — 3-CARD TRADED GOODS STALL",
+                15, TextAnchor.MiddleLeft, new Vector2(0.03f, 0.87f), new Vector2(0.85f, 0.97f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
             CreateButton(modalRt, "BtnClose", "Close [X]",
-                new Vector2(0.87f, 0.90f), new Vector2(0.97f, 0.97f), Palette.FromHex("#7A2828"), () =>
+                new Vector2(0.87f, 0.88f), new Vector2(0.97f, 0.96f), Palette.FromHex("#7A2828"), () =>
                 {
-                    _tradeAndStallModal.SetActive(false);
+                    _stallModal.SetActive(false);
                 });
 
             var stallGo = new GameObject("StallSection");
             stallGo.transform.SetParent(modalRt, false);
             var stallRt = stallGo.AddComponent<RectTransform>();
-            stallRt.anchorMin = new Vector2(0.03f, 0.46f);
-            stallRt.anchorMax = new Vector2(0.97f, 0.86f);
+            stallRt.anchorMin = new Vector2(0.04f, 0.08f);
+            stallRt.anchorMax = new Vector2(0.96f, 0.84f);
             stallRt.offsetMin = Vector2.zero;
             stallRt.offsetMax = Vector2.zero;
             var sLayout = stallGo.AddComponent<VerticalLayoutGroup>();
-            sLayout.spacing = 6f;
+            sLayout.spacing = 10f;
             sLayout.childControlHeight = true;
             sLayout.childControlWidth = true;
             sLayout.childForceExpandHeight = true;
             sLayout.childForceExpandWidth = true;
             _stallButtonsRoot = stallGo.transform;
 
-            var tradeGo = new GameObject("TradeSection");
-            tradeGo.transform.SetParent(modalRt, false);
-            var tradeRt = tradeGo.AddComponent<RectTransform>();
-            tradeRt.anchorMin = new Vector2(0.03f, 0.04f);
-            tradeRt.anchorMax = new Vector2(0.97f, 0.43f);
-            tradeRt.offsetMin = Vector2.zero;
-            tradeRt.offsetMax = Vector2.zero;
-            var tLayout = tradeGo.AddComponent<VerticalLayoutGroup>();
-            tLayout.spacing = 6f;
-            tLayout.childControlHeight = true;
-            tLayout.childControlWidth = true;
-            tLayout.childForceExpandHeight = true;
-            tLayout.childForceExpandWidth = true;
-            _tradeButtonsRoot = tradeGo.transform;
-
-            _tradeAndStallModal.SetActive(false);
+            _stallModal.SetActive(false);
         }
 
-        private void RefreshTradeAndStallModal()
+        private void RefreshStallModal()
         {
             if (_engine == null) return;
             foreach (Transform c in _stallButtonsRoot) Destroy(c.gameObject);
-            foreach (Transform c in _tradeButtonsRoot) Destroy(c.gameObject);
 
-            var activePlayer = _engine.Players[_engine.CurrentTurnPlayerIndex];
-
-            // 1. Capybara Caravan 3-Card Traded Goods Stall
             for (int i = 0; i < _engine.TradedGoodsStall.Count; i++)
             {
                 int slot = i;
                 var tg = _engine.TradedGoodsStall[i];
                 CreateLayoutButton(_stallButtonsRoot, $"Stall_{i}",
-                    $"<b>[Capybara Trader Stall] Buy '{tg.Title}'</b> ({tg.EffectText}) -> Both Buyer & Capybara Gain +1 Authority & Spawn Guest!",
+                    $"<b>[Buy Traded Good] {tg.Title}</b>\n{tg.EffectText}\n(Purchasing grants +1 Authority to Buyer & +1 Authority to Capybara Caravan, and places 1 Basic Unit as a Guest at a Wallow!)",
                     Palette.FromHex("#3A6B6C"), () =>
                     {
                         if (!_engine.TryBuyTradedGoodFromCapybaraStall(slot))
-                            _engine.Log($"Cannot buy '{tg.Title}' (requires Capybara Caravan in match and enough resources).");
-                        RefreshTradeAndStallModal();
-                        RefreshHUD();
-                    });
-            }
-
-            // 2. Player-to-Player Resource Trading (Rulebook Part 5 Line 225; blocked for Briared Flower's Instinctual Hatred)
-            foreach (var other in _engine.Players.Where(pl => pl.PlayerIndex != activePlayer.PlayerIndex))
-            {
-                var partner = other;
-                CreateLayoutButton(_tradeButtonsRoot, $"TradeWoodStone_{partner.PlayerIndex}",
-                    $"<b>Trade with {partner.DisplayName} ({partner.Faction.Name}):</b> Give 1 Wood <-> Receive 1 Stone",
-                    new Color(0.22f, 0.27f, 0.34f, 0.96f), () =>
-                    {
-                        _engine.TryTradeResourceWithPlayer(partner.PlayerIndex, ResourceType.Wood, ResourceType.Stone);
-                        RefreshTradeAndStallModal();
-                        RefreshHUD();
-                    });
-                CreateLayoutButton(_tradeButtonsRoot, $"TradeStoneWood_{partner.PlayerIndex}",
-                    $"<b>Trade with {partner.DisplayName} ({partner.Faction.Name}):</b> Give 1 Stone <-> Receive 1 Wood",
-                    new Color(0.22f, 0.27f, 0.34f, 0.96f), () =>
-                    {
-                        _engine.TryTradeResourceWithPlayer(partner.PlayerIndex, ResourceType.Stone, ResourceType.Wood);
-                        RefreshTradeAndStallModal();
+                            _engine.Log($"Cannot buy '{tg.Title}' (requires Capybara Caravan in match and {tg.Cost}).");
+                        RefreshStallModal();
                         RefreshHUD();
                     });
             }
@@ -686,7 +613,7 @@ namespace CrittersOfCalamity.UI
                 Vector2.zero, Vector2.zero, new Color(0.14f, 0.09f, 0.10f, 0.98f));
             _battlePopupModal = modalRt.gameObject;
 
-            CreateText(modalRt, "Header", "5-PHASE 2D6 BATTLE RESOLUTION REPORT",
+            CreateText(modalRt, "Header", "5-PHASE 2D6 BATTLE RESOLUTION REPORT (PART 12)",
                 16, TextAnchor.MiddleCenter, new Vector2(0.03f, 0.86f), new Vector2(0.97f, 0.98f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
             _battlePopupText = CreateText(modalRt, "Body", "", 13, TextAnchor.MiddleLeft,
@@ -709,19 +636,19 @@ namespace CrittersOfCalamity.UI
 
             var sb = new StringBuilder();
             sb.AppendLine($"<b>Battle Hex:</b> {r.TileCoord}");
-            sb.AppendLine($"<b>Phase 1 (Declaration):</b> {atk.DisplayName} ({atk.Faction.Name}) attacked {def.DisplayName} ({def.Faction.Name})");
-            sb.AppendLine($"<b>Phase 2 (2d6 Dice Roll):</b> Attacker rolled {r.AttackerDice1}+{r.AttackerDice2} (Bonus: {r.AttackerDiceBonus:+#;-#;0}) | Defender rolled {r.DefenderDice1}+{r.DefenderDice2} (Bonus: {r.DefenderDiceBonus:+#;-#;0})");
+            sb.AppendLine($"<b>Phase 1 (Attack Declaration):</b> {atk.DisplayName} ({atk.Faction.Name}) attacked {def.DisplayName} ({def.Faction.Name})");
+            sb.AppendLine($"<b>Phase 2 (2d6 Dice Roll):</b> Attacker rolled {r.AttackerDice1}+{r.AttackerDice2} (Mod: {r.AttackerDiceBonus:+#;-#;0}) | Defender rolled {r.DefenderDice1}+{r.DefenderDice2} (Mod: {r.DefenderDiceBonus:+#;-#;0})");
             sb.AppendLine($"<b>Phase 3 (Totals):</b> Attacker Total = <b>{r.AttackerTotal}</b> (ATK Points: {r.AttackerUnitAttackSum}) vs Defender Total = <b>{r.DefenderTotal}</b> (DEF Points: {r.DefenderUnitDefenseSum})");
             if (r.IsTie)
             {
-                sb.AppendLine("<b>Phase 4 (Outcome):</b> TIE! Both sides take 1HP damage and the battle ends immediately.");
+                sb.AppendLine("<b>Phase 4 (Tie):</b> Equal Totals! Each side takes 1 HP of damage and the battle ends immediately.");
             }
             else
             {
                 var win = _engine.Players[r.WinnerPlayerIndex];
-                sb.AppendLine($"<b>Phase 4 (Damage Calculation):</b> <b>{win.DisplayName} WINS!</b> Winner Dealt <b>{r.WinnerDamageDealt} HP</b> (Capped by participating units) | Mandatory Loser Damage: <b>{r.MandatoryLoserDamageDealt} HP</b>");
+                sb.AppendLine($"<b>Phase 4 (Damage Calculation):</b> <b>{win.DisplayName} WINS!</b> Damage Dealt: <b>{r.WinnerDamageDealt} HP</b> (Capped at 1 per winning unit) | Mandatory Loser Damage: <b>{r.MandatoryLoserDamageDealt} HP</b>");
             }
-            sb.AppendLine($"<b>Phase 5 (Resolution - Units Removed):</b> {(r.DestroyedUnitNames.Count > 0 ? string.Join(", ", r.DestroyedUnitNames) : "None (Damage absorbed by multi-HP Special Units or Thorn Armor)")}");
+            sb.AppendLine($"<b>Phase 5 (Battle Resolution - 0 HP Units Removed):</b> {(r.DestroyedUnitNames.Count > 0 ? string.Join(", ", r.DestroyedUnitNames) : "None (Damage absorbed by multi-HP Special Units, Selfless Nature, or Thorn Armor)")}");
 
             _battlePopupText.text = sb.ToString();
             _battlePopupModal.SetActive(true);
@@ -735,7 +662,8 @@ namespace CrittersOfCalamity.UI
                 inspectFaction = allFactions.First(f => f.Id == _draftedFactions[_editingPlayerSlot]);
 
             var sb = new StringBuilder();
-            sb.AppendLine($"<b>MULTIPLAYER ROOM:</b> {_mpManager.StatusMessage} (Join Code: <b>{_mpManager.ActiveJoinCode}</b>) | <b>3D Continent Size:</b> {_engine.Board.Count} Hexes (Radius {_selectedMapRadius})");
+            sb.AppendLine($"<b>MULTIPLAYER ROOM:</b> {_mpManager.StatusMessage} (Join Code: <b>{_mpManager.ActiveJoinCode}</b>)");
+            sb.AppendLine($"<b>CANONICAL BOARD:</b> {_engine.Board.Count} Tiles (90 Forest, 14 Stream, 4 Ruin) | Max 6 Units/Faction/Tile | Reverse Turn-Order Setup");
             sb.AppendLine($"<b>CURRENT 4-PLAYER TABLE DRAFT</b> (Editing Seat {_editingPlayerSlot + 1}):");
             for (int i = 0; i < 4; i++)
             {
@@ -744,7 +672,7 @@ namespace CrittersOfCalamity.UI
                 sb.AppendLine($"{marker}Seat {i + 1}: <b>{f.Name}</b> (Difficulty {f.DifficultyRatingOutOf10}/10)");
             }
             sb.AppendLine("------------------------------------------------------------------");
-            sb.AppendLine($"<b>{inspectFaction.Name.ToUpperInvariant()}</b> — {inspectFaction.Tier} ({inspectFaction.DifficultyRatingOutOf10}/10)");
+            sb.AppendLine($"<b>{inspectFaction.Name.ToUpperInvariant()}</b> — Difficulty {inspectFaction.DifficultyRatingOutOf10}/10 (Recommended for New Players)");
             sb.AppendLine(inspectFaction.ShortSummary);
             sb.AppendLine($"\n<b>Setup:</b> {inspectFaction.SetupInstructions}");
             sb.AppendLine($"<b>Buildings:</b> {inspectFaction.BuildingRules}");
@@ -769,7 +697,7 @@ namespace CrittersOfCalamity.UI
             // 1. Top Bar
             string moveHint = _awaitingMoveDestination ? $" | [CLICK DESTINATION HEX FROM {_moveOriginCoord}]" : "";
             _topStatusText.text = $"<b>TURN {_engine.TurnNumber} — {activePlayer.DisplayName} ({activePlayer.Faction.Name})</b>\n" +
-                                  $"Phase: <b>{_engine.CurrentPhase}</b> (Main Actions: {_engine.MainPhaseActionsRemaining}/3) | Map: {_engine.Board.Count} Hexes{moveHint}";
+                                  $"Phase: <b>{_engine.CurrentPhase}</b> (Main Actions: {_engine.MainPhaseActionsRemaining}/3) | Board: {_engine.Board.Count} Tiles{moveHint}";
 
             for (int i = 0; i < _engine.Players.Count && i < 4; i++)
             {
@@ -781,7 +709,7 @@ namespace CrittersOfCalamity.UI
                 _playerScoreBadges[i].color = isTurn ? Palette.AuthorityGold : Color.white;
             }
 
-            // 2. Left Panel: Excavation Area (5 face-up Relic cards)
+            // 2. Left Panel: Excavation Area (5 faceup Relic cards)
             foreach (Transform child in _excavationButtonsRoot)
                 Destroy(child.gameObject);
 
@@ -794,7 +722,7 @@ namespace CrittersOfCalamity.UI
                     new Color(0.20f, 0.25f, 0.32f, 0.95f), () =>
                     {
                         if (!_engine.TryUnearthRelic(slotIdx))
-                            _engine.Log($"Cannot Unearth '{card.Name}' (need 2nd Excavation Phase, unused Unearth, and {card.Cost}).");
+                            _engine.Log($"Cannot Unearth '{card.Name}' (need 2. Excavation Phase, unused Unearth, and {card.Cost}).");
                         RefreshHUD();
                     });
             }
@@ -805,30 +733,29 @@ namespace CrittersOfCalamity.UI
                 var sbHex = new StringBuilder();
                 sbHex.AppendLine($"<b>SELECTED HEX {tile.Coord}</b> — Terrain: <b>{tile.EffectiveTerrain}</b>{(tile.IsBoardEdge ? " (Edge)" : "")}");
                 if (tile.Overlay != FactionOverlayTileType.None)
-                    sbHex.AppendLine($"Overlay Tile: <b>{tile.Overlay}</b>");
-                if (tile.HasIcebergWall)
-                    sbHex.AppendLine($"Iceberg Wall: <b>0/0/{tile.IcebergWallHP}HP</b>");
+                    sbHex.AppendLine($"Unique Faction Tile: <b>{tile.Overlay}</b>");
                 if (tile.Building != null)
-                    sbHex.AppendLine($"Building: <b>{tile.Building.Type}</b> ({_engine.Players[tile.Building.OwnerPlayerIndex].Faction.Name})");
+                    sbHex.AppendLine($"Building (1/1): <b>{tile.Building.Type}</b> ({_engine.Players[tile.Building.OwnerPlayerIndex].Faction.Name})");
                 if (tile.Tokens.Count > 0)
                     sbHex.AppendLine($"Tokens ({tile.Tokens.Count}/2): {string.Join(", ", tile.Tokens.Select(t => t.Type.ToString()))}");
                 sbHex.AppendLine($"Looted This Turn: {(tile.LootedThisTurn ? "Yes" : "No")}");
-                sbHex.AppendLine($"<b>Units on Tile ({tile.Units.Count}):</b>");
+                sbHex.AppendLine($"<b>Units on Tile ({tile.Units.Count} total | Max 6/faction):</b>");
                 foreach (var u in tile.Units)
                 {
                     var uOwner = _engine.Players[u.OwnerPlayerIndex];
-                    string tags = (u.IsFrozen ? " [FROZEN]" : "") + (u.IsHidden ? " [HIDDEN]" : "") + (u.IsGuest ? " [GUEST]" : "");
+                    string tags = (u.TrapLeafTurnsRemaining > 0 ? " [TRAP LEAF]" : "") + (u.IsGuest ? " [GUEST]" : "");
                     sbHex.AppendLine($" • [{uOwner.Faction.Name}] <b>{u.Definition.Name}</b> ({u.EffectiveAttack}/{u.EffectiveDefense}/{u.CurrentHP}HP){tags}");
                 }
                 _selectedHexText.text = sbHex.ToString();
             }
             else
             {
-                _selectedHexText.text = $"<b>CONTINENT MAP ({_engine.Board.Count} HEXES) & DECKS</b>\n" +
+                _selectedHexText.text = $"<b>108-TILE CONTINENT BOARD & DECKS</b>\n" +
+                                        $"Board: 90 Forest · 14 Stream · 4 Ruin (0-30 Authority Track)\n" +
                                         $"Relic Deck: {_engine.RelicDeck.Count}/40 (Discard: {_engine.RelicDiscardPile.Count})\n" +
                                         $"Resource Deck: {_engine.ResourceDeck.Count}/50 (Burned: {_engine.BurnedResources.Count})\n" +
-                                        $"Forage Deck: {_engine.ForageDeck.Count}/8 | Grimoire: {_engine.GrimoireDeck.Count}/14 | Traded Goods: {_engine.TradedGoodsDeck.Count}/8\n\n" +
-                                        "Camera: WASD/Arrows or Middle-Mouse to Pan, Right-Click Drag to Orbit, Scroll to Zoom, Space to Reset.\nClick any Player Badge at top to focus their stronghold!";
+                                        $"Forage Deck: 8 (Reshuffled each draw) | Traded Goods: {_engine.TradedGoodsDeck.Count}/8\n\n" +
+                                        "Camera: WASD/Arrows or Middle-Mouse Pan, Right-Click Orbit, Scroll Zoom, Space Reset.";
             }
 
             // 3. Right Panel: Active Player Faction Board & Meters + Log
@@ -839,16 +766,14 @@ namespace CrittersOfCalamity.UI
             sbFac.AppendLine("<b>Species Traits:</b>");
             foreach (var tr in activePlayer.Faction.SpeciesTraits.Take(4))
                 sbFac.AppendLine($" • {tr}");
-            if (activePlayer.FaceUpRelics.Count > 0)
-                sbFac.AppendLine($"<b>Crafted Face-Up Relics:</b> {string.Join(", ", activePlayer.FaceUpRelics.Select(r => r.Name))}");
-            if (activePlayer.DraftedMutations.Count > 0)
-                sbFac.AppendLine($"<b>Queen Mutations:</b> {string.Join(", ", activePlayer.DraftedMutations.Select(m => m.Name))}");
+            if (activePlayer.TableRelics.Count > 0)
+                sbFac.AppendLine($"<b>Table Relics (In Play):</b> {string.Join(", ", activePlayer.TableRelics.Select(r => r.Name))}");
             _factionBoardText.text = sbFac.ToString();
 
             var recentLogs = _engine.GameLog.Skip(Mathf.Max(0, _engine.GameLog.Count - 10));
             _gameLogText.text = "<b>TABLETOP EVENT & BATTLE LOG:</b>\n" + string.Join("\n", recentLogs);
 
-            // 4. Bottom Bar: Active Player's Resource Pile & Relic Hand (with separate Assemble & Disassemble buttons!)
+            // 4. Bottom Bar: Active Player's Resource Pile & Relic Hand
             int wCount = activePlayer.ResourcePile.Count(r => r == ResourceType.Wood);
             int sCount = activePlayer.ResourcePile.Count(r => r == ResourceType.Stone);
             int gCount = activePlayer.ResourcePile.Count(r => r == ResourceType.Gold);
@@ -857,7 +782,7 @@ namespace CrittersOfCalamity.UI
                 $"<b>{activePlayer.DisplayName}'s Resource Pile ({activePlayer.ResourcePile.Count} cards):</b> " +
                 $"Wood: <b>{wCount}</b> | Stone: <b>{sCount}</b> | Gold: <b>{gCount}</b>" +
                 (cCount > 0 ? $" | Charcoal: <b>{cCount}</b>" : "") +
-                $"  |  <b>Excavation Actions Used:</b> Unearth:{(_engine.UsedUnearthThisTurn ? "✓" : "○")} Craft:{(_engine.UsedFactionCraftThisTurn ? "✓" : "○")} Assemble:{(_engine.UsedAssembleThisTurn ? "✓" : "○")} Disassemble:{(_engine.UsedDisassembleThisTurn ? "✓" : "○")}";
+                $"  |  <b>Excavation Actions:</b> Unearth:{(_engine.UsedUnearthThisTurn ? "✓" : "○")} Craft:{(_engine.UsedFactionCraftThisTurn ? "✓" : "○")} Assemble:{(_engine.UsedAssembleThisTurn ? "✓" : "○")} Disassemble:{(_engine.UsedDisassembleThisTurn ? "✓" : "○")}";
 
             foreach (Transform child in _handButtonsRoot)
                 Destroy(child.gameObject);
@@ -887,7 +812,7 @@ namespace CrittersOfCalamity.UI
                 card.HasCraftedEffect ? Palette.FromHex("#2E6B47") : new Color(0.3f, 0.3f, 0.3f, 0.5f), () =>
                 {
                     if (!_engine.TryAssembleRelicFromHand(handIdx))
-                        _engine.Log($"Cannot Assemble '{card.Name}' (need 2nd Excavation Phase, unused Assemble, crafted effect, and {card.Cost}).");
+                        _engine.Log($"Cannot Assemble '{card.Name}' (need 2. Excavation Phase, unused Assemble, crafted effect, and {card.Cost}).");
                     RefreshHUD();
                 });
 
@@ -896,7 +821,7 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.51f, 0.04f), new Vector2(0.97f, 0.34f), Palette.FromHex("#7A4E24"), () =>
                 {
                     if (!_engine.TryDisassembleRelicFromHand(handIdx))
-                        _engine.Log($"Cannot Disassemble '{card.Name}' (need 2nd Excavation Phase and unused Disassemble).");
+                        _engine.Log($"Cannot Disassemble '{card.Name}' (need 2. Excavation Phase and unused Disassemble).");
                     RefreshHUD();
                 });
         }
@@ -905,24 +830,24 @@ namespace CrittersOfCalamity.UI
         {
             switch (p.Faction.Id)
             {
-                case FactionId.Necromouser:
-                    return $"<b>Cauldron Dead Units:</b> {p.NecromouserCauldronDeadCount} | Special Summons: {p.NecromouserSpecialSummonsUsed}/4 | Awakened: {p.NecromouserAwakened}";
-                case FactionId.GoatCabal:
-                    return $"<b>Purgatory Card:</b> {p.GoatPurgatoryCount} Purged Goats | Grimoire: {_engine.GrimoireDeck.Count}/14";
                 case FactionId.CurlyTail:
                     return $"<b>Meters:</b> Thirst for Glory Lv.{p.CurlyTailThirstForGlory}/4 | Hunger Lv.{p.CurlyTailHunger}/4 | Momentum Lv.{p.CurlyTailMomentum}/4";
-                case FactionId.FirestartingSquirrels:
-                    return $"<b>Crafted Acorn Firestarters:</b> {p.SquirrelsCraftedFirestarters} | Burned Pile: {_engine.BurnedResources.Count}";
+                case FactionId.HordeOfTheMillions:
+                    return $"<b>Forage Deck:</b> 8 Cards (3 Plague, 5 Rummage — reshuffled each draw)";
                 case FactionId.PlatypusPapacy:
                     return $"<b>Faith Meter:</b> {p.PlatypusFaith}/5 | <b>Platy-Pope Level:</b> {p.PlatyPopeLevel}/5 | Crusade Turns: {p.CrusadeTurnsRemaining}";
-                case FactionId.CarnivorousQueen:
-                    return $"<b>Evolution Stage:</b> {p.QueenStage}/4 (Feeding: {p.QueenFeeding}/7) | <b>Rage Meter:</b> {p.QueenRage}/15";
-                case FactionId.GlacierKingdom:
-                    return $"<b>Blizzard Meter Active:</b> {p.GlacierBlizzardActive}";
+                case FactionId.TroubleMakingTanukis:
+                    return $"<b>Fallen Leaves Stack:</b> {p.FallenLeavesStack.Count}/13 tiles remaining";
+                case FactionId.Necromouser:
+                    return $"<b>Cauldron Dead Units:</b> {p.NecromouserCauldronDeadCount} | Special Summons: {p.NecromouserSpecialSummonsUsed}/4 | Awakened: {p.NecromouserAwakened}";
+                case FactionId.FirestartingSquirrels:
+                    return $"<b>Crafted Acorn Firestarters:</b> {p.SquirrelsCraftedFirestarters} | Burned Area: {_engine.BurnedResources.Count}";
+                case FactionId.CapybaraCaravan:
+                    return $"<b>Traded Goods Stall:</b> {_engine.TradedGoodsStall.Count}/3 cards faceup";
                 case FactionId.BriaredFlower:
                     return $"<b>Thorn Meter:</b> {p.BriaredFlowerThorns}/6 Thorns ({(p.BriaredFlowerThorns == 0 ? "FRENZIED BLOOM ACTIVE!" : "Thorned Body")})";
                 default:
-                    return $"<b>Difficulty:</b> {p.Faction.DifficultyRatingOutOf10}/10 ({p.Faction.Tier})";
+                    return $"<b>Difficulty:</b> {p.Faction.DifficultyRatingOutOf10}/10";
             }
         }
 

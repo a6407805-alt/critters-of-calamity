@@ -4,26 +4,32 @@ using UnityEngine;
 
 namespace CrittersOfCalamity.Model
 {
+    /// <summary>
+    /// Core Rulebook: Eight Faction Edition
+    /// 1. Curly Tail's Warband
+    /// 2. Horde of the Millions
+    /// 3. Platypus Papacy
+    /// 4. Trouble Making Tanukis
+    /// 5. The Necro-mouser
+    /// 6. Firestarting Squirrels
+    /// 7. The Capybara Caravan
+    /// 8. The Briared Flower
+    /// </summary>
     public enum FactionId
     {
-        Necromouser = 0,
+        CurlyTail = 0,
         HordeOfTheMillions = 1,
-        GoatCabal = 2,
-        CurlyTail = 3,
-        FirestartingSquirrels = 4,
-        PlatypusPapacy = 5,
-        CarnivorousQueen = 6,
-        GlacierKingdom = 7,
-        TroubleMakingTanukis = 8,
-        CapybaraCaravan = 9,
-        BriaredFlower = 10
+        PlatypusPapacy = 2,
+        TroubleMakingTanukis = 3,
+        Necromouser = 4,
+        FirestartingSquirrels = 5,
+        CapybaraCaravan = 6,
+        BriaredFlower = 7
     }
 
     public enum FactionDifficultyTier
     {
-        BeginnerFriendly,
-        Intermediate,
-        Expert
+        RecommendedForNewPlayers
     }
 
     public enum ResourceType
@@ -34,24 +40,28 @@ namespace CrittersOfCalamity.Model
         Charcoal // Firestarting Squirrels faction resource (6 cards)
     }
 
+    /// <summary>
+    /// Rulebook Part 1 & Part 2:
+    /// "The board has about 108 tiles: roughly 90 forest tiles, 14 stream tiles, and 4 ruin tiles."
+    /// "Tile types are forest (green), ruin (gray), stream (light blue), and unique faction tiles (Fallen Leaves)."
+    /// </summary>
     public enum TileTerrainType
     {
-        Forest, // Green
-        Ruin,   // Gray
-        River   // Light Blue
+        Forest, // Green (90 tiles)
+        Ruin,   // Gray (4 tiles)
+        Stream  // Light Blue (14 tiles)
     }
 
     public enum FactionOverlayTileType
     {
         None = 0,
-        Miasma_Hidden,       // Necromouser face-down setup
-        Miasma_Revealed,     // Necromouser face-up
-        Fire,                // Firestarting Squirrels
-        Glacier,             // Glacier Kingdom
-        FallenLeaf_Unflipped,// Trouble-Making Tanukis hidden
+        Miasma_Hidden,       // Necro-mouser facedown setup
+        Miasma_Revealed,     // Necro-mouser faceup
+        Fire,                // Firestarting Squirrels (6 tiles)
+        FallenLeaf_Unflipped,// Trouble Making Tanukis facedown (13 stack: 8 Prank, 5 Trap)
         FallenLeaf_Trap,     // Flipped Trap Leaf
         FallenLeaf_Prank,    // Flipped Prank Leaf
-        CapybaraRiver        // Capybara Caravan River Tile overlay
+        CapybaraStream       // Capybara Caravan Stream Tile overlay (8 tiles)
     }
 
     public enum TurnPhase
@@ -60,7 +70,8 @@ namespace CrittersOfCalamity.Model
         PreGame_FactionPick,
         PreGame_TurnOrderRoll,
         PreGame_CapybaraSpecialSetup,
-        PreGame_FactionSetup,
+        PreGame_ReverseFactionSetup,
+        PreGame_TanukiCoinSetup,
         DrawPhase,
         ExcavationPhase,
         MainPhase,
@@ -71,34 +82,24 @@ namespace CrittersOfCalamity.Model
     public enum BuildingType
     {
         None = 0,
-        Burrow,          // Horde of the Millions
-        Bunker,          // Firestarting Squirrels
-        TheCitadel,      // Platypus Papacy
-        Igloo,           // Glacier Kingdom
-        FrozenHarbor,    // Glacier Kingdom
-        WarParty,        // Curly Tail
-        Chrysalis,       // Carnivorous Queen (also acts as 0/2/2 defending unit)
-        SummoningCircle, // Goat Cabal
-        Shrine,          // Trouble-Making Tanukis
-        Wallow,          // Capybara Caravan
-        PricklyThicket   // The Briared Flower
+        WarParty,        // Curly Tail's Warband (5 pieces)
+        Burrow,          // Horde of the Millions (3 pieces)
+        TheCitadel,      // Platypus Papacy (1 piece, can be placed on forest or stream)
+        Shrine,          // Trouble Making Tanukis (3 pieces)
+        Bunker,          // Firestarting Squirrels (3 pieces)
+        Wallow,          // Capybara Caravan (5 pieces)
+        PricklyThicket   // The Briared Flower (4 pieces)
     }
 
     public enum TokenType
     {
         None = 0,
-        Gluttony,        // Horde of the Millions
-        Catapult,        // Horde of the Millions
-        TarPit,          // Firestarting Squirrels
-        HolyRelic,       // Platypus Papacy
-        SupplyLine,      // Curly Tail
-        Snowfall_Lv1,    // Glacier Kingdom
-        Snowfall_Lv2,    // Glacier Kingdom
-        Snowfall_Lv3,    // Glacier Kingdom
-        Egg,             // Carnivorous Queen
-        InitiationRite,  // Goat Cabal
-        Effigy,          // Goat Cabal
-        Coin             // Trouble-Making Tanukis
+        Gluttony,        // Horde of the Millions (3 pieces)
+        Catapult,        // Horde of the Millions (2 pieces, any player can craft, 2 uses each)
+        HolyRelic,       // Platypus Papacy (2 pieces, can be placed on stream with Citadel)
+        SupplyLine,      // Curly Tail's Warband (8 pieces)
+        Coin,            // Trouble Making Tanukis (20 pieces, 12 placed in setup after all players)
+        TarPit           // Firestarting Squirrels (3 pieces)
     }
 
     [Serializable]
@@ -192,7 +193,7 @@ namespace CrittersOfCalamity.Model
         public ResourceCost Cost;
         public ResourceCost DisassembleGain;
         public bool DisassembleChoiceWoodOrStone;
-        public bool KeepFaceUpWhenCrafted;
+        public bool KeepOnTableWhenCrafted;
         public bool HasCraftedEffect;
         public string EffectText;
     }
@@ -254,7 +255,6 @@ namespace CrittersOfCalamity.Model
         public Color PrimaryColor;
         public Color SecondaryColor;
         public BuildingType PrimaryBuilding;
-        public BuildingType SecondaryBuilding;
         public ResourceCost PrimaryBuildingCost;
         public string BuildingRules;
         public List<string> SpeciesTraits = new List<string>();
