@@ -96,9 +96,11 @@ namespace CrittersOfCalamity.Visuals
                 case "the_brute": if (!SculptedModel(body, "Models/TheBrute", a, b, 0.62f, u)) Brute(body, a, b); break;
                 case "squirrel": if (!SculptedModel(body, "Models/Squirrel", a, b, 0.46f, u)) Squirrel(body, a, b); break;
                 case "pyromaniac": if (!SculptedModel(body, "Models/Pyromaniac", a, b, 0.64f, u)) { Squirrel(body, a, b); Flame(body, new Vector3(0f, 0.42f, -0.06f), 0.10f); } break;
-                case "capybara": Capybara(body, a, b); break;
+                case "capybara": if (!SculptedModel(body, "Models/Capybara", a, b, 0.55f, u)) Capybara(body, a, b); break;
                 case "capybara_trader": if (!SculptedModel(body, "Models/CapybaraTrader", a, b, 0.62f)) { Capybara(body, a, b); Pack(body, b); } break;
-                case "riverkeeper": Capybara(body, a, b); S(body, new Vector3(0f, 0.33f, -0.16f), Vector3.one * 0.09f, Palette.CarrotOrange); break;
+                case "riverkeeper":
+                    if (!SculptedModel(body, "Models/Riverkeeper", a, b, 0.70f, u)) { Capybara(body, a, b); S(body, new Vector3(0f, 0.33f, -0.16f), Vector3.one * 0.09f, Palette.CarrotOrange); }
+                    break;
                 case "thorned_seed": Seed(body, a, b); break;
                 case "blooming_briar": Briar(body, a, b, owner.BriaredFlowerThorns); break;
                 default: Mouse(body, a, b, b); break;
