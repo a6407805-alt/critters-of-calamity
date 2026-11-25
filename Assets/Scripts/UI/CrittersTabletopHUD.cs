@@ -55,6 +55,10 @@ namespace CrittersOfCalamity.UI
         private GameObject _battlePopupModal;
         private Text _battlePopupText;
 
+        private GameObject _battleDecisionModal;
+        private Text _battleDecisionHeaderText;
+        private Text _battleDecisionBodyText;
+
         // Move action two-click state
         private bool _awaitingMoveDestination = false;
         private HexCoord _moveOriginCoord;
@@ -117,6 +121,7 @@ namespace CrittersOfCalamity.UI
             _engine = new CrittersGameEngine();
             _engine.OnStateChanged += RefreshHUD;
             _engine.OnBattleResolved += ShowBattleReportPopup;
+            _engine.OnBattleDecisionRequired += ShowBattleDecisionModal;
             _boardRenderer.OnHexClicked += HandleHexClicked;
             _mpManager.OnSessionUpdated += RefreshHUD;
 
@@ -357,6 +362,7 @@ namespace CrittersOfCalamity.UI
             BuildFactionActionsModal(canvasGo.transform);
             BuildStallModal(canvasGo.transform);
             BuildBattlePopupModal(canvasGo.transform);
+            BuildBattleDecisionModal(canvasGo.transform);
         }
 
         private void ToggleModal(GameObject targetModal)
@@ -628,6 +634,45 @@ namespace CrittersOfCalamity.UI
             _battlePopupModal.SetActive(false);
         }
 
+        private void BuildBattleDecisionModal(Transform canvasParent)
+        {
+            var modalRt = CreatePanel(canvasParent, "BattleDecisionModal",
+                new Vector2(0.30f, 0.34f), new Vector2(0.70f, 0.70f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero, new Color(0.10f, 0.08f, 0.14f, 0.98f));
+            _battleDecisionModal = modalRt.gameObject;
+
+            _battleDecisionHeaderText = CreateText(modalRt, "Header", "", 16, TextAnchor.MiddleCenter,
+                new Vector2(0.03f, 0.80f), new Vector2(0.97f, 0.97f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
+
+            _battleDecisionBodyText = CreateText(modalRt, "Body", "", 13, TextAnchor.MiddleLeft,
+                new Vector2(0.05f, 0.26f), new Vector2(0.95f, 0.78f), Vector2.zero, Vector2.zero, Color.white);
+
+            CreateButton(modalRt, "BtnUse", "Use It",
+                new Vector2(0.12f, 0.05f), new Vector2(0.46f, 0.20f), Palette.FromHex("#2F7A3E"), () => AnswerBattleDecision(true));
+            CreateButton(modalRt, "BtnPass", "Pass",
+                new Vector2(0.54f, 0.05f), new Vector2(0.88f, 0.20f), Palette.FromHex("#7A2828"), () => AnswerBattleDecision(false));
+
+            _battleDecisionModal.SetActive(false);
+        }
+
+        private void ShowBattleDecisionModal(BattleDecision d)
+        {
+            if (d == null || _battleDecisionModal == null) return;
+            var p = _engine.Players[d.PlayerIndex];
+            _battleDecisionHeaderText.text = $"{p.DisplayName} ({p.Faction.Name}): use {d.Title}?";
+            _battleDecisionBodyText.text = d.Prompt;
+            _battleDecisionModal.transform.SetAsLastSibling();
+            _battleDecisionModal.SetActive(true);
+        }
+
+        private void AnswerBattleDecision(bool use)
+        {
+            // Hide first: answering can immediately raise the next decision, which re-opens this modal.
+            _battleDecisionModal.SetActive(false);
+            _engine.RespondToBattleDecision(use);
+            RefreshHUD();
+        }
+
         private void ShowBattleReportPopup(BattleReport r)
         {
             if (r == null || _battlePopupModal == null) return;
@@ -696,6 +741,8 @@ namespace CrittersOfCalamity.UI
 
             // 1. Top Bar
             string moveHint = _awaitingMoveDestination ? $" | [CLICK DESTINATION HEX FROM {_moveOriginCoord}]" : "";
+            if (_engine.IsBattlePending && _engine.PendingBattle.CurrentDecision != null)
+                moveHint += $" | [BATTLE PAUSED: waiting on {_engine.Players[_engine.PendingBattle.CurrentDecision.PlayerIndex].DisplayName}]";
             _topStatusText.text = $"<b>TURN {_engine.TurnNumber} — {activePlayer.DisplayName} ({activePlayer.Faction.Name})</b>\n" +
                                   $"Phase: <b>{_engine.CurrentPhase}</b> (Main Actions: {_engine.MainPhaseActionsRemaining}/3) | Board: {_engine.Board.Count} Tiles{moveHint}";
 

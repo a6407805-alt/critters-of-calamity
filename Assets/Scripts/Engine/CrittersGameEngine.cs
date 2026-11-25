@@ -146,6 +146,63 @@ namespace CrittersOfCalamity.Engine
         public string SummaryLog;
     }
 
+    public enum BattleDecisionKind
+    {
+        WarHorn,           // Defender, end of Attack Declaration
+        OvergrownWall,     // Defender, start of Dice Roll
+        IronHalberd,       // Attacker, start of Attack and Defense Points (after the dice)
+        PoliticalTreatise, // Defender, start of Attack and Defense Points (after the dice)
+        BrassShield,       // Winner only, Damage Calculation
+        QuickFeet          // Trouble Making Tanukis trait, after 0 HP units are removed
+    }
+
+    public class BattleDecision
+    {
+        public BattleDecisionKind Kind;
+        public int PlayerIndex;
+        public string Title;
+        public string Prompt;
+    }
+
+    public enum PendingBattleStage
+    {
+        WarHornWindow,
+        OvergrownWallWindow,
+        RollDice,
+        HalberdWindow,
+        TreatiseWindow,
+        DamageCalculation,
+        ApplyDamage,
+        QuickFeetWindow,
+        Finish
+    }
+
+    /// <summary>A unit battle in progress, paused while a player decides whether to use a card or trait.</summary>
+    public class PendingBattleState
+    {
+        public HexTileState Tile;
+        public PlayerState Attacker;
+        public PlayerState Defender;
+        public List<UnitInstance> AttackerUnits;
+        public List<UnitInstance> DefenderUnits;
+        public BattleReport Report;
+        public bool ConsumesMainPhaseAction;
+        public PendingBattleStage Stage;
+        public BattleDecision CurrentDecision;
+
+        public int AttackerRoll;
+        public int DefenderRoll;
+        public int AttackerAttackPoints;
+        public int AttackerDefensePoints;
+        public int DefenderAttackPoints;
+        public int DefenderDefensePoints;
+
+        public bool AttackerWon;
+        public int FinalWinnerDamage;
+        public int MandatoryLoserDamage;
+        public int QuickFeetEligiblePlayerIndex = -1;
+    }
+
     /// <summary>
     /// Full deterministic rules engine implementing Critters of Calamity - Core Rulebook: Eight Faction Edition:
     /// - 108-Tile Hexagonal Gameboard (90 Forest tiles, 14 Stream tiles, 4 Ruin tiles - Part 2 Line 43)
@@ -197,11 +254,16 @@ namespace CrittersOfCalamity.Engine
         public List<string> GameLog = new List<string>();
         public BattleReport LastBattleReport;
 
+        // A unit battle waiting on a player's decision (relic cards / Quick Feet). Other actions are blocked until it finishes.
+        public PendingBattleState PendingBattle;
+        public bool IsBattlePending => PendingBattle != null;
+
         private System.Random _rng;
         private int _unitUidCounter = 1;
 
         public event Action OnStateChanged;
         public event Action<BattleReport> OnBattleResolved;
+        public event Action<BattleDecision> OnBattleDecisionRequired;
 
         public CrittersGameEngine(int seed = 0)
         {
@@ -628,6 +690,7 @@ namespace CrittersOfCalamity.Engine
         public void AdvancePhase()
         {
             if (CurrentPhase == TurnPhase.GameOver) return;
+            if (PendingBattle != null) return; // finish the battle first
 
             var p = Players[CurrentTurnPlayerIndex];
             if (CurrentPhase == TurnPhase.DrawPhase)
@@ -1391,6 +1454,7 @@ namespace CrittersOfCalamity.Engine
 
         public bool TryMoveUnits(HexCoord fromCoord, HexCoord toCoord)
         {
+            if (PendingBattle != null) return false;
             if (CurrentPhase != TurnPhase.MainPhase || MainPhaseActionsRemaining <= 0) return false;
             if (!Board.TryGetValue(fromCoord, out var fromTile) || !Board.TryGetValue(toCoord, out var toTile)) return false;
 
@@ -1599,6 +1663,7 @@ namespace CrittersOfCalamity.Engine
 
         public bool TryLootTile(HexCoord coord)
         {
+            if (PendingBattle != null) return false;
             if (CurrentPhase != TurnPhase.MainPhase || MainPhaseActionsRemaining <= 0) return false;
             if (!Board.TryGetValue(coord, out var tile) || tile.LootedThisTurn) return false;
 
@@ -1682,6 +1747,7 @@ namespace CrittersOfCalamity.Engine
 
         public bool TryRecruit()
         {
+            if (PendingBattle != null) return false;
             if (CurrentPhase != TurnPhase.MainPhase || MainPhaseActionsRemaining <= 0) return false;
             var p = Players[CurrentTurnPlayerIndex];
             if (p.Faction.Id == FactionId.Necromouser) return false; // Necro-mouser has no building and cannot recruit
@@ -1730,9 +1796,22 @@ namespace CrittersOfCalamity.Engine
         // Part 12 & Part 13: 5-PHASE 2D6 BATTLE RESOLUTION & ISOLATED PIECE REMOVAL
         // =====================================================================
 
-        public BattleReport TryBattleOnTile(HexCoord coord, int targetDefenderPlayerIndex = -1)
+        // =====================================================================
+        // PART 12 BATTLES (staged so players choose whether to use relic cards)
+        // =====================================================================
+
+        /// <summary>
+        /// Starts a battle on a tile. Part 13 removals (isolated buildings, tokens, tiles) resolve immediately.
+        /// Unit battles run as a staged PendingBattle: whenever a player holds a relic card (or trait) that
+        /// "may" be used at the current battle timing, the engine pauses, raises OnBattleDecisionRequired,
+        /// and waits for RespondToBattleDecision(bool). Returns the report if the battle finished synchronously,
+        /// otherwise null (watch OnBattleResolved).
+        /// </summary>
+        public BattleReport TryBattleOnTile(HexCoord coord, int targetDefenderPlayerIndex = -1, bool consumesMainPhaseAction = true)
         {
-            if (CurrentPhase != TurnPhase.MainPhase || MainPhaseActionsRemaining <= 0) return null;
+            if (PendingBattle != null) return null;
+            if (CurrentPhase != TurnPhase.MainPhase) return null;
+            if (consumesMainPhaseAction && MainPhaseActionsRemaining <= 0) return null;
             if (!Board.TryGetValue(coord, out var tile)) return null;
 
             var attacker = Players[CurrentTurnPlayerIndex];
@@ -1767,14 +1846,18 @@ namespace CrittersOfCalamity.Engine
                 defenderUnits.RemoveAll(u => u.Definition.Id == "necromouser");
             }
 
-            // Vanguard Devotion (Line 688): If Necromouser is defending and Vanguard is on an adjacent tile, Vanguard + friendly units on its tile join defense
-            if (defender.Faction.Id == FactionId.Necromouser)
+            // Vanguard Devotion (Line 688): only when the Necromouser himself is the one defending in this battle
+            // and a Vanguard is in range (on a tile adjacent to the battle tile). The Vanguard and any other of
+            // the Necromouser's units on the Vanguard's tile join the defense.
+            if (defender.Faction.Id == FactionId.Necromouser && defenderUnits.Any(u => u.Definition.Id == "necromouser"))
             {
                 foreach (var nCoord in coord.GetNeighbors())
                 {
-                    if (Board.TryGetValue(nCoord, out var adjTile) && adjTile.Units.Any(u => u.Definition.Id == "the_vanguard"))
+                    if (Board.TryGetValue(nCoord, out var adjTile) &&
+                        adjTile.Units.Any(u => u.OwnerPlayerIndex == defender.PlayerIndex && u.Definition.Id == "the_vanguard"))
                     {
-                        defenderUnits.AddRange(adjTile.Units.Where(u => u.OwnerPlayerIndex == defender.PlayerIndex));
+                        foreach (var ally in adjTile.Units.Where(u => u.OwnerPlayerIndex == defender.PlayerIndex))
+                            if (!defenderUnits.Contains(ally)) defenderUnits.Add(ally);
                         Log($"The Vanguard's Devotion triggered from {nCoord} to defend The Necromouser!");
                     }
                 }
@@ -1811,6 +1894,7 @@ namespace CrittersOfCalamity.Engine
                     var oldOverlay = tile.Overlay;
                     bool wasTrap = (oldOverlay == FactionOverlayTileType.FallenLeaf_Trap);
                     tile.Overlay = FactionOverlayTileType.None;
+                    canRemove--;
                     removedCount++;
                     AwardAuthority(attacker.PlayerIndex, 1, $"Removed Isolated {oldOverlay}");
                     if (defender.Faction.Id == FactionId.Necromouser)
@@ -1825,178 +1909,423 @@ namespace CrittersOfCalamity.Engine
 
                 if (removedCount > 0)
                 {
-                    MainPhaseActionsRemaining--;
+                    if (consumesMainPhaseAction) MainPhaseActionsRemaining--;
                     OnStateChanged?.Invoke();
                 }
                 return null;
             }
 
-            // Part 12: 5-Phase Unit Battle
-            var report = new BattleReport
+            // Part 12: 5-Phase Unit Battle (Phase 1: Attack Declaration is complete at this point)
+            PendingBattle = new PendingBattleState
             {
-                TileCoord = coord,
-                AttackerPlayerIndex = attacker.PlayerIndex,
-                DefenderPlayerIndex = defender.PlayerIndex
-            };
-
-            // War Horn check on Defender (end of Attack Declaration phase: place 1 basic unit from supply on battle tile)
-            var warHorn = defender.TableRelics.FirstOrDefault(r => r.Id == "war_horn");
-            if (warHorn != null && CanAddUnitToTile(tile, defender.PlayerIndex))
-            {
-                defender.TableRelics.Remove(warHorn);
-                RelicDiscardPile.Add(warHorn);
-                var defBasic = defender.Faction.Units.FirstOrDefault(u => !u.IsSpecialUnit);
-                if (defBasic != null)
+                Tile = tile,
+                Attacker = attacker,
+                Defender = defender,
+                AttackerUnits = attackerUnits,
+                DefenderUnits = defenderUnits,
+                ConsumesMainPhaseAction = consumesMainPhaseAction,
+                Stage = PendingBattleStage.WarHornWindow,
+                Report = new BattleReport
                 {
-                    var hornSpawned = SpawnUnit(coord, defBasic.Id, defender, 1);
-                    defenderUnits.AddRange(hornSpawned);
-                    Log($"{defender.DisplayName} flipped & discarded War Horn -> Placed 1 {defBasic.Name} into the defending battle!");
+                    TileCoord = coord,
+                    AttackerPlayerIndex = attacker.PlayerIndex,
+                    DefenderPlayerIndex = defender.PlayerIndex
                 }
-            }
+            };
+            Log($"{attacker.DisplayName} declared an attack on {defender.DisplayName} at {coord}.");
 
-            // Phase 2: Dice Roll (2d6 each)
-            int atkRoll = Roll2D6(out report.AttackerDice1, out report.AttackerDice2);
-            int defRoll = Roll2D6(out report.DefenderDice1, out report.DefenderDice2);
+            ContinuePendingBattle();
+            return PendingBattle == null ? LastBattleReport : null;
+        }
 
-            // Auto-check Table combat Relics (Overgrown Wall, Iron Halberd, Political Treatise)
-            var overgrownWall = defender.TableRelics.FirstOrDefault(r => r.Id == "overgrown_wall");
-            if (overgrownWall != null)
+        /// <summary>
+        /// Answers the current battle decision ("use this card/trait?") for the player named in
+        /// PendingBattle.CurrentDecision, then continues the battle.
+        /// </summary>
+        public void RespondToBattleDecision(bool use)
+        {
+            var pb = PendingBattle;
+            if (pb == null || pb.CurrentDecision == null) return;
+            var decision = pb.CurrentDecision;
+            pb.CurrentDecision = null;
+            var player = Players[decision.PlayerIndex];
+
+            if (!use)
             {
-                defender.TableRelics.Remove(overgrownWall);
-                RelicDiscardPile.Add(overgrownWall);
-                report.AttackerDiceBonus -= 2;
-                Log($"{defender.DisplayName} discarded Overgrown Wall (-2 to Attacker dice roll).");
-            }
-
-            var halberd = attacker.TableRelics.FirstOrDefault(r => r.Id == "iron_halberd");
-            if (halberd != null)
-            {
-                attacker.TableRelics.Remove(halberd);
-                RelicDiscardPile.Add(halberd);
-                report.AttackerDiceBonus += 2;
-                Log($"{attacker.DisplayName} discarded Iron Halberd (+2 to Attacker dice roll).");
-            }
-
-            var treatise = defender.TableRelics.FirstOrDefault(r => r.Id == "political_treatise");
-            if (treatise != null)
-            {
-                defender.TableRelics.Remove(treatise);
-                RelicDiscardPile.Add(treatise);
-                report.DefenderDiceBonus += 2;
-                Log($"{defender.DisplayName} discarded Political Treatise (+2 to Defender dice roll).");
-            }
-
-            // Phase 3: Attack and Defense Points (Part 12 Lines 197-202)
-            // Note: Each side totals both Attack Points and Defense Points of its participating units!
-            int attackerAttackPoints = attackerUnits.Sum(u => GetUnitBattleAttack(attacker, tile, u));
-            int attackerDefensePoints = attackerUnits.Sum(u => GetUnitBattleDefense(attacker, tile, u));
-            int defenderAttackPoints = defenderUnits.Sum(u => GetUnitBattleAttack(defender, tile, u));
-            int defenderDefensePoints = defenderUnits.Sum(u => GetUnitBattleDefense(defender, tile, u));
-
-            report.AttackerUnitAttackSum = attackerAttackPoints;
-            report.DefenderUnitDefenseSum = defenderDefensePoints;
-
-            tile.HasStatueOfGoddessBuff = false;
-
-            report.AttackerTotal = Mathf.Max(0, atkRoll + report.AttackerDiceBonus) + attackerAttackPoints;
-            report.DefenderTotal = Mathf.Max(0, defRoll + report.DefenderDiceBonus) + defenderDefensePoints;
-
-            // Phase 4: Damage Calculation & Phase 5: Battle Resolution
-            if (report.AttackerTotal == report.DefenderTotal)
-            {
-                // Tie: Each side takes 1 HP of damage, skip Phase 4 and go to Phase 5 (Line 204)
-                report.IsTie = true;
-                report.WinnerPlayerIndex = -1;
-                report.LoserPlayerIndex = -1;
-                report.WinnerDamageDealt = 1;
-                report.MandatoryLoserDamageDealt = 1;
-                ApplyBattleDamageToSide(tile, attackerUnits, 1, defender.PlayerIndex, report);
-                ApplyBattleDamageToSide(tile, defenderUnits, 1, attacker.PlayerIndex, report);
+                Log($"{player.DisplayName} chose not to use {decision.Title}.");
             }
             else
             {
-                bool attackerWon = report.AttackerTotal > report.DefenderTotal;
-                var winner = attackerWon ? attacker : defender;
-                var loser = attackerWon ? defender : attacker;
-                var winnerUnits = attackerWon ? attackerUnits : defenderUnits;
-                var loserUnits = attackerWon ? defenderUnits : attackerUnits;
-
-                report.WinnerPlayerIndex = winner.PlayerIndex;
-                report.LoserPlayerIndex = loser.PlayerIndex;
-
-                // Damage Dealt = winner's Attack Points minus loser's Defense Points (min 1, max = winner's participating units) (Lines 206-208)
-                int winnerAttackPts = attackerWon ? attackerAttackPoints : defenderAttackPoints;
-                int loserDefensePts = attackerWon ? defenderDefensePoints : attackerDefensePoints;
-                int rawDamage = Mathf.Max(1, winnerAttackPts - loserDefensePts);
-                int damageCap = Mathf.Max(1, winnerUnits.Count);
-                int finalWinnerDamage = Mathf.Min(rawDamage, damageCap);
-
-                // Brass Shield check on loser (after damage cap is applied, reduce damage by 2 to a min of 0 - Line 316)
-                var brassShield = loser.TableRelics.FirstOrDefault(r => r.Id == "brass_shield");
-                if (brassShield != null && finalWinnerDamage > 0)
+                switch (decision.Kind)
                 {
-                    loser.TableRelics.Remove(brassShield);
-                    RelicDiscardPile.Add(brassShield);
-                    finalWinnerDamage = Mathf.Max(0, finalWinnerDamage - 2);
-                    Log($"{loser.DisplayName} discarded Brass Shield (-2HP damage taken).");
+                    case BattleDecisionKind.WarHorn:
+                        if (DiscardTableRelic(player, "war_horn"))
+                        {
+                            var defBasic = player.Faction.Units.FirstOrDefault(u => !u.IsSpecialUnit);
+                            if (defBasic != null)
+                            {
+                                var hornSpawned = SpawnUnit(pb.Tile.Coord, defBasic.Id, player, 1);
+                                pb.DefenderUnits.AddRange(hornSpawned);
+                                Log($"{player.DisplayName} discarded War Horn -> placed {hornSpawned.Count} {defBasic.Name} into the defending battle!");
+                            }
+                        }
+                        break;
+                    case BattleDecisionKind.OvergrownWall:
+                        if (DiscardTableRelic(player, "overgrown_wall"))
+                        {
+                            pb.Report.AttackerDiceBonus -= 2;
+                            Log($"{player.DisplayName} discarded Overgrown Wall (-2 to Attacker dice roll).");
+                        }
+                        break;
+                    case BattleDecisionKind.IronHalberd:
+                        if (DiscardTableRelic(player, "iron_halberd"))
+                        {
+                            pb.Report.AttackerDiceBonus += 2;
+                            Log($"{player.DisplayName} discarded Iron Halberd (+2 to Attacker dice roll).");
+                        }
+                        break;
+                    case BattleDecisionKind.PoliticalTreatise:
+                        if (DiscardTableRelic(player, "political_treatise"))
+                        {
+                            pb.Report.DefenderDiceBonus += 2;
+                            Log($"{player.DisplayName} discarded Political Treatise (+2 to Defender dice roll).");
+                        }
+                        break;
+                    case BattleDecisionKind.BrassShield:
+                        if (DiscardTableRelic(player, "brass_shield"))
+                        {
+                            int before = pb.MandatoryLoserDamage;
+                            pb.MandatoryLoserDamage = Mathf.Max(0, pb.MandatoryLoserDamage - 2);
+                            Log($"{player.DisplayName} discarded Brass Shield (damage taken {before}HP -> {pb.MandatoryLoserDamage}HP).");
+                        }
+                        break;
+                    case BattleDecisionKind.QuickFeet:
+                        ExecuteQuickFeet(pb, player);
+                        break;
                 }
+            }
 
-                // Mandatory Loser Damage: loser always deals 1 HP back to winner unless Horde of the Millions (Oblivious to Danger - Line 210)
-                int mandatoryLoserDmg = (loser.Faction.Id == FactionId.HordeOfTheMillions) ? 0 : 1;
+            ContinuePendingBattle();
+        }
 
-                report.WinnerDamageDealt = finalWinnerDamage;
-                report.MandatoryLoserDamageDealt = mandatoryLoserDmg;
+        private bool HasTableRelic(PlayerState p, string relicId) => p.TableRelics.Any(r => r.Id == relicId);
+
+        private bool DiscardTableRelic(PlayerState p, string relicId)
+        {
+            var card = p.TableRelics.FirstOrDefault(r => r.Id == relicId);
+            if (card == null) return false;
+            p.TableRelics.Remove(card);
+            RelicDiscardPile.Add(card);
+            return true;
+        }
+
+        private void AskBattleDecision(BattleDecisionKind kind, PlayerState player, string title, string prompt)
+        {
+            var decision = new BattleDecision { Kind = kind, PlayerIndex = player.PlayerIndex, Title = title, Prompt = prompt };
+            PendingBattle.CurrentDecision = decision;
+            Log($"Waiting for {player.DisplayName}: use {title}?");
+            OnBattleDecisionRequired?.Invoke(decision);
+            OnStateChanged?.Invoke();
+        }
+
+        private string DescribeBattleTotals(PendingBattleState pb)
+        {
+            int atk = Mathf.Max(0, pb.AttackerRoll + pb.Report.AttackerDiceBonus) + pb.AttackerAttackPoints;
+            int def = Mathf.Max(0, pb.DefenderRoll + pb.Report.DefenderDiceBonus) + pb.DefenderDefensePoints;
+            return $"Attacker rolled {pb.Report.AttackerDice1}+{pb.Report.AttackerDice2} (mod {pb.Report.AttackerDiceBonus:+#;-#;0}) + {pb.AttackerAttackPoints} Attack Points = {atk}\n" +
+                   $"Defender rolled {pb.Report.DefenderDice1}+{pb.Report.DefenderDice2} (mod {pb.Report.DefenderDiceBonus:+#;-#;0}) + {pb.DefenderDefensePoints} Defense Points = {def}";
+        }
+
+        /// <summary>Runs the battle forward until it needs a player decision or finishes.</summary>
+        private void ContinuePendingBattle()
+        {
+            while (PendingBattle != null && PendingBattle.CurrentDecision == null)
+            {
+                var pb = PendingBattle;
+                var tile = pb.Tile;
+                var attacker = pb.Attacker;
+                var defender = pb.Defender;
+                var report = pb.Report;
+
+                switch (pb.Stage)
+                {
+                    case PendingBattleStage.WarHornWindow:
+                        // War Horn: Defender, at the end of the Attack Declaration phase
+                        pb.Stage = PendingBattleStage.OvergrownWallWindow;
+                        if (HasTableRelic(defender, "war_horn") && CanAddUnitToTile(tile, defender.PlayerIndex) &&
+                            defender.Faction.Units.Any(u => !u.IsSpecialUnit))
+                        {
+                            AskBattleDecision(BattleDecisionKind.WarHorn, defender, "War Horn",
+                                $"{attacker.DisplayName} is attacking you at {tile.Coord}.\nDiscard War Horn to place 1 basic unit from your supply on the battle tile? It joins the battle.");
+                        }
+                        break;
+
+                    case PendingBattleStage.OvergrownWallWindow:
+                        // Overgrown Wall: Defender, at the start of the Dice Roll phase
+                        pb.Stage = PendingBattleStage.RollDice;
+                        if (HasTableRelic(defender, "overgrown_wall"))
+                        {
+                            AskBattleDecision(BattleDecisionKind.OvergrownWall, defender, "Overgrown Wall",
+                                "The dice are about to be rolled.\nDiscard Overgrown Wall so the Attacker subtracts 2 from their dice roll?");
+                        }
+                        break;
+
+                    case PendingBattleStage.RollDice:
+                        // Phase 2: Dice Roll (2d6 each)
+                        pb.AttackerRoll = Roll2D6(out report.AttackerDice1, out report.AttackerDice2);
+                        pb.DefenderRoll = Roll2D6(out report.DefenderDice1, out report.DefenderDice2);
+
+                        // Phase 3 inputs: Attack and Defense Points of the participating units (Part 12 Lines 197-202)
+                        pb.AttackerAttackPoints = pb.AttackerUnits.Sum(u => GetUnitBattleAttack(attacker, tile, u));
+                        pb.AttackerDefensePoints = pb.AttackerUnits.Sum(u => GetUnitBattleDefense(attacker, tile, u));
+                        pb.DefenderAttackPoints = pb.DefenderUnits.Sum(u => GetUnitBattleAttack(defender, tile, u));
+                        pb.DefenderDefensePoints = pb.DefenderUnits.Sum(u => GetUnitBattleDefense(defender, tile, u));
+                        report.AttackerUnitAttackSum = pb.AttackerAttackPoints;
+                        report.DefenderUnitDefenseSum = pb.DefenderDefensePoints;
+                        tile.HasStatueOfGoddessBuff = false;
+
+                        pb.Stage = PendingBattleStage.HalberdWindow;
+                        break;
+
+                    case PendingBattleStage.HalberdWindow:
+                        // Iron Halberd: Attacker, at the start of the Attack and Defense Points phase (after seeing the dice)
+                        pb.Stage = PendingBattleStage.TreatiseWindow;
+                        if (HasTableRelic(attacker, "iron_halberd"))
+                        {
+                            AskBattleDecision(BattleDecisionKind.IronHalberd, attacker, "Iron Halberd",
+                                DescribeBattleTotals(pb) + "\nDiscard Iron Halberd to add 2 to your dice roll?");
+                        }
+                        break;
+
+                    case PendingBattleStage.TreatiseWindow:
+                        // Political Treatise: Defender, at the start of the Attack and Defense Points phase (after seeing the dice)
+                        pb.Stage = PendingBattleStage.DamageCalculation;
+                        if (HasTableRelic(defender, "political_treatise"))
+                        {
+                            AskBattleDecision(BattleDecisionKind.PoliticalTreatise, defender, "Political Treatise",
+                                DescribeBattleTotals(pb) + "\nDiscard Political Treatise to add 2 to your dice roll?");
+                        }
+                        break;
+
+                    case PendingBattleStage.DamageCalculation:
+                        report.AttackerTotal = Mathf.Max(0, pb.AttackerRoll + report.AttackerDiceBonus) + pb.AttackerAttackPoints;
+                        report.DefenderTotal = Mathf.Max(0, pb.DefenderRoll + report.DefenderDiceBonus) + pb.DefenderDefensePoints;
+                        pb.Stage = PendingBattleStage.ApplyDamage;
+
+                        if (report.AttackerTotal == report.DefenderTotal)
+                        {
+                            // Tie: Each side takes 1 HP of damage, skip Phase 4 and go to Phase 5 (Line 204)
+                            report.IsTie = true;
+                            report.WinnerPlayerIndex = -1;
+                            report.LoserPlayerIndex = -1;
+                            report.WinnerDamageDealt = 1;
+                            report.MandatoryLoserDamageDealt = 1;
+                            break;
+                        }
+
+                        pb.AttackerWon = report.AttackerTotal > report.DefenderTotal;
+                        var winner = pb.AttackerWon ? attacker : defender;
+                        var loser = pb.AttackerWon ? defender : attacker;
+                        var winnerUnits = pb.AttackerWon ? pb.AttackerUnits : pb.DefenderUnits;
+                        report.WinnerPlayerIndex = winner.PlayerIndex;
+                        report.LoserPlayerIndex = loser.PlayerIndex;
+
+                        // Damage Dealt = winner's Attack Points minus loser's Defense Points (min 1, max = winner's participating units) (Lines 206-208)
+                        int winnerAttackPts = pb.AttackerWon ? pb.AttackerAttackPoints : pb.DefenderAttackPoints;
+                        int loserDefensePts = pb.AttackerWon ? pb.DefenderDefensePoints : pb.AttackerDefensePoints;
+                        int rawDamage = Mathf.Max(1, winnerAttackPts - loserDefensePts);
+                        int damageCap = Mathf.Max(1, winnerUnits.Count);
+                        pb.FinalWinnerDamage = Mathf.Min(rawDamage, damageCap);
+
+                        // Mandatory Loser Damage: loser always deals 1 HP back to winner unless Horde of the Millions (Oblivious to Danger - Line 210)
+                        pb.MandatoryLoserDamage = (loser.Faction.Id == FactionId.HordeOfTheMillions) ? 0 : 1;
+
+                        // Brass Shield: only the WINNER of a battle may use it, to reduce the damage their units take (Part 16).
+                        if (pb.MandatoryLoserDamage > 0 && HasTableRelic(winner, "brass_shield"))
+                        {
+                            AskBattleDecision(BattleDecisionKind.BrassShield, winner, "Brass Shield",
+                                $"You won the battle ({report.AttackerTotal} vs {report.DefenderTotal}).\n" +
+                                $"Your units are about to take {pb.MandatoryLoserDamage}HP of mandatory loser damage.\n" +
+                                "Discard Brass Shield to reduce the damage your units take by 2 (to a minimum of 0)?");
+                        }
+                        break;
+
+                    case PendingBattleStage.ApplyDamage:
+                        ApplyPendingBattleDamage(pb);
+                        pb.Stage = PendingBattleStage.QuickFeetWindow;
+                        break;
+
+                    case PendingBattleStage.QuickFeetWindow:
+                        // Quick Feet (Line 618): after the 0 HP units are removed
+                        pb.Stage = PendingBattleStage.Finish;
+                        if (pb.QuickFeetEligiblePlayerIndex >= 0)
+                        {
+                            var tanukiPlayer = Players[pb.QuickFeetEligiblePlayerIndex];
+                            AskBattleDecision(BattleDecisionKind.QuickFeet, tanukiPlayer, "Quick Feet",
+                                $"Your Tanuki units at {tile.Coord} took damage.\n" +
+                                "Scatter your remaining units on that tile to adjacent tiles with no enemy units and place 1 Fallen Leaves tile?");
+                        }
+                        break;
+
+                    case PendingBattleStage.Finish:
+                        FinishPendingBattle(pb);
+                        break;
+                }
+            }
+        }
+
+        private void ApplyPendingBattleDamage(PendingBattleState pb)
+        {
+            var tile = pb.Tile;
+            var attacker = pb.Attacker;
+            var defender = pb.Defender;
+            var report = pb.Report;
+
+            // Snapshot for Quick Feet: Tanuki units on the battle tile before damage is applied
+            var tanukiSide = attacker.Faction.Id == FactionId.TroubleMakingTanukis ? attacker
+                           : defender.Faction.Id == FactionId.TroubleMakingTanukis ? defender : null;
+            var tanukiHpBefore = new Dictionary<UnitInstance, int>();
+            if (tanukiSide != null)
+                foreach (var t in tile.Units.Where(u => u.OwnerPlayerIndex == tanukiSide.PlayerIndex && u.Definition.Id == "tanuki"))
+                    tanukiHpBefore[t] = t.CurrentHP;
+
+            List<UnitInstance> attackerLosses;
+            List<UnitInstance> defenderLosses;
+
+            if (report.IsTie)
+            {
+                attackerLosses = ApplyBattleDamageToSide(tile, pb.AttackerUnits, 1, defender.PlayerIndex, report);
+                defenderLosses = ApplyBattleDamageToSide(tile, pb.DefenderUnits, 1, attacker.PlayerIndex, report);
+            }
+            else
+            {
+                var winner = pb.AttackerWon ? attacker : defender;
+                var loser = pb.AttackerWon ? defender : attacker;
+                var winnerUnits = pb.AttackerWon ? pb.AttackerUnits : pb.DefenderUnits;
+                var loserUnits = pb.AttackerWon ? pb.DefenderUnits : pb.AttackerUnits;
+
+                report.WinnerDamageDealt = pb.FinalWinnerDamage;
+                report.MandatoryLoserDamageDealt = pb.MandatoryLoserDamage;
 
                 bool allow2HpToSingleUnit = winnerUnits.Any(u => u.EquippedItems.Any(e => e.Id == "golden_gauntlet")) ||
                                             (winner.Faction.Id == FactionId.BriaredFlower && winner.BriaredFlowerThorns == 0 && winnerUnits.Any(u => u.Definition.Id == "blooming_briar"));
 
-                int crusadersBefore = loserUnits.Count(u => u.Definition.Id == "crusader");
+                // All damage is applied at the same time at the end of Phase 4
+                var loserLosses = ApplyBattleDamageToSide(tile, loserUnits, pb.FinalWinnerDamage, winner.PlayerIndex, report, allow2HpToSingleUnit);
+                var winnerLosses = pb.MandatoryLoserDamage > 0
+                    ? ApplyBattleDamageToSide(tile, winnerUnits, pb.MandatoryLoserDamage, loser.PlayerIndex, report, false)
+                    : new List<UnitInstance>();
 
-                // Apply damage simultaneously
-                ApplyBattleDamageToSide(tile, loserUnits, finalWinnerDamage, winner.PlayerIndex, report, allow2HpToSingleUnit);
-                if (mandatoryLoserDmg > 0)
-                    ApplyBattleDamageToSide(tile, winnerUnits, mandatoryLoserDmg, loser.PlayerIndex, report, false);
+                attackerLosses = pb.AttackerWon ? winnerLosses : loserLosses;
+                defenderLosses = pb.AttackerWon ? loserLosses : winnerLosses;
+            }
 
-                // Phase 5 Step 1: Platypus Papacy Crusader removal Authority checks (Lines 578 & 582)
-                int crusadersRemoved = crusadersBefore - tile.Units.Count(u => u.OwnerPlayerIndex == loser.PlayerIndex && u.Definition.Id == "crusader");
+            // Platypus Papacy Crusader Authority, whichever side removed them and whatever the battle outcome
+            ScoreCrusaderBattleRemovals(attacker, pb.AttackerUnits, defender, defenderLosses);
+            ScoreCrusaderBattleRemovals(defender, pb.DefenderUnits, attacker, attackerLosses);
+
+            // Quick Feet (Line 618): a player dealt 1+ HP of damage to your Tanuki units on a tile with 2 or more of your Tanuki units
+            pb.QuickFeetEligiblePlayerIndex = -1;
+            if (tanukiSide != null && tanukiHpBefore.Count >= 2 &&
+                tanukiHpBefore.Any(kv => kv.Key.CurrentHP < kv.Value))
+            {
+                bool hasRemainingUnits = tile.Units.Any(u => u.OwnerPlayerIndex == tanukiSide.PlayerIndex);
+                bool hasSafeTile = tile.Coord.GetNeighbors().Any(n => Board.ContainsKey(n) &&
+                                    !Board[n].Units.Any(u => u.OwnerPlayerIndex != tanukiSide.PlayerIndex));
+                if (hasRemainingUnits && hasSafeTile)
+                    pb.QuickFeetEligiblePlayerIndex = tanukiSide.PlayerIndex;
+            }
+        }
+
+        /// <summary>
+        /// Platypus Papacy Crusader scoring for one direction of a battle (remover's units removed victim's units):
+        /// - Removing 2 or more Crusaders in one battle: remover gains 1 Authority (Ways Enemies Can Score Authority).
+        /// - Level 4, during a Crusade: when an enemy removes one of your Crusaders, that enemy gains 1 Authority (per Crusader).
+        /// - Level 4, during a Crusade: when one of your Crusaders removes an enemy unit, gain 1 Authority (per unit removed,
+        ///   when Crusaders took part in the battle).
+        /// </summary>
+        private void ScoreCrusaderBattleRemovals(PlayerState remover, List<UnitInstance> removerUnits, PlayerState victim, List<UnitInstance> victimLosses)
+        {
+            if (victimLosses.Count == 0) return;
+
+            if (victim.Faction.Id == FactionId.PlatypusPapacy)
+            {
+                int crusadersRemoved = victimLosses.Count(u => u.OwnerPlayerIndex == victim.PlayerIndex && u.Definition.Id == "crusader");
                 if (crusadersRemoved >= 2)
-                    AwardAuthority(winner.PlayerIndex, 1, "Removed 2+ Platypus Crusaders in one battle");
-                if (loser.Faction.Id == FactionId.PlatypusPapacy && loser.PlatyPopeLevel >= 4 && loser.CrusadeTurnsRemaining > 0 && crusadersRemoved > 0)
-                    AwardAuthority(winner.PlayerIndex, crusadersRemoved, "Removed Crusaders during Lv4+ Crusade");
-                if (winner.Faction.Id == FactionId.PlatypusPapacy && winner.PlatyPopeLevel >= 4 && winner.CrusadeTurnsRemaining > 0 && report.DestroyedUnitNames.Count > 0)
-                    AwardAuthority(winner.PlayerIndex, 1, "Crusader removed enemy unit during Lv4+ Crusade");
+                    AwardAuthority(remover.PlayerIndex, 1, "Removed 2+ Platypus Crusaders in one battle");
+                if (victim.PlatyPopeLevel >= 4 && victim.CrusadeTurnsRemaining > 0 && crusadersRemoved > 0)
+                    AwardAuthority(remover.PlayerIndex, crusadersRemoved, $"Removed {crusadersRemoved} Crusader(s) during a Level 4 Crusade");
+            }
 
-                // Trouble Making Tanukis Quick Feet (Line 618)
-                if (loser.Faction.Id == FactionId.TroubleMakingTanukis && finalWinnerDamage >= 1)
+            if (remover.Faction.Id == FactionId.PlatypusPapacy && remover.PlatyPopeLevel >= 4 && remover.CrusadeTurnsRemaining > 0 &&
+                removerUnits.Any(u => u.Definition.Id == "crusader"))
+            {
+                int enemyUnitsRemoved = victimLosses.Count(u => u.OwnerPlayerIndex != remover.PlayerIndex);
+                if (enemyUnitsRemoved > 0)
+                    AwardAuthority(remover.PlayerIndex, enemyUnitsRemoved, $"Crusaders removed {enemyUnitsRemoved} enemy unit(s) during a Level 4 Crusade");
+            }
+        }
+
+        /// <summary>
+        /// Quick Feet (Line 618): move the Tanuki player's remaining units on the battle tile to adjacent tiles with
+        /// no enemy units. Units are spread across the safe tiles (each may go to a different tile), the coin follows
+        /// the first unit that moves, then 1 Fallen Leaves tile is placed on one forest tile a unit moved to.
+        /// </summary>
+        private void ExecuteQuickFeet(PendingBattleState pb, PlayerState tanukiPlayer)
+        {
+            var tile = pb.Tile;
+            var safeTiles = tile.Coord.GetNeighbors()
+                .Where(n => Board.ContainsKey(n) && !Board[n].Units.Any(u => u.OwnerPlayerIndex != tanukiPlayer.PlayerIndex))
+                .Select(n => Board[n])
+                .ToList();
+            var movers = tile.Units.Where(u => u.OwnerPlayerIndex == tanukiPlayer.PlayerIndex).ToList();
+            if (safeTiles.Count == 0 || movers.Count == 0) return;
+
+            var destinations = new List<HexTileState>();
+            HexTileState coinDestination = null;
+            for (int i = 0; i < movers.Count; i++)
+            {
+                HexTileState dest = null;
+                for (int k = 0; k < safeTiles.Count; k++)
                 {
-                    var survivingTanukis = tile.Units.Where(u => u.OwnerPlayerIndex == loser.PlayerIndex && u.Definition.Id == "tanuki").ToList();
-                    if (survivingTanukis.Count > 0)
-                    {
-                        var safeAdj = coord.GetNeighbors().Where(n => Board.ContainsKey(n) && !Board[n].Units.Any(u => u.OwnerPlayerIndex != loser.PlayerIndex)).ToList();
-                        if (safeAdj.Count > 0)
-                        {
-                            var dest = safeAdj[0];
-                            foreach (var st in survivingTanukis)
-                            {
-                                if (CanAddUnitToTile(Board[dest], loser.PlayerIndex))
-                                {
-                                    tile.Units.Remove(st);
-                                    Board[dest].Units.Add(st);
-                                }
-                            }
-                            MoveAndScoreTanukiCoin(tile, Board[dest], loser.PlayerIndex);
-                            if (Board[dest].EffectiveTerrain == TileTerrainType.Forest && Board[dest].Overlay == FactionOverlayTileType.None)
-                                PlaceOverlayTile(dest, FactionOverlayTileType.FallenLeaf_Unflipped, loser.PlayerIndex);
-                            Log($"Quick Feet! Surviving Tanukis scattered to {dest} and placed a Fallen Leaves Tile!");
-                        }
-                    }
+                    var candidate = safeTiles[(i + k) % safeTiles.Count];
+                    if (CanAddUnitToTile(candidate, tanukiPlayer.PlayerIndex)) { dest = candidate; break; }
                 }
+                if (dest == null) continue; // stacking limit: this unit stays
+
+                tile.Units.Remove(movers[i]);
+                dest.Units.Add(movers[i]);
+                if (!destinations.Contains(dest)) destinations.Add(dest);
+                if (coinDestination == null) coinDestination = dest;
+            }
+
+            if (coinDestination != null)
+                MoveAndScoreTanukiCoin(tile, coinDestination, tanukiPlayer.PlayerIndex);
+
+            var leafTile = destinations.FirstOrDefault(d => d.EffectiveTerrain == TileTerrainType.Forest && d.Overlay == FactionOverlayTileType.None);
+            if (leafTile != null)
+                PlaceOverlayTile(leafTile.Coord, FactionOverlayTileType.FallenLeaf_Unflipped, tanukiPlayer.PlayerIndex);
+
+            Log($"Quick Feet! {tanukiPlayer.DisplayName}'s units scattered to {string.Join(", ", destinations.Select(d => d.Coord.ToString()))}" +
+                (leafTile != null ? $" and placed a Fallen Leaves tile at {leafTile.Coord}." : "."));
+        }
+
+        private void FinishPendingBattle(PendingBattleState pb)
+        {
+            var attacker = pb.Attacker;
+            var defender = pb.Defender;
+            var report = pb.Report;
+
+            if (!report.IsTie)
+            {
+                var winner = pb.AttackerWon ? attacker : defender;
+                var winnerUnits = pb.AttackerWon ? pb.AttackerUnits : pb.DefenderUnits;
 
                 // Phase 5 Step 2: Resolve effects that care about winning or losing the battle (Momentum - Line 215 & Lines 414-418)
                 // "Momentum only changes from battles where your faction is the Attacker."
                 if (attacker.Faction.Id == FactionId.CurlyTail)
                 {
-                    if (attackerWon)
+                    if (pb.AttackerWon)
                     {
                         attacker.CurlyTailMomentum = Mathf.Min(4, attacker.CurlyTailMomentum + 1);
                         Log($"{attacker.DisplayName} attacked and won -> Momentum rose to Level {attacker.CurlyTailMomentum}.");
@@ -2036,15 +2365,15 @@ namespace CrittersOfCalamity.Engine
                 }
             }
 
-            MainPhaseActionsRemaining--;
-            report.SummaryLog = $"Battle at {coord}: {attacker.DisplayName} ({report.AttackerTotal}) vs {defender.DisplayName} ({report.DefenderTotal}) -> " +
+            if (pb.ConsumesMainPhaseAction) MainPhaseActionsRemaining--;
+            report.SummaryLog = $"Battle at {report.TileCoord}: {attacker.DisplayName} ({report.AttackerTotal}) vs {defender.DisplayName} ({report.DefenderTotal}) -> " +
                                 (report.IsTie ? "Tie (1HP each)" : $"{Players[report.WinnerPlayerIndex].DisplayName} wins ({report.WinnerDamageDealt}HP dealt)!");
             Log(report.SummaryLog);
 
+            PendingBattle = null;
             LastBattleReport = report;
             OnBattleResolved?.Invoke(report);
             OnStateChanged?.Invoke();
-            return report;
         }
 
         private int GetUnitBattleAttack(PlayerState owner, HexTileState tile, UnitInstance u)
@@ -2089,8 +2418,9 @@ namespace CrittersOfCalamity.Engine
             return def;
         }
 
-        private void ApplyBattleDamageToSide(HexTileState tile, List<UnitInstance> units, int totalDamage, int killerPlayerIndex, BattleReport report, bool allow2HpToSingleUnit = false)
+        private List<UnitInstance> ApplyBattleDamageToSide(HexTileState tile, List<UnitInstance> units, int totalDamage, int killerPlayerIndex, BattleReport report, bool allow2HpToSingleUnit = false)
         {
+            var removed = new List<UnitInstance>();
             // Capybara Caravan Selfless Nature (Line 824): When a Guest would take damage in battle, a Capybara unit on that tile absorbs 1HP damage
             var ordered = units.OrderBy(u => u.Definition.IsSpecialUnit ? 1 : 0).ToList();
             int remaining = totalDamage;
@@ -2110,6 +2440,7 @@ namespace CrittersOfCalamity.Engine
                         if (protectorCapy.CurrentHP <= 0)
                         {
                             report.DestroyedUnitNames.Add(protectorCapy.Definition.Name);
+                            removed.Add(protectorCapy);
                             RemoveUnitFromBoard(tile, protectorCapy, killerPlayerIndex);
                         }
                         continue;
@@ -2132,13 +2463,21 @@ namespace CrittersOfCalamity.Engine
                 if (u.CurrentHP <= 0)
                 {
                     report.DestroyedUnitNames.Add(u.Definition.Name);
+                    removed.Add(u);
                     RemoveUnitFromBoard(tile, u, killerPlayerIndex);
                 }
             }
+            return removed;
         }
 
         private void RemoveUnitFromBoard(HexTileState tile, UnitInstance u, int removerPlayerIndex)
         {
+            // Units that joined a battle from an adjacent tile (Vanguard Devotion) are removed from the tile they stand on
+            if (!tile.Units.Contains(u))
+            {
+                var actualTile = Board.Values.FirstOrDefault(t => t.Units.Contains(u));
+                if (actualTile != null) tile = actualTile;
+            }
             var owner = Players[u.OwnerPlayerIndex];
             int crusadeBonus = (removerPlayerIndex >= 0 && removerPlayerIndex != owner.PlayerIndex &&
                                 Players[removerPlayerIndex].Faction.Id == FactionId.PlatypusPapacy &&
@@ -2373,6 +2712,7 @@ namespace CrittersOfCalamity.Engine
 
         public bool ExecuteSpecificFactionAction(int actionIndex, HexCoord selectedCoord)
         {
+            if (PendingBattle != null) return false;
             var p = Players[CurrentTurnPlayerIndex];
             if (!Board.TryGetValue(selectedCoord, out var selectedTile))
                 selectedTile = Board.Values.First();
@@ -2401,7 +2741,7 @@ namespace CrittersOfCalamity.Engine
                         enemyTile.Units.Remove(pulled);
                         ctTile.Units.Add(pulled);
                         Log($"Curly Tail used Taunt to pull {pulled.Definition.Name} onto {ctTile.Coord}!");
-                        TryBattleOnTile(ctTile.Coord, pulled.OwnerPlayerIndex);
+                        TryBattleOnTile(ctTile.Coord, pulled.OwnerPlayerIndex, consumesMainPhaseAction: false);
                     }
                     else return false;
                     break;

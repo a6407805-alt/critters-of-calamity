@@ -313,7 +313,7 @@ Effect: When you are the Attacker, at the start of the Attack and Defense Points
 Disassemble: Gain 1 Stone.
 Brass Shield (2 copies)
 Cost: 2 Stone, 1 Wood
-Effect: During the Damage Calculation phase, after the damage cap is applied, you may discard this card to reduce the damage your units take in this battle by 2 (to a minimum of 0).
+Effect: When you win a battle, during the Damage Calculation phase, you may discard this card to reduce the damage your units take in this battle by 2 (to a minimum of 0). The loser of a battle cannot use this card.
 Disassemble: Gain 1 Wood.
 Statue of the Goddess (2 copies)
 Cost: 2 Stone, 1 Gold

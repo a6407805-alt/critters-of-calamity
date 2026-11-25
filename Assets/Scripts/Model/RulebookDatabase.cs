@@ -103,7 +103,7 @@ namespace CrittersOfCalamity.Model
                     Cost = new ResourceCost(wood: 1, stone: 2),
                     DisassembleGain = new ResourceCost(wood: 1),
                     KeepOnTableWhenCrafted = true, HasCraftedEffect = true,
-                    EffectText = "Effect: During Damage Calculation, after the damage cap is applied, discard to reduce damage your units take by 2 (min 0)."
+                    EffectText = "Effect: When you win a battle, during Damage Calculation, discard to reduce the damage your units take in this battle by 2 (min 0). The loser of a battle cannot use this card."
                 },
                 new RelicCardDef
                 {
