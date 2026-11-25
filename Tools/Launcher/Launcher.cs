@@ -1,9 +1,9 @@
 // Critters of Calamity Launcher
 // A small Windows app (.NET Framework 4.8, built into Windows 10/11) that keeps the game up to date:
-//   1. asks GitHub for the latest release of the public releases repo,
-//   2. downloads and installs the game zip when there is a newer version,
+//   1. reads latest.json from the public releases repo (ebenlyon/critters-of-calamity-releases),
+//   2. downloads the game zip when there is a newer version, checks its SHA-256, and installs it,
 //   3. launches the game.
-// It also updates itself when a release carries a newer Launcher.exe.
+// It also updates itself when latest.json lists a newer launcher.
 // Build: see Tools/Launcher/build.sh (compiles with mono's C# compiler; no Visual Studio needed).
 
 using System;
@@ -27,11 +27,9 @@ namespace CrittersOfCalamity.Launcher
 {
     static class Config
     {
-        // The public repository whose GitHub Releases hold the game builds.
-        public const string Owner = "a6407805-alt";
-        public const string Repo = "critters-of-calamity-releases";
-        public const string GameAsset = "CrittersOfCalamity-win64.zip";
-        public const string LauncherAsset = "Launcher.exe";
+        // The public repository that holds the game builds and latest.json.
+        public const string RawBase = "https://raw.githubusercontent.com/ebenlyon/critters-of-calamity-releases/main/";
+        public const string Manifest = RawBase + "latest.json";
         public const string GameExe = "Critters of Calamity.exe";
         public static readonly Version LauncherVersion = new Version(1, 0, 0);
 
@@ -46,8 +44,9 @@ namespace CrittersOfCalamity.Launcher
         public string Notes;
         public string GameUrl;
         public long GameSize;
+        public string GameSha256;
         public string LauncherUrl;
-        public Version LauncherVersion; // from the release body line "launcher: 1.0.1", if present
+        public Version LauncherVersion;
     }
 
     class LauncherForm : Form
@@ -176,29 +175,32 @@ namespace CrittersOfCalamity.Launcher
 
         static ReleaseInfo FetchLatest()
         {
-            string url = $"https://api.github.com/repos/{Config.Owner}/{Config.Repo}/releases/latest";
             string json;
             using (var wc = NewClient())
             {
-                wc.Headers[HttpRequestHeader.Accept] = "application/vnd.github+json";
-                json = wc.DownloadString(url);
+                wc.Headers[HttpRequestHeader.CacheControl] = "no-cache";
+                json = wc.DownloadString(Config.Manifest + "?t=" + DateTime.UtcNow.Ticks);
             }
-            var data = (Dictionary<string, object>)new JavaScriptSerializer().DeserializeObject(json);
-            var info = new ReleaseInfo { Tag = data["tag_name"] as string, Notes = data.ContainsKey("body") ? data["body"] as string : "" };
-            if (data.ContainsKey("assets") && data["assets"] is object[] assets)
-                foreach (Dictionary<string, object> a in assets)
-                {
-                    string name = a["name"] as string;
-                    if (name == Config.GameAsset) { info.GameUrl = a["browser_download_url"] as string; info.GameSize = Convert.ToInt64(a["size"]); }
-                    if (name == Config.LauncherAsset) info.LauncherUrl = a["browser_download_url"] as string;
-                }
-            foreach (var line in (info.Notes ?? "").Split('\n'))
+            var d = (Dictionary<string, object>)new JavaScriptSerializer().DeserializeObject(json);
+            Func<string, string> str = k => d.ContainsKey(k) && d[k] != null ? d[k].ToString() : null;
+            var info = new ReleaseInfo
             {
-                var l = line.Trim();
-                if (l.StartsWith("launcher:", StringComparison.OrdinalIgnoreCase) && Version.TryParse(l.Substring(9).Trim(), out var v))
-                    info.LauncherVersion = v;
-            }
+                Tag = "v" + Clean(str("version")),
+                Notes = str("notes") ?? "",
+                GameUrl = str("game") != null ? Config.RawBase + str("game") : null,
+                GameSize = str("gameSize") != null ? long.Parse(str("gameSize")) : 0,
+                GameSha256 = str("gameSha256"),
+                LauncherUrl = str("launcher") != null ? Config.RawBase + str("launcher") : null,
+            };
+            if (str("launcherVersion") != null && Version.TryParse(str("launcherVersion"), out var lv)) info.LauncherVersion = lv;
             return info;
+        }
+
+        static string Sha256Of(string path)
+        {
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            using (var fs = File.OpenRead(path))
+                return BitConverter.ToString(sha.ComputeHash(fs)).Replace("-", "").ToLowerInvariant();
         }
 
         async Task PlayOrUpdate()
@@ -229,6 +231,13 @@ namespace CrittersOfCalamity.Launcher
                         _status.Text = $"Downloading {_latest.Tag}: {e.BytesReceived / (1024 * 1024)} of {Math.Max(1, (_latest.GameSize > 0 ? _latest.GameSize : e.TotalBytesToReceive) / (1024 * 1024))} MB";
                     };
                     await wc.DownloadFileTaskAsync(new Uri(_latest.GameUrl), tmpZip);
+                }
+                _status.Text = "Checking the download...";
+                if (!string.IsNullOrEmpty(_latest.GameSha256))
+                {
+                    string got = await Task.Run(() => Sha256Of(tmpZip));
+                    if (!string.Equals(got, _latest.GameSha256, StringComparison.OrdinalIgnoreCase))
+                        throw new Exception("the download was damaged (checksum mismatch). Please try again.");
                 }
                 _status.Text = "Installing...";
                 await Task.Run(() =>
