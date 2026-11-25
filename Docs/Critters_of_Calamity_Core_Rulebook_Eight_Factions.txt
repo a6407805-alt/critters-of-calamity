@@ -919,12 +919,13 @@ Unit Stats: 0/1/1
 Goat Unit Ability - Invocation: During your main phase, you can remove 1 Goat unit from the board and place it into the Purgatory card, then discard 1 Wood, 1 Stone, and 1 Gold from your resource pile to place an Initiation Rite Token on a tile with a Summoning Circle.
 Goat Unit Ability - Canto Inferno: Once during your main phase, if there is an Initiation Rite Token on the board, you can remove the Initiation Rite Token and pay one of your special unit demon's summoning costs to flip that Demon's Special Unit Card face up (the Bound side), and then place that Demon's Special Unit piece on the tile where the Initiation Rite Token was removed.
 Goat Unit Ability - Effigy: Once during your excavation phase, you can remove 1 Purged and place it into your supply to place an Effigy Token on a tile with a Summoning Circle.
-Effigy Token Effect: During your draw phase, when there is an Effigy Token on the board, you can remove 1 Purged to either gain 1 Gold or lose 1 Authority.
+Effigy Token Effect: During your draw phase, when there is an Effigy Token on the board, you can remove 1 Purged to either gain 1 Gold or gain 1 Authority.
 How to Use Demon Special Unit Cards:
 You can summon the same demon multiple times during the same game but you cannot have multiple of the same demon on the field at the same time.
 •	Each demon has its own Special Unit abilities listed on their Special Unit card.
-•	If the Goat Cabal player is unable to meet the binding requirement(s) of a Demon piece on the board during the end phase of their turn, that demon becomes unbound. Unbound demons then place a negative effect on the Goat player before the demon card flips back face-down.
-•	Demons that were summoned but became unbound can be rebound by paying only the Purged cost of their summoning condition. When that demon is rebound, its binding requirements must still be paid every end phase.
+•	If the Goat Cabal player is unable to meet the binding requirement(s) of a Demon piece on the board during the end phase of their turn, that demon becomes unbound. Unbound demons then place a negative effect on the Goat player before the demon card flips back face-down, and the demon piece leaves the board.
+•	Demons that were summoned but became unbound can be rebound by paying only the Purged cost of their summoning condition. When that demon is rebound, its binding requirements must still be paid every end phase, and its "when summoned" abilities trigger again.
+•	You pay each bound demon's binding separately. If you can't pay them all, choose which ones to pay; each demon whose binding goes unpaid becomes unbound.
 •	When a demon is bound, flip the demon's unique card into faceup portrait orientation. When the demon's once per turn effect is used, put the demon's unique card faceup sideways in landscape orientation. If the demon becomes unbound, resolve the unbound penalty, then flip the demon card face down in portrait orientation.
 •	When a demon is removed, place their card face-down; they cannot be resummoned.
 •	Face down demon cards apply no effect.
@@ -946,7 +947,7 @@ Unbound: Roll a 6-sided die: if the roll is 1 lose 2 random resources, if 2-4 lo
 Demon 3 Special Unit - Serpentine Sovereign:
 Unit Stats: 1/2/2
 Summoning Condition: Remove 3 Purged from Purgatory and place them into your supply.
-•	Ability - Royal Decree: When the Serpentine Sovereign is summoned, choose one tile up to 4 tiles away from him and mark it. At the start of your next draw phase, remove every unit, token, building, and Unique Faction Tile still on that marked tile. Players have until then to move or remove their pieces from the tile to save them. Royal Decree does not trigger if the Serpentine Sovereign is unbound or has been removed from the board before your next draw phase.
+•	Ability - Royal Decree: When the Serpentine Sovereign is summoned, choose one tile up to 4 tiles away from him and mark it. At the start of your next draw phase, remove every unit, token, building, and Unique Faction Tile still on that marked tile. Players have until then to move or remove their pieces from the tile to save them. Royal Decree does not trigger if the Serpentine Sovereign is unbound or has been removed from the board before your next draw phase. Enemy pieces removed by Royal Decree score Authority for you as usual.
 Binding: You must lose 2 Authority during your turn.
 Unbound: Lose 2 Gold or 3 resources of your choosing from your resource pile. If unable to lose the necessary resources, remove 2 Purged and place them in your supply.
 Demon 4 Special Unit - The Lord of War:

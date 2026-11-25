@@ -902,6 +902,7 @@ namespace CrittersOfCalamity.Engine
             CurrentPhase = TurnPhase.EndPhase;
             Log($"{Players[CurrentTurnPlayerIndex].DisplayName} entered 4. End Phase.");
             _endPhaseIgniteAsked = false;
+            _bindingsHandled.Clear();
             ContinueEndPhase();
         }
 
@@ -1007,7 +1008,7 @@ namespace CrittersOfCalamity.Engine
                     break;
 
                 case FactionId.GoatCabal:
-                    ResolveDemonBindings(p);
+                    if (ResolveDemonBindings(p)) { OnStateChanged?.Invoke(); return; }   // paused for a binding choice
                     break;
 
                 case FactionId.BriaredFlower:

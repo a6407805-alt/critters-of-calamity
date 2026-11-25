@@ -492,7 +492,7 @@ namespace CrittersOfCalamity.UI
                 case TokenType.Coin: return "Tanukis on this tile hold the coin and carry it when they move.";
                 case TokenType.TarPit: return "Fire Tiles here deal 1 extra HP. Enemies need two Main phase actions to leave this tile.";
                 case TokenType.InitiationRite: return "Canto Inferno removes it to summon a demon here.";
-                case TokenType.Effigy: return "In the Goat player's Draw phase: return 1 Purged to gain 1 Gold or lose 1 Authority.";
+                case TokenType.Effigy: return "In the Goat player's Draw phase: return 1 Purged to gain 1 Gold or 1 Authority.";
             }
             return "";
         }

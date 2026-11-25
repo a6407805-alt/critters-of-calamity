@@ -229,46 +229,95 @@ namespace CrittersOfCalamity.Engine
             }
         }
 
-        /// <summary>Goat Cabal End phase: each bound demon's binding must be met, or it becomes unbound.</summary>
-        private void ResolveDemonBindings(PlayerState p)
+        /// <summary>Bound demons whose binding has been dealt with in this End phase.</summary>
+        private readonly HashSet<string> _bindingsHandled = new HashSet<string>();
+
+        private int GoatCircles(PlayerState p) =>
+            Board.Values.Count(t => t.Building != null && t.Building.Type == BuildingType.SummoningCircle && t.Building.OwnerPlayerIndex == p.PlayerIndex);
+
+        /// <summary>Whether a demon's binding can be met with these amounts (used to plan the End phase).</summary>
+        private bool CanMeetBinding(PlayerState p, string id, int auth, int gold, int hand, int purged)
         {
-            foreach (var id in DemonIds)
+            switch (id)
             {
-                if (DemonState(p, id) != DemonBound) continue;
-                var tile = TileOf(p, id);
-                if (tile == null) continue;
-                bool held = true;
-                switch (id)
+                case "faust": return purged >= 2;
+                case "the_midian":
+                case "serpentine_sovereign": return auth >= 2;
+                case "lord_of_war":
                 {
-                    case "faust":
-                        held = p.GoatPurged >= 2;
-                        break;
-                    case "the_midian":
-                    case "serpentine_sovereign":
-                        held = p.Authority >= 2;
-                        if (held) LoseAuthority(p, 2, $"binding {DemonName(p, id)}");
-                        break;
-                    case "lord_of_war":
-                        held = !tile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex) &&
-                               !(tile.Building != null && tile.Building.OwnerPlayerIndex != p.PlayerIndex) &&
-                               !tile.Tokens.Any(k => k.OwnerPlayerIndex != p.PlayerIndex);
-                        break;
-                    case "horned_beast":
-                        held = Count(p, ResourceType.Gold) >= 2 && p.RelicHand.Count >= 1 && p.Authority >= 1 && p.GoatPurged >= 1 &&
-                               Board.Values.Count(t => t.Building != null && t.Building.Type == BuildingType.SummoningCircle && t.Building.OwnerPlayerIndex == p.PlayerIndex) >= 3;
-                        if (held)
-                        {
-                            RemoveResources(p, ResourceType.Gold, 2);
-                            int k = _rng.Next(p.RelicHand.Count);
-                            RelicDiscardPile.Add(p.RelicHand[k]); p.RelicHand.RemoveAt(k);
-                            LoseAuthority(p, 1, "binding The Horned Beast");
-                            ReturnPurged(p, 1);
-                        }
-                        break;
+                    var tile = TileOf(p, id);
+                    return tile != null && !tile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex) &&
+                           !(tile.Building != null && tile.Building.OwnerPlayerIndex != p.PlayerIndex) &&
+                           !tile.Tokens.Any(k => k.OwnerPlayerIndex != p.PlayerIndex);
                 }
-                if (held) { Log($"{DemonName(p, id)} stays bound."); continue; }
-                UnbindDemon(p, id, tile);
+                case "horned_beast": return gold >= 2 && hand >= 1 && auth >= 1 && purged >= 1 && GoatCircles(p) >= 3;
             }
+            return true;
+        }
+
+        private void PayBinding(PlayerState p, string id)
+        {
+            switch (id)
+            {
+                case "the_midian":
+                case "serpentine_sovereign":
+                    LoseAuthority(p, 2, $"binding {DemonName(p, id)}");
+                    break;
+                case "horned_beast":
+                {
+                    RemoveResources(p, ResourceType.Gold, 2);
+                    int k = _rng.Next(p.RelicHand.Count);
+                    RelicDiscardPile.Add(p.RelicHand[k]); p.RelicHand.RemoveAt(k);
+                    LoseAuthority(p, 1, "binding The Horned Beast");
+                    ReturnPurged(p, 1);
+                    break;
+                }
+            }
+            _bindingsHandled.Add(id);
+            Log($"{DemonName(p, id)} stays bound.");
+        }
+
+        /// <summary>
+        /// Goat Cabal End phase: each bound demon's binding must be met, or it becomes unbound. Bindings are paid one
+        /// at a time; when you can't pay them all, you choose which to pay and the rest become unbound.
+        /// Returns true when it paused for that choice (the End phase resumes after it).
+        /// </summary>
+        private bool ResolveDemonBindings(PlayerState p)
+        {
+            var left = DemonIds.Where(id => DemonState(p, id) == DemonBound && TileOf(p, id) != null && !_bindingsHandled.Contains(id)).ToList();
+            if (left.Count == 0) return false;
+
+            // Can every remaining binding be met, paid in order?
+            int auth = p.Authority, gold = Count(p, ResourceType.Gold), hand = p.RelicHand.Count, purged = p.GoatPurged;
+            bool all = true;
+            foreach (var id in left.OrderBy(id => id == "horned_beast" ? 1 : 0))   // Faust checks Purged before the Beast spends one
+            {
+                if (!CanMeetBinding(p, id, auth, gold, hand, purged)) { all = false; break; }
+                if (id == "the_midian" || id == "serpentine_sovereign") auth -= 2;
+                if (id == "horned_beast") { gold -= 2; hand -= 1; auth -= 1; purged -= 1; }
+            }
+            if (all)
+            {
+                foreach (var id in left.OrderBy(id => id == "horned_beast" ? 1 : 0)) PayBinding(p, id);
+                return false;
+            }
+
+            var payable = left.Where(id => CanMeetBinding(p, id, p.Authority, Count(p, ResourceType.Gold), p.RelicHand.Count, p.GoatPurged)).ToList();
+            if (payable.Count == 0)
+            {
+                foreach (var id in left) { _bindingsHandled.Add(id); UnbindDemon(p, id, TileOf(p, id)); }
+                return false;
+            }
+            if (payable.Count == 1 && left.Count == 1)
+            {
+                PayBinding(p, payable[0]);
+                return false;
+            }
+            var c = NewChoice("binding_pick", p.PlayerIndex, "Bindings",
+                "You can't meet every demon's binding. Choose a binding to pay; demons whose bindings go unpaid become unbound.");
+            foreach (var id in payable) { c.UnitIds.Add(id); AddOption(c, $"Keep {DemonName(p, id)} bound"); }
+            c.UnitIds.Add(""); AddOption(c, "Pay no more bindings");
+            return true;
         }
 
         /// <summary>The demon slips its binding: its penalty resolves, then it leaves the board and its card flips face down.</summary>
@@ -389,6 +438,18 @@ namespace CrittersOfCalamity.Engine
                     if (c.Number > 0) AwardAuthority(p.PlayerIndex, c.Number, "Grimoire");
                     if (CurrentPhase == TurnPhase.DrawPhase && p.PlayerIndex == CurrentTurnPlayerIndex && QueuedChoices.Count == 0 && !HasDrawPhaseOptions(p))
                         EnterExcavationPhase(p);
+                    return true;
+                }
+                case "binding_pick":
+                {
+                    string id = c.UnitIds[Mathf.Clamp(option, 0, c.UnitIds.Count - 1)];
+                    if (id == "")
+                    {
+                        foreach (var d in DemonIds.Where(d => DemonState(p, d) == DemonBound && TileOf(p, d) != null && !_bindingsHandled.Contains(d)).ToList())
+                        { _bindingsHandled.Add(d); UnbindDemon(p, d, TileOf(p, d)); }
+                    }
+                    else PayBinding(p, id);
+                    ContinueEndPhase();
                     return true;
                 }
                 case "royal_decree":
@@ -523,17 +584,17 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "effigy_offering", Name = "Effigy Offering", Phase = TurnPhase.DrawPhase, Target = AbilityTarget.None,
-                Summary = "Draw phase, with an Effigy Token on the board: return 1 Purged to your supply to gain 1 Gold or lose 1 Authority.",
+                Summary = "Draw phase, with an Effigy Token on the board: return 1 Purged to your supply to gain 1 Gold or 1 Authority.",
                 Check = pl => Uses("effigy_offering") > 0 ? "Already used this Draw phase." :
                               TokensOnBoard(TokenType.Effigy, me) == 0 ? "No Effigy Token on the board." :
                               pl.GoatPurged < 1 ? "Needs 1 Purged." : null,
-                Choices = (pl, a, b) => new List<string> { "Gain 1 Gold", "Lose 1 Authority" },
+                Choices = (pl, a, b) => new List<string> { "Gain 1 Gold", "Gain 1 Authority" },
                 Run = (pl, a, b, o) =>
                 {
                     ReturnPurged(pl, 1);
-                    if (o == 0) GainSpecificResourceFromDeck(pl, ResourceType.Gold); else LoseAuthority(pl, 1, "Effigy");
+                    if (o == 0) GainSpecificResourceFromDeck(pl, ResourceType.Gold); else AwardAuthority(pl.PlayerIndex, 1, "Effigy");
                     MarkUsed("effigy_offering");
-                    Log($"Effigy Offering: {pl.DisplayName} {(o == 0 ? "gained 1 Gold" : "gave up 1 Authority")}.");
+                    Log($"Effigy Offering: {pl.DisplayName} {(o == 0 ? "gained 1 Gold" : "gained 1 Authority")}.");
                     return true;
                 }
             });
