@@ -362,26 +362,30 @@ namespace CrittersOfCalamity.Visuals
             int i = 0;
             foreach (var spot in PropSpots)
             {
-                var at = spot + new Vector3(0f, top, 0f);
+                var holder = new GameObject("Props").transform;
+                holder.SetParent(parent, false);
+                holder.localPosition = spot + new Vector3(0f, top, 0f);
+                holder.localScale = Vector3.one * K * 0.9f;
+                var at = Vector3.zero;
                 if (terrain == TileTerrainType.Forest)
                 {
                     // small pine: trunk + two tapered canopy tiers, tilted a few degrees
                     float tilt = i == 0 ? 4f : -5f;
-                    Prop(parent, PrimitiveType.Cylinder, at + new Vector3(0f, 0.08f, 0f), new Vector3(0.07f, 0.08f, 0.07f), new Vector3(0f, 0f, tilt), Palette.TableOak);
-                    Prop(parent, PrimitiveType.Sphere, at + new Vector3(0f, 0.24f, 0f), new Vector3(0.26f, 0.22f, 0.26f), new Vector3(0f, 0f, tilt), Palette.CanopyGreen);
-                    Prop(parent, PrimitiveType.Sphere, at + new Vector3(0f, 0.38f, 0f), new Vector3(0.17f, 0.18f, 0.17f), new Vector3(0f, 0f, tilt), Palette.CanopyLight);
+                    Prop(holder, PrimitiveType.Cylinder, at + new Vector3(0f, 0.08f, 0f), new Vector3(0.07f, 0.08f, 0.07f), new Vector3(0f, 0f, tilt), Palette.TableOak);
+                    Prop(holder, PrimitiveType.Sphere, at + new Vector3(0f, 0.24f, 0f), new Vector3(0.26f, 0.22f, 0.26f), new Vector3(0f, 0f, tilt), Palette.CanopyGreen);
+                    Prop(holder, PrimitiveType.Sphere, at + new Vector3(0f, 0.38f, 0f), new Vector3(0.17f, 0.18f, 0.17f), new Vector3(0f, 0f, tilt), Palette.CanopyLight);
                 }
                 else if (terrain == TileTerrainType.Ruin)
                 {
                     if (i == 0)
-                        Prop(parent, PrimitiveType.Cylinder, at + new Vector3(0f, 0.16f, 0f), new Vector3(0.14f, 0.16f, 0.14f), new Vector3(6f, 15f, -5f), Palette.RuinStoneLight);
+                        Prop(holder, PrimitiveType.Cylinder, at + new Vector3(0f, 0.16f, 0f), new Vector3(0.14f, 0.16f, 0.14f), new Vector3(6f, 15f, -5f), Palette.RuinStoneLight);
                     else
-                        Prop(parent, PrimitiveType.Cube, at + new Vector3(0f, 0.07f, 0f), new Vector3(0.24f, 0.12f, 0.12f), new Vector3(0f, 25f, 8f), Palette.RuinStoneDark);
+                        Prop(holder, PrimitiveType.Cube, at + new Vector3(0f, 0.07f, 0f), new Vector3(0.24f, 0.12f, 0.12f), new Vector3(0f, 25f, 8f), Palette.RuinStoneDark);
                 }
                 else if (terrain == TileTerrainType.Stream)
                 {
-                    Prop(parent, PrimitiveType.Cylinder, at + new Vector3(0f, 0.01f, 0f), new Vector3(0.18f, 0.008f, 0.18f), Vector3.zero, Palette.LilyPad, 0.6f);
-                    Prop(parent, PrimitiveType.Cube, at + new Vector3(0.12f, 0.09f, 0.05f), new Vector3(0.02f, 0.18f, 0.02f), new Vector3(0f, 0f, 8f), Palette.LilyPad);
+                    Prop(holder, PrimitiveType.Cylinder, at + new Vector3(0f, 0.01f, 0f), new Vector3(0.18f, 0.008f, 0.18f), Vector3.zero, Palette.LilyPad, 0.6f);
+                    Prop(holder, PrimitiveType.Cube, at + new Vector3(0.12f, 0.09f, 0.05f), new Vector3(0.02f, 0.18f, 0.02f), new Vector3(0f, 0f, 8f), Palette.LilyPad);
                 }
                 i++;
             }
@@ -404,33 +408,37 @@ namespace CrittersOfCalamity.Visuals
             int n = 0;
             foreach (var spot in PropSpots)
             {
-                var at = spot + new Vector3(0f, top, 0f);
+                var holder = new GameObject("Props").transform;
+                holder.SetParent(root, false);
+                holder.localPosition = spot + new Vector3(0f, top, 0f);
+                holder.localScale = Vector3.one * K * 0.9f;
+                var at = Vector3.zero;
                 switch (tile.Overlay)
                 {
                     case FactionOverlayTileType.Fire:
-                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0f, 0.10f, 0f), new Vector3(0.20f, 0.22f, 0.20f), Vector3.zero, Palette.FireTile, 0.6f);
-                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0f, 0.24f, 0f), new Vector3(0.13f, 0.20f, 0.13f), Vector3.zero, Palette.CarrotOrange, 0.6f);
-                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0f, 0.36f, 0f), new Vector3(0.07f, 0.14f, 0.07f), Vector3.zero, Palette.EmberYellow, 0.7f);
-                        Prop(root, PrimitiveType.Cylinder, at + new Vector3(0.1f, 0.04f, 0.1f), new Vector3(0.05f, 0.08f, 0.05f), new Vector3(70f, 30f, 0f), Palette.InkAccent);
+                        Prop(holder, PrimitiveType.Sphere, at + new Vector3(0f, 0.10f, 0f), new Vector3(0.20f, 0.22f, 0.20f), Vector3.zero, Palette.FireTile, 0.6f);
+                        Prop(holder, PrimitiveType.Sphere, at + new Vector3(0f, 0.24f, 0f), new Vector3(0.13f, 0.20f, 0.13f), Vector3.zero, Palette.CarrotOrange, 0.6f);
+                        Prop(holder, PrimitiveType.Sphere, at + new Vector3(0f, 0.36f, 0f), new Vector3(0.07f, 0.14f, 0.07f), Vector3.zero, Palette.EmberYellow, 0.7f);
+                        Prop(holder, PrimitiveType.Cylinder, at + new Vector3(0.1f, 0.04f, 0.1f), new Vector3(0.05f, 0.08f, 0.05f), new Vector3(70f, 30f, 0f), Palette.InkAccent);
                         break;
                     case FactionOverlayTileType.FallenLeaf_Unflipped:
                     case FactionOverlayTileType.FallenLeaf_Prank:
                     case FactionOverlayTileType.FallenLeaf_Trap:
                         for (int l = 0; l < 3; l++)
-                            Prop(root, PrimitiveType.Cube, at + new Vector3((l - 1) * 0.12f, 0.02f + l * 0.01f, (l % 2) * 0.09f),
+                            Prop(holder, PrimitiveType.Cube, at + new Vector3((l - 1) * 0.12f, 0.02f + l * 0.01f, (l % 2) * 0.09f),
                                  new Vector3(0.14f, 0.01f, 0.08f), new Vector3(0f, n * 70f + l * 47f, l * 6f), l == 1 ? Palette.LeafRust : Palette.FallenLeafTile);
                         if (tile.Overlay == FactionOverlayTileType.FallenLeaf_Trap && n == 0)
                             for (int j = 0; j < 4; j++) // snapped trap jaws
-                                Prop(root, PrimitiveType.Cube, at + new Vector3((j - 1.5f) * 0.07f, 0.06f, -0.12f), new Vector3(0.03f, 0.09f, 0.03f), new Vector3(20f, 0f, 0f), Palette.InkAccent);
+                                Prop(holder, PrimitiveType.Cube, at + new Vector3((j - 1.5f) * 0.07f, 0.06f, -0.12f), new Vector3(0.03f, 0.09f, 0.03f), new Vector3(20f, 0f, 0f), Palette.InkAccent);
                         break;
                     case FactionOverlayTileType.Miasma_Revealed:
-                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0f, 0.14f, 0f), new Vector3(0.22f, 0.12f, 0.22f), Vector3.zero, Palette.MiasmaMist, 0.2f);
-                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0.08f, 0.26f, 0.05f), new Vector3(0.13f, 0.08f, 0.13f), Vector3.zero, Palette.MiasmaMist, 0.2f);
-                        Prop(root, PrimitiveType.Cube, at + new Vector3(-0.05f, 0.05f, -0.08f), new Vector3(0.06f, 0.10f, 0.03f), new Vector3(0f, 20f, 6f), Palette.BoneWhite); // grave marker
+                        Prop(holder, PrimitiveType.Sphere, at + new Vector3(0f, 0.14f, 0f), new Vector3(0.22f, 0.12f, 0.22f), Vector3.zero, Palette.MiasmaMist, 0.2f);
+                        Prop(holder, PrimitiveType.Sphere, at + new Vector3(0.08f, 0.26f, 0.05f), new Vector3(0.13f, 0.08f, 0.13f), Vector3.zero, Palette.MiasmaMist, 0.2f);
+                        Prop(holder, PrimitiveType.Cube, at + new Vector3(-0.05f, 0.05f, -0.08f), new Vector3(0.06f, 0.10f, 0.03f), new Vector3(0f, 20f, 6f), Palette.BoneWhite); // grave marker
                         break;
                     case FactionOverlayTileType.CapybaraStream:
-                        Prop(root, PrimitiveType.Cylinder, at + new Vector3(0f, 0.01f, 0f), new Vector3(0.18f, 0.008f, 0.18f), Vector3.zero, Palette.LilyPad, 0.6f);
-                        Prop(root, PrimitiveType.Cube, at + new Vector3(0.12f, 0.09f, 0.05f), new Vector3(0.02f, 0.18f, 0.02f), new Vector3(0f, 0f, 8f), Palette.LilyPad);
+                        Prop(holder, PrimitiveType.Cylinder, at + new Vector3(0f, 0.01f, 0f), new Vector3(0.18f, 0.008f, 0.18f), Vector3.zero, Palette.LilyPad, 0.6f);
+                        Prop(holder, PrimitiveType.Cube, at + new Vector3(0.12f, 0.09f, 0.05f), new Vector3(0.02f, 0.18f, 0.02f), new Vector3(0f, 0f, 8f), Palette.LilyPad);
                         break;
                 }
                 n++;
@@ -568,7 +576,7 @@ namespace CrittersOfCalamity.Visuals
             var root = new GameObject($"Token_{tk.Type}");
             root.transform.SetParent(_piecesRoot, false);
             root.transform.localPosition = pos;
-            root.transform.localScale = Vector3.one * K * 1.2f;
+            root.transform.localScale = Vector3.one * K * 1.0f;
             var t = root.transform;
             var owner = _engine.Players[tk.OwnerPlayerIndex];
             Color own = owner.Faction.PrimaryColor;
