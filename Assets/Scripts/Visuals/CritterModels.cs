@@ -77,7 +77,7 @@ namespace CrittersOfCalamity.Visuals
             switch (u.Definition.Id)
             {
                 case "warband": Boar(body, a, b, false); break;
-                case "curly_tail": Boar(body, a, b, true); break;
+                case "curly_tail": if (!SculptedModel(body, "Models/CurlyTail", a, b, 0.58f, u)) Boar(body, a, b, true); break;
                 case "millions": Rabbit(body, a, b); break;
                 case "king_of_the_millions": Rabbit(body, a, b); Crown(body, new Vector3(0f, 0.43f, -0.07f), 0.13f); break;
                 case "pilgrim": Platypus(body, a, b); Hood(body, b); break;
@@ -114,7 +114,7 @@ namespace CrittersOfCalamity.Visuals
         /// Its materials are named by role and recolored here, so the model still wears the owner's faction colors
         /// and the Palette accents. Returns false if the model isn't in the project.
         /// </summary>
-        static bool SculptedModel(Transform parent, string resource, Color a, Color b, float scale)
+        static bool SculptedModel(Transform parent, string resource, Color a, Color b, float scale, UnitInstance unit = null)
         {
             var prefab = Resources.Load<GameObject>(resource);
             if (prefab == null) return false;
@@ -123,8 +123,16 @@ namespace CrittersOfCalamity.Visuals
             go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // modelled facing Blender -Y; turn to face the camera
             go.transform.localScale = Vector3.one;
             foreach (var col in go.GetComponentsInChildren<Collider>()) UnityEngine.Object.Destroy(col);
-            // Size from the model's measured bounds (FBX unit scale varies by exporter): longest side = scale
-            var rs = go.GetComponentsInChildren<Renderer>();
+            // Equipment meshes are named "Gear_<equipment id>" and only show while that item is equipped
+            foreach (Transform child in go.GetComponentsInChildren<Transform>(true))
+                if (child.name.StartsWith("Gear_"))
+                {
+                    string id = child.name.Substring(5);
+                    child.gameObject.SetActive(unit != null && unit.EquippedItems.Exists(e => e.Id == id));
+                }
+            // Size from the bare model's measured bounds (FBX unit scale varies by exporter): longest side = scale.
+            // Gear is left out so forging a sword doesn't shrink the piece.
+            var rs = Array.FindAll(go.GetComponentsInChildren<Renderer>(true), r => !r.name.StartsWith("Gear_"));
             if (rs.Length > 0)
             {
                 var bounds = rs[0].bounds;
@@ -142,6 +150,9 @@ namespace CrittersOfCalamity.Visuals
                     Color c = n.StartsWith("Body") ? a
                             : n.StartsWith("Belly") ? Color.Lerp(a, Palette.ParchmentMap, 0.35f)
                             : n.StartsWith("Blanket") ? b
+                            : n.StartsWith("Cloth") ? Color.Lerp(a, Palette.InkAccent, 0.55f)
+                            : n.StartsWith("Leather") ? Color.Lerp(Palette.InkAccent, Palette.WoodPlank, 0.5f)
+                            : n.StartsWith("Bone") ? Palette.BoneWhite
                             : n.StartsWith("Wood") ? Palette.WoodPlank
                             : n.StartsWith("Rope") ? Palette.ParchmentMap
                             : n.StartsWith("Gold") ? Palette.AuthorityGold
