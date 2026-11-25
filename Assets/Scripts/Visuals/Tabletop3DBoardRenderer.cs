@@ -599,6 +599,16 @@ namespace CrittersOfCalamity.Visuals
             Prop(t, PrimitiveType.Cylinder, Vector3.zero + new Vector3(0f, 0.02f, 0f), new Vector3(0.30f, 0.02f, 0.30f), Vector3.zero, disc, 0.65f);
             Prop(t, PrimitiveType.Cylinder, new Vector3(0f, 0.01f, 0f), new Vector3(0.33f, 0.012f, 0.33f), Vector3.zero, own, 0.5f); // owner ring
 
+            // Sculpted topper (Tools/Blender/tokens.py) on the disc; the primitive emblems below are the fallback
+            var model = new GameObject("Model").transform;
+            model.SetParent(t, false);
+            model.localPosition = new Vector3(0f, 0.035f, 0f);
+            if (tk.Type == TokenType.Catapult) model.localRotation = Quaternion.Euler(0f, 60f, 0f);   // arm side-on to the camera
+            if (CritterModels.SculptedModel(model, "Models/" + tk.Type, own, owner.Faction.SecondaryColor, 0.27f,
+                    count: tk.Type == TokenType.Catapult ? tk.RemainingUses : 0))   // catapult: one stone per use left
+                return root;
+            UnityEngine.Object.Destroy(model.gameObject);
+
             switch (tk.Type)
             {
                 case TokenType.SupplyLine: // forward chevron

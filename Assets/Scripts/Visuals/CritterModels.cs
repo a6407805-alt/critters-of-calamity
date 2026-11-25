@@ -176,6 +176,7 @@ namespace CrittersOfCalamity.Visuals
                             : n.StartsWith("Flame") ? Palette.EmberYellow
                             : n.StartsWith("Ember") ? Palette.CarrotOrange
                             : n.StartsWith("Thorn") ? Palette.LeafRust
+                            : n.StartsWith("Tar") ? Palette.TarBlack
                             : n.StartsWith("Stone") ? Palette.RuinStoneLight
                             : n.StartsWith("Earth") ? Color.Lerp(Palette.TableOak, Palette.CharredGround, 0.3f)
                             : n.StartsWith("Grass") ? Palette.CanopyLight
