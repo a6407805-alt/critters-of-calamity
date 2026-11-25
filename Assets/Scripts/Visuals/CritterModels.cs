@@ -93,7 +93,7 @@ namespace CrittersOfCalamity.Visuals
                 case "squirrel": Squirrel(body, a, b); break;
                 case "pyromaniac": Squirrel(body, a, b); Flame(body, new Vector3(0f, 0.42f, -0.06f), 0.10f); break;
                 case "capybara": Capybara(body, a, b); break;
-                case "capybara_trader": if (!SculptedModel(body, "Models/CapybaraTrader", a, b, 0.20f)) { Capybara(body, a, b); Pack(body, b); } break;
+                case "capybara_trader": if (!SculptedModel(body, "Models/CapybaraTrader", a, b, 0.62f)) { Capybara(body, a, b); Pack(body, b); } break;
                 case "riverkeeper": Capybara(body, a, b); S(body, new Vector3(0f, 0.33f, -0.16f), Vector3.one * 0.09f, Palette.CarrotOrange); break;
                 case "thorned_seed": Seed(body, a, b); break;
                 case "blooming_briar": Briar(body, a, b, owner.BriaredFlowerThorns); break;
@@ -121,8 +121,18 @@ namespace CrittersOfCalamity.Visuals
             var go = UnityEngine.Object.Instantiate(prefab, parent, false);
             go.transform.localPosition = Vector3.zero;
             go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // modelled facing Blender -Y; turn to face the camera
-            go.transform.localScale = Vector3.one * scale;
+            go.transform.localScale = Vector3.one;
             foreach (var col in go.GetComponentsInChildren<Collider>()) UnityEngine.Object.Destroy(col);
+            // Size from the model's measured bounds (FBX unit scale varies by exporter): longest side = scale
+            var rs = go.GetComponentsInChildren<Renderer>();
+            if (rs.Length > 0)
+            {
+                var bounds = rs[0].bounds;
+                foreach (var r in rs) bounds.Encapsulate(r.bounds);
+                float parentScale = Mathf.Max(0.0001f, parent.lossyScale.x);
+                float longest = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z)) / parentScale;
+                if (longest > 0.0001f) go.transform.localScale = Vector3.one * (scale / longest);
+            }
             foreach (var r in go.GetComponentsInChildren<Renderer>())
             {
                 var mats = r.sharedMaterials;

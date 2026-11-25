@@ -336,9 +336,13 @@ namespace CrittersOfCalamity.Visuals
         // Tile layout (pointy-top hex, tips toward +Z/back and -Z/front, camera looks from the front):
         // building at the back tip, two token spots either side of it, units in faction blocks across the front,
         // terrain props in the left/right back corners. Room for 12 units (two full factions), 2 tokens and a building.
-        private Vector3 BuildingSpot => new Vector3(0f, 0f, 0.55f * K);
-        private Vector3 TokenSpot(int i) => new Vector3((i == 0 ? -0.43f : 0.43f) * K, 0f, 0.26f * K);
-        private Vector3[] PropSpots => new[] { new Vector3(-0.66f * K, 0f, 0.48f * K), new Vector3(0.66f * K, 0f, 0.48f * K) };
+        private Vector3 BuildingSpot => new Vector3(0f, 0f, 0.52f * K);
+        private Vector3 TokenSpot(int i) => new Vector3((i == 0 ? -0.52f : 0.52f) * K, 0f, 0.42f * K);
+        private Vector3[] PropSpots => new[] { new Vector3(-0.45f * K, 0f, 0.70f * K), new Vector3(0.45f * K, 0f, 0.70f * K) };
+        // unit grid: 4 columns x 3 rows across the front of the tile (12 spots)
+        private static readonly float[] UnitCols = { -0.57f, -0.19f, 0.19f, 0.57f };
+        private static readonly float[] UnitRows = { 0.08f, -0.26f, -0.58f };
+        private const float UnitScaleK = 0.85f;
 
         private Transform Prop(Transform parent, PrimitiveType type, Vector3 pos, Vector3 scale, Vector3 euler, Color c, float smooth = 0.35f)
         {
@@ -469,23 +473,29 @@ namespace CrittersOfCalamity.Visuals
                     TagPiece(tGo, PieceKind.Token, coord, new Vector3(0f, 0.1f, 0f), new Vector3(0.5f, 0.3f, 0.5f), token: tk);
                 }
 
-                // 4. Units: one block per faction across the front of the tile (up to 6 each; 12 fit side by side)
+                // 4. Units: each faction gets its own columns of the 4x3 grid (two full factions = 12 units)
                 var owners = tile.Units.Select(x => x.OwnerPlayerIndex).Distinct().OrderBy(x => x).ToList();
-                int blocks = Mathf.Max(1, owners.Count);
-                float usable = 1.30f * K;                                   // tile width available for unit blocks
-                float blockW = usable / blocks;
-                float spacing = Mathf.Min(0.215f * K, blockW / 3f);
-                float unitScale = Mathf.Clamp(spacing / (0.215f * K), 0.6f, 1f) * K * 0.62f;
+                int nf = Mathf.Max(1, owners.Count);
                 for (int bi = 0; bi < owners.Count; bi++)
                 {
                     var mine = tile.Units.Where(x => x.OwnerPlayerIndex == owners[bi])
                                          .OrderByDescending(x => x.Definition.IsSpecialUnit).ToList();
-                    float bx = -usable * 0.5f + blockW * (bi + 0.5f);
+                    // which grid columns this faction uses
+                    float[] cols;
+                    if (nf == 1) cols = new[] { -0.38f, 0f, 0.38f };
+                    else if (nf == 2) cols = bi == 0 ? new[] { UnitCols[0], UnitCols[1] } : new[] { UnitCols[2], UnitCols[3] };
+                    else cols = new[] { UnitCols[Mathf.Min(bi, 3)] };
+                    int perRow = cols.Length;
+                    int rowsNeeded = Mathf.CeilToInt(mine.Count / (float)perRow);
+                    float shrink = rowsNeeded > 3 ? 3f / rowsNeeded : 1f;
+                    float unitScale = UnitScaleK * K * shrink * (nf > 2 ? 0.8f : 1f);
                     for (int ui = 0; ui < mine.Count; ui++)
                     {
-                        int col = ui % 3, row = ui / 3;
-                        var pos = tileCenter + new Vector3(bx + (col - 1) * spacing, 0f, (-0.02f - row * 0.26f) * K);
-                        if (mine.Count == 1) pos.x = tileCenter.x + bx;
+                        int col = ui % perRow, row = ui / perRow;
+                        float rz = rowsNeeded > 3 ? (UnitRows[0] - row * (0.66f / (rowsNeeded - 1))) : UnitRows[Mathf.Min(row, 2)];
+                        float cx = cols[col];
+                        if (nf == 1 && mine.Count == 1) cx = 0f;
+                        var pos = tileCenter + new Vector3(cx * K, 0f, rz * K);
                         var u = mine[ui];
                         var uGo = CreateCritterMiniature(pos, u, _engine.Players[u.OwnerPlayerIndex], ui, unitScale);
                         TagPiece(uGo, PieceKind.Unit, coord, new Vector3(0f, 0.25f, 0f), new Vector3(0.4f, 0.55f, 0.4f), unit: u);
@@ -499,7 +509,7 @@ namespace CrittersOfCalamity.Visuals
             var root = new GameObject($"Building_{b.Type}");
             root.transform.SetParent(_piecesRoot, false);
             root.transform.localPosition = pos;
-            root.transform.localScale = Vector3.one * K * 0.75f;
+            root.transform.localScale = Vector3.one * K * 1.15f;
             var t = root.transform;
             Color a = owner.Faction.PrimaryColor, s = owner.Faction.SecondaryColor;
             Prop(t, PrimitiveType.Cylinder, new Vector3(0f, 0.02f, 0f), new Vector3(0.46f, 0.02f, 0.46f), Vector3.zero, a, 0.5f); // owner base
@@ -558,7 +568,7 @@ namespace CrittersOfCalamity.Visuals
             var root = new GameObject($"Token_{tk.Type}");
             root.transform.SetParent(_piecesRoot, false);
             root.transform.localPosition = pos;
-            root.transform.localScale = Vector3.one * K * 0.72f;
+            root.transform.localScale = Vector3.one * K * 1.2f;
             var t = root.transform;
             var owner = _engine.Players[tk.OwnerPlayerIndex];
             Color own = owner.Faction.PrimaryColor;
