@@ -22,6 +22,54 @@ namespace CrittersOfCalamity.Model
     /// </summary>
     public static class RulebookDatabase
     {
+        /// <summary>How many of each building a faction owns (Part 17 materials lists).</summary>
+        public static int BuildingSupply(BuildingType type)
+        {
+            switch (type)
+            {
+                case BuildingType.WarParty: return 5;
+                case BuildingType.Burrow: return 3;
+                case BuildingType.TheCitadel: return 1;
+                case BuildingType.Shrine: return 3;
+                case BuildingType.Bunker: return 3;
+                case BuildingType.Wallow: return 5;
+                case BuildingType.PricklyThicket: return 4;
+            }
+            return 0;
+        }
+
+        /// <summary>Tokens each faction owns (Part 17 materials lists). Catapults are shared: any player may craft one.</summary>
+        public static List<KeyValuePair<TokenType, int>> TokenSupply(FactionId faction)
+        {
+            var list = new List<KeyValuePair<TokenType, int>>();
+            switch (faction)
+            {
+                case FactionId.CurlyTail: list.Add(new KeyValuePair<TokenType, int>(TokenType.SupplyLine, 8)); break;
+                case FactionId.HordeOfTheMillions:
+                    list.Add(new KeyValuePair<TokenType, int>(TokenType.Gluttony, 3));
+                    list.Add(new KeyValuePair<TokenType, int>(TokenType.Catapult, 2));
+                    break;
+                case FactionId.PlatypusPapacy: list.Add(new KeyValuePair<TokenType, int>(TokenType.HolyRelic, 2)); break;
+                case FactionId.TroubleMakingTanukis: list.Add(new KeyValuePair<TokenType, int>(TokenType.Coin, 20)); break;
+                case FactionId.FirestartingSquirrels: list.Add(new KeyValuePair<TokenType, int>(TokenType.TarPit, 3)); break;
+            }
+            return list;
+        }
+
+        /// <summary>Unique faction tiles each faction owns (Part 17 materials lists).</summary>
+        public static List<KeyValuePair<string, int>> FactionTileSupply(FactionId faction)
+        {
+            var list = new List<KeyValuePair<string, int>>();
+            switch (faction)
+            {
+                case FactionId.TroubleMakingTanukis: list.Add(new KeyValuePair<string, int>("Fallen Leaves", 13)); break;
+                case FactionId.Necromouser: list.Add(new KeyValuePair<string, int>("Miasma", 6)); break;
+                case FactionId.FirestartingSquirrels: list.Add(new KeyValuePair<string, int>("Fire", 6)); break;
+                case FactionId.CapybaraCaravan: list.Add(new KeyValuePair<string, int>("Stream", 8)); break;
+            }
+            return list;
+        }
+
         public static List<ResourceType> BuildStandard50ResourceDeck()
         {
             var deck = new List<ResourceType>(50);
@@ -237,6 +285,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 4,
                     ShortSummary = "Snowballing early game faction led by a ferocious boar. Race to forge golden armor and secure supply lines to quickly cross the map.",
+                    HowToScoreAuthority = "Forge Golden Arms and Armor (2 Authority each, the first time each is crafted). Momentum Level 2: 1 Authority in your End phase if you won a battle that turn. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "Curly Tail, a boar warlord, stumbled upon the old political treatises of the Ananke and admired their indomitable warrior spirit. His loyal Warband pillages to forge golden arms from plundered wealth, stretching supply lines across the Continent like a closing fist.",
                     SetupInstructions = "Place Curly Tail, 4 Warband units, and 1 War Party on a forest or ruin tile with no enemy units that is at least 2 tiles away from every enemy unit. Set all three meters to Level 0.",
                     PrimaryColor = Palette.FromHex("#C86428"),
@@ -285,6 +334,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 2,
                     ShortSummary = "Mid game faction made up of an endless swarm of rabbits that wins by spreading plague and being impossible to remove.",
+                    HowToScoreAuthority = "Burrows: 1 Authority for every 2 Burrows on the board, each End phase. On the Search for Food: 1 Authority for every 3 Millions on a tile with enemy pieces (max 2 per turn). Plague cards from the Forage deck. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "The Millions are a horde of hungry rabbits that do not seek to conquer the Continent so much as fill it. Burrow by burrow they multiply, and while rummaging for food they accidentally spread sickness.",
                     SetupInstructions = "Place 2 Burrows on 2 separate forest tiles with no enemy units. Then place 2 Millions units on each of those tiles.",
                     PrimaryColor = Palette.FromHex("#D99B66"),
@@ -326,6 +376,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 2,
                     ShortSummary = "Mid to late game faction that martyrs Pilgrims to fuel a Crusade that only grows stronger with time.",
+                    HowToScoreAuthority = "Martyrdom: 1 Authority per Pilgrim sacrificed. Holy Relic Tokens: 1 Authority when crafted. Alms: 1 Authority each time the Platy-Pope levels up. Level 5: turn 3 Faith into 1 Authority. Remove enemy buildings, tokens and special units (1 extra during a Crusade).",
                     LoreDescription = "The Papacy holds the platypus to be the divinely inspired creation of a divine being. Turning away from the heresy of the Ananke, the Platypus Pilgrims carry their gospel into hostile lands and die for it gladly.",
                     SetupInstructions = "Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units. Set the Faith Meter and the Platy-Pope Level Meter to 0.",
                     PrimaryColor = Palette.FromHex("#2E8B9A"),
@@ -367,6 +418,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 4,
                     ShortSummary = "Mid game faction that scampers around the board collecting coins while hiding pranks and traps beneath fallen leaves.",
+                    HowToScoreAuthority = "Deliver Coin Tokens to your Shrines (2 Authority each). Remove enemy buildings, tokens and special units.",
                     LoreDescription = "Inspired by the religious works of the Ananke, the Tanukis scamper across the Continent gathering the Ananke's scattered coins and dropping them off at shrines while leaving traps for travelers.",
                     SetupInstructions = "1. Place 3 Tanuki units and 1 Shrine on a forest tile with no enemy units. 2. After ALL other players finish setup, place 12 Coin Tokens on 12 different forest tiles with no enemy units (each at least 2 tiles away from every other Coin Token).",
                     PrimaryColor = Palette.FromHex("#B5652A"),
@@ -406,6 +458,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 6,
                     ShortSummary = "Late game faction that harvests the dead from every battle, hoards resources, and spends fallen units to summon powerful undead horrors.",
+                    HowToScoreAuthority = "Undead Shackles: 1 Authority per 2 Dead in the Cauldron each End phase (max 2). Summoning special units: The Bloat 1, The Vanguard 3, The Brute 4. Ring of Favor explosions: 2 more. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "The incarnate of death came to the Continent long before the other factions did. Where armies clash he seeds his creeping miasma, and the fallen of every banner rise again in his service.",
                     SetupInstructions = "Place 3 Miasma Tiles facedown on the gameboard in any pattern (not directly adjacent or on the same tile). Start with 3 Skeleton Units on the Cauldron ('Dead' units).",
                     PrimaryColor = Palette.FromHex("#7B46B8"),
@@ -459,6 +512,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 6,
                     ShortSummary = "Aggressive early game faction that burns down the forest and profits from the chaos, forcing enemies off tiles with fire and disrupting their resources.",
+                    HowToScoreAuthority = "Flames of War: 1 Authority per 2 HP of Fire Tile damage and per 2 enemy units moved by fire (max 4 per End phase). Forest Fire: 1 per Fire Tile next to enemy pieces (max 2). Burning Gold (Disruption, Burn the Deck): 1 each. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "The Squirrels use Acorn Firestarters to create Fire Tiles that damage enemy units, drive enemies out, and burn the Continent's resources.",
                     SetupInstructions = "Place 1 Squirrel Unit each on 3 adjacent forest tiles without any enemy pieces. Then place 1 Bunker on one of those forest tiles. Place 2 Charcoal resource cards in your resource pile and 1 crafted Acorn Firestarter card faceup on your table.",
                     PrimaryColor = Palette.FromHex("#E35225"),
@@ -500,6 +554,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 5,
                     ShortSummary = "Peaceful economic faction that expands the stream network and profits from enemy movements through hospitality and trade.",
+                    HowToScoreAuthority = "Customary Greeting: 1 Authority per player with a Guest unit (max 2 per turn). Traded Goods: 1 Authority each time someone buys from your Trader. Hospitality: 1 Authority when a Guest draws a relic. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "At the bottom of the stream are remnants of the Ananke, and the capybaras dredge that memory up one relic at a time and sell those relics using their merchants.",
                     SetupInstructions = "Special Setup (before any other player sets up): Place all 8 Stream Tiles one at a time onto forest tiles, each adjacent to another Stream Tile. Regular Setup: Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile.",
                     PrimaryColor = Palette.FromHex("#9C6B3B"),
@@ -543,6 +598,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 7,
                     ShortSummary = "Explosive special unit faction that scores Authority by hurling thorns across the board and scattering seeds in its wake.",
+                    HowToScoreAuthority = "Thistle Barrage and Furious Lashing: 1 Authority per 2 HP of damage. Bursting Into Bloom: 1 Authority if it removes an enemy unit. Pollination: 1 Authority with Thorned Seeds on 4+ tiles (2 with 7+). Remove enemy buildings, tokens and special units.",
                     LoreDescription = "Born with an instinctual hatred of other creatures, the Blooming Briar hurls its spines across the Continent so that its seedlings might take root, and when stripped bare, thrashes out one last fury.",
                     SetupInstructions = "Place the Blooming Briar with 6 Thorns, 2 Thorned Seeds, and 1 Prickly Thicket on a forest tile with no enemy pieces within 4 tiles. Other factions cannot place their pieces within 4 tiles of any Briared Flower pieces during setup.",
                     PrimaryColor = Palette.FromHex("#C2295A"),

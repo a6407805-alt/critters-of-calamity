@@ -98,7 +98,8 @@ namespace CrittersOfCalamity.UI
         private void RefreshPreGame()
         {
             if (_preGameRoot == null) return;
-            bool show = _engine != null && _engine.Players.Count > 0 && _engine.IsPreGame;
+            bool show = _engine != null && _engine.Players.Count > 0 && _engine.IsPreGame &&
+                        _engine.CurrentPhase != TurnPhase.PreGame_ReverseFactionSetup; // setup uses the board, with a banner
             _preGameRoot.SetActive(show);
             if (!show) return;
             _preGameRoot.transform.SetAsLastSibling();

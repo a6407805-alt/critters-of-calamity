@@ -40,7 +40,7 @@ Debuff: any effect that hinders a unit's movement. This includes effects that st
 Part 2: Setting Up the Game
 Place the game board in the center of the table.
 
-The board has about 108 tiles: roughly 90 forest tiles, 14 stream tiles, and 4 ruin tiles. The score track around the edge measures Authority and runs from 0 to 30.
+The board has 108 tiles: 90 forest tiles (green), 14 stream tiles (light blue), and 4 ruin tiles (gray). Each player's Authority, from 0 to 30, is shown under their name at the top of the screen.
 Shuffle the relic deck and resource deck, then place the following beside the board:
 The 40 card Relic Deck and its Discard Area
 The 50 card Resource Deck
@@ -182,7 +182,7 @@ Part 11: Unit Stats
 All units have three stats written on their card as Attack / Defense / HP. For example, Curly Tail is 3/2/2: 3 Attack, 2 Defense, and 2 HP.
 All basic units have 1 HP unless an effect raises it. Special units often have more.
 Equipment, abilities, and relic cards can change a unit's Attack, Defense, or HP.
-Tracking damage: put a die on a special unit's card showing its current HP. If a basic unit has more than 1 HP, mark damage on it with a damage marker. Damage stays until healed.
+Tracking damage: hover over any piece on the board to see its current Attack, Defense and HP, or click it for its full details. Damage stays until healed.
 Part 12: How to Battle
 During your Main phase you can use a Battle action if your units and another faction's units are on the same tile. Follow these phases in order.
 Phase 1: Attack Declaration
@@ -619,14 +619,14 @@ Quick Feet. When a player deals 1 or more HP of damage to your Tanuki units on a
 Rustling in the Trees. Once during your Draw phase, place 1 Fallen Leaves tile on a forest tile with a Shrine, or a forest tile adjacent to a Shrine, that has no enemy units.
 Unique Faction Tile: Fallen Leaves
 There are 13 Fallen Leaves tiles: 8 Prank Leaves and 5 Trap Leaves. All of them have identical backs.
-Keep the Fallen Leaves tiles in a shuffled facedown stack. When you place one, take the top tile, look at it privately, then place it facedown. Only the Tanuki player knows whether each placed tile is a Prank Leaf or a Trap Leaf. Other players do not know what an unflipped tile is until it is flipped.
+Fallen Leaves tiles are kept in the Tanuki player's supply. When you place one, a random tile from your supply is placed facedown. Only the Tanuki player knows whether each placed tile is a Prank Leaf or a Trap Leaf. Other players do not know what an unflipped tile is until it is flipped.
 A Fallen Leaves tile can only replace a forest tile. All pieces on that tile stay where they are.
 Any player can Loot a Fallen Leaves tile (flipped or unflipped) for 1 Wood, and only Wood.
 Unflipped Fallen Leaves tiles cannot be removed.
 Flipping: when an enemy group ends a Move action on an unflipped Fallen Leaves tile, flip it and resolve it:
 Trap Leaf: all enemy units on this tile cannot move, and cannot be moved by effects, for the rest of this turn and during that enemy's next turn. This is a debuff.
 Prank Leaf: place 1 Coin Token from supply on this tile, unless it already has a Coin Token or the token limit is full.
-After flipping: the tile stays faceup and has no further effect. While isolated (none of your Tanuki units or the Band are on it), a flipped Fallen Leaves tile can be removed with a Battle action (Part 13) for 1 Authority. When it is removed, the forest tile returns and the Fallen Leaves tile is shuffled back into the facedown stack.
+After flipping: the tile stays faceup and has no further effect. While isolated (none of your Tanuki units or the Band are on it), a flipped Fallen Leaves tile can be removed with a Battle action (Part 13) for 1 Authority. When it is removed, the forest tile returns and the Fallen Leaves tile goes back to the Tanuki player's supply.
 Unit: Tanuki
 Stats: 1/1/1
 Tanuki Ability: Running Amok. Once during your Main phase, place 1 Fallen Leaves tile on a forest tile with a Tanuki unit.

@@ -110,6 +110,7 @@ namespace CrittersOfCalamity.UI
 
             _engine = new CrittersGameEngine(); // empty until a match starts
             _boardRenderer.OnHexClicked += HandleHexClicked;
+            _boardRenderer.OnPieceClicked += HandlePieceClicked;
             _mpManager.OnSessionUpdated += HandleSessionUpdated;
             _mpManager.OnMatchStarted += HandleMatchStarted;
             _mpManager.OnCommandApplied += HandleCommandApplied;
@@ -209,8 +210,10 @@ namespace CrittersOfCalamity.UI
 
         private void HandleHexClicked(HexCoord coord)
         {
-            if (HandleGuideTileClick(coord))
+            _clickUsedByAction = false;
+            if (HandleSetupTileClick(coord) || HandleGuideTileClick(coord))
             {
+                _clickUsedByAction = true; // don't also open the piece details popup
                 RefreshHUD();
                 return;
             }
@@ -280,12 +283,8 @@ namespace CrittersOfCalamity.UI
                     RefreshStallModal();
                 });
 
-            CreateButton(topBar, "BtnLobbyCodex", "Factions Codex",
-                new Vector2(0.91f, 0.15f), new Vector2(0.995f, 0.85f), Palette.FromHex("#8C5328"), () =>
-                {
-                    ToggleModal(_lobbyCodexModal);
-                    RefreshCodexModal();
-                });
+            CreateButton(topBar, "BtnRulebook", "Rulebook & Factions",
+                new Vector2(0.91f, 0.15f), new Vector2(0.995f, 0.85f), Palette.FromHex("#8C5328"), () => ToggleInfoModal());
 
             // 2. LEFT PANEL: 5-Card Excavation Area & Selected Hex Inspector
             _leftPanelRt = CreatePanel(canvasGo.transform, "LeftPanel",
@@ -368,6 +367,7 @@ namespace CrittersOfCalamity.UI
             BuildBattlePopupModal(canvasGo.transform);
             BuildBattleDecisionModal(canvasGo.transform);
             BuildTurnGuide(canvasGo.transform);
+            BuildInfoScreens(canvasGo.transform);
             BuildPreGamePanel(canvasGo.transform);
             BuildMainMenu(canvasGo.transform);
         }
@@ -684,10 +684,12 @@ namespace CrittersOfCalamity.UI
             RefreshPreGame();
             RefreshTurnGuide();
             RefreshWinPopup();
+            RefreshSetupBanner();
+            if (_infoModal != null && _infoModal.activeSelf && !_infoShowingRulebook) RefreshInfoModal();
 
             if (_engine.IsPreGame)
             {
-                _topStatusText.text = $"<b>CRITTERS OF CALAMITY</b>\nSetting up: {PhaseName(_engine.CurrentPhase)}";
+                _topStatusText.text = $"<b>CRITTERS OF CALAMITY</b>\nSetting up: {(_engine.CurrentPhase == TurnPhase.PreGame_ReverseFactionSetup ? "Placing starting pieces" : PhaseName(_engine.CurrentPhase))}";
                 for (int i = 0; i < 4; i++)
                 {
                     bool exists = i < _engine.Players.Count;
@@ -710,7 +712,7 @@ namespace CrittersOfCalamity.UI
                 moveHint += $" | [BATTLE PAUSED: waiting on {_engine.Players[_engine.PendingBattle.CurrentDecision.PlayerIndex].DisplayName}]";
             if (_mpManager.IsOnline)
                 moveHint += $" | You: {viewer.DisplayName} ({viewer.Faction.Name})" + (_mpManager.OutOfSync ? " | OUT OF SYNC" : "");
-            _topStatusText.text = $"<b>TURN {_engine.TurnNumber}: {activePlayer.DisplayName} ({activePlayer.Faction.Name})</b>\n" +
+            _topStatusText.text = $"<b>ROUND {_engine.RoundNumber}, TURN {_engine.TurnNumber}: {activePlayer.DisplayName} ({activePlayer.Faction.Name})</b>\n" +
                                   $"{PhaseName(_engine.CurrentPhase)}" + (_engine.CurrentPhase == TurnPhase.MainPhase ? $" ({_engine.MainPhaseActionsRemaining}/3 actions left)" : "") + moveHint;
 
             for (int i = 0; i < 4; i++)
@@ -773,22 +775,14 @@ namespace CrittersOfCalamity.UI
                                         "Camera: WASD/Arrows or Middle-Mouse Pan, Right-Click Orbit, Scroll Zoom, Space Reset.";
             }
 
-            // 3. Right Panel: Active Player Faction Board & Meters + Log
+            // 3. Right Panel: YOUR faction board (meters, traits, Table relics, supply) + Activity + Log
             var sbFac = new StringBuilder();
-            sbFac.AppendLine($"<b>{activePlayer.Faction.Name.ToUpperInvariant()} — FACTION BOARD</b>");
-            sbFac.AppendLine(GetFactionMeterSummary(activePlayer));
-            sbFac.AppendLine($"<b>Building ({activePlayer.Faction.PrimaryBuilding}):</b> Cost {activePlayer.Faction.PrimaryBuildingCost}");
-            sbFac.AppendLine("<b>Species Traits:</b>");
-            foreach (var tr in activePlayer.Faction.SpeciesTraits.Take(4))
-                sbFac.AppendLine($" • {tr}");
-            if (activePlayer.TableRelics.Count > 0)
-            {
-                // Crafted cards on a Table are facedown: only their owner may look at them.
-                if (activePlayer == viewer)
-                    sbFac.AppendLine($"<b>Your Table Relics (facedown):</b> {string.Join(", ", activePlayer.TableRelics.Select(r => r.Name))}");
-                else
-                    sbFac.AppendLine($"<b>Table Relics:</b> {activePlayer.TableRelics.Count} facedown card(s)");
-            }
+            sbFac.AppendLine($"<b>{(_mpManager.IsOnline ? "YOUR FACTION" : viewer.DisplayName.ToUpperInvariant())}: {viewer.Faction.Name.ToUpperInvariant()}</b>");
+            sbFac.AppendLine(GetFactionMeterSummary(viewer));
+            if (viewer.TableRelics.Count > 0)
+                sbFac.AppendLine($"<b>Table relics (facedown):</b> {string.Join(", ", viewer.TableRelics.Select(r => r.Name))}");
+            sbFac.AppendLine("<b>Supply:</b>");
+            sbFac.Append(SupplySummary(viewer));
             _factionBoardText.text = sbFac.ToString();
 
             var recentLogs = _engine.GameLog.Skip(Mathf.Max(0, _engine.GameLog.Count - 10));

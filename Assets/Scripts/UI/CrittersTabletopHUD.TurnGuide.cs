@@ -295,23 +295,54 @@ namespace CrittersOfCalamity.UI
             }
 
             BuildFactionAbilityOptions(p);
+            BuildTableRelicOptions(p);
         }
 
         private void BuildMainOptions(PlayerState p)
         {
             int left = _engine.MainPhaseActionsRemaining;
-            _guideHint.text = $"<b>{left} of 3 actions left.</b> Pick any mix, including the same one more than once. Faction abilities are free.";
+            int extra = _engine.ExtraBattleActions;
+            _guideHint.text = $"<b>{left} of 3 actions left.</b>" + (extra > 0 ? $" Plus <b>{extra} extra Battle</b> from Abandoned Road." : "") +
+                              " Pick any mix, including the same one more than once. Faction abilities are free.";
 
             GuideButton("<b>Move</b>: move units from one tile to an adjacent tile", Palette.FromHex("#35688C"),
                 () => { _tileAction = TileAction.MoveFrom; RefreshTurnGuide(); }, 44f, left > 0);
-            GuideButton("<b>Battle</b>: fight another faction on a tile you share", Palette.FromHex("#9C2F2F"),
-                () => { _tileAction = TileAction.Battle; RefreshTurnGuide(); }, 44f, left > 0);
+            GuideButton("<b>Battle</b>: fight another faction on a tile you share" + (extra > 0 ? " (uses your extra Battle first)" : ""), Palette.FromHex("#9C2F2F"),
+                () => { _tileAction = TileAction.Battle; RefreshTurnGuide(); }, 44f, left > 0 || extra > 0);
             GuideButton("<b>Loot</b>: gather from a tile with your units and no enemies", Palette.FromHex("#8A6E2F"),
                 () => { _tileAction = TileAction.Loot; RefreshTurnGuide(); }, 44f, left > 0);
             GuideButton("<b>Recruit</b>: place a basic unit at each recruitment building", Palette.FromHex("#4E568C"),
                 () => _mpManager.Submit(GameCommand.Make(GameCommandType.Recruit)), 44f, left > 0);
 
             BuildFactionAbilityOptions(p);
+            BuildTableRelicOptions(p);
+        }
+
+        /// <summary>Relic cards on your Table that can be used now, on your own turn (Abandoned Road, Ceremonial Bow and Arrow).</summary>
+        private void BuildTableRelicOptions(PlayerState p)
+        {
+            bool road = _engine.CanUseTableRelic(p, "abandoned_road");
+            bool bow = _engine.CanUseTableRelic(p, "ceremonial_bow_and_arrow");
+            if (!road && !bow) return;
+
+            OptionHeader("relics", "Relic cards on your Table you can use now", "#8C5328", true);
+            if (_guideExpanded != "relics") return;
+            if (road)
+                GuideButton("   <b>Abandoned Road</b>: discard it for 1 extra Battle action this turn (not one of your 3)",
+                    new Color(0.30f, 0.20f, 0.12f, 1f), () => _mpManager.Submit(GameCommand.UseTableRelic("abandoned_road")), 48f);
+            if (bow)
+            {
+                GuideNote("   <b>Ceremonial Bow and Arrow</b>: pick another player's facedown Table card to make them discard it:");
+                foreach (var other in _engine.Players.Where(o => o.PlayerIndex != p.PlayerIndex))
+                {
+                    for (int i = 0; i < other.TableRelics.Count; i++)
+                    {
+                        int target = other.PlayerIndex, index = i;
+                        GuideButton($"      {other.DisplayName}'s facedown card #{i + 1}", new Color(0.30f, 0.20f, 0.12f, 1f),
+                            () => _mpManager.Submit(GameCommand.UseTableRelic("ceremonial_bow_and_arrow", target, index)), 36f);
+                    }
+                }
+            }
         }
 
         private void BuildFactionAbilityOptions(PlayerState p)
@@ -398,7 +429,7 @@ namespace CrittersOfCalamity.UI
             if (_engine.CurrentTurnPlayerIndex != _lastSeenTurnPlayer)
             {
                 var p = _engine.Players[_engine.CurrentTurnPlayerIndex];
-                AddActivity($"<color=#F2B83B>Turn {_engine.TurnNumber}: {p.DisplayName}'s turn ({p.Faction.Name})</color>");
+                AddActivity($"<color=#F2B83B>Round {_engine.RoundNumber}, turn {_engine.TurnNumber}: {p.DisplayName}'s turn ({p.Faction.Name})</color>");
             }
             else if (_engine.CurrentPhase != _lastSeenPhase && _engine.CurrentPhase != TurnPhase.GameOver)
             {
@@ -438,6 +469,10 @@ namespace CrittersOfCalamity.UI
                 case GameCommandType.CraftEquipment: return $"crafted {cmd.S.Replace('_', ' ')}";
                 case GameCommandType.BuyTradedGood: return "bought a Traded Good from the Capybara Trader";
                 case GameCommandType.BattleDecision: return cmd.A == 1 ? "used a card in the battle" : "passed on a battle card";
+                case GameCommandType.SetupPlace: return $"picked tile ({cmd.A}, {cmd.B}) for setup";
+                case GameCommandType.UseTableRelic:
+                    return cmd.S == "abandoned_road" ? "used Abandoned Road for an extra Battle"
+                         : $"used Ceremonial Bow and Arrow on {(cmd.A >= 0 && cmd.A < _engine.Players.Count ? _engine.Players[cmd.A].DisplayName : "another player")}";
             }
             return null;
         }

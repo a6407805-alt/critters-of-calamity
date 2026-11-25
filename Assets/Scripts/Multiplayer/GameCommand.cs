@@ -22,7 +22,9 @@ namespace CrittersOfCalamity.Multiplayer
         BuyTradedGood = 11,  // A = stall slot
         BattleDecision = 12, // A = 1 use / 0 pass
         RollDice = 13,       // pre-game roll for pick order / turn order (the seat rolls for itself)
-        PickFaction = 14     // A = FactionId
+        PickFaction = 14,    // A = FactionId
+        SetupPlace = 15,     // A,B = tile (q,r) for your starting pieces (click again to un-pick)
+        UseTableRelic = 16   // S = relic id, A = target player, B = target Table card index
     }
 
     /// <summary>
@@ -49,6 +51,9 @@ namespace CrittersOfCalamity.Multiplayer
         public static GameCommand BattleDecision(bool use) => Make(GameCommandType.BattleDecision, use ? 1 : 0);
         public static GameCommand RollDice() => Make(GameCommandType.RollDice);
         public static GameCommand PickFaction(FactionId faction) => Make(GameCommandType.PickFaction, (int)faction);
+        public static GameCommand SetupPlace(HexCoord at) => Make(GameCommandType.SetupPlace, at.q, at.r);
+        public static GameCommand UseTableRelic(string relicId, int targetPlayer = -1, int targetIndex = -1) =>
+            Make(GameCommandType.UseTableRelic, targetPlayer, targetIndex, s: relicId);
 
         /// <summary>Compact text form for the network: seat|type|a|b|c|d|s</summary>
         public string Encode()
@@ -92,6 +97,8 @@ namespace CrittersOfCalamity.Multiplayer
                 return engine.PendingBattle?.CurrentDecision != null ? engine.PendingBattle.CurrentDecision.PlayerIndex : -1;
             if (cmd.Type == GameCommandType.PickFaction)
                 return engine.CurrentFactionPicker;
+            if (cmd.Type == GameCommandType.SetupPlace)
+                return engine.CurrentSetupPlayer;
             if (cmd.Type == GameCommandType.RollDice)
                 return engine.PreGameSeatsToRoll.Count > 0 ? engine.PreGameSeatsToRoll[0] : -1; // any seat that still has to roll may
             return engine.CurrentTurnPlayerIndex;
@@ -119,10 +126,18 @@ namespace CrittersOfCalamity.Multiplayer
                     if (!engine.CanPickFaction(cmd.Seat, (FactionId)cmd.A)) { reason = "That faction is already taken."; return false; }
                     return true;
                 }
+                if (cmd.Type == GameCommandType.SetupPlace)
+                {
+                    int setter = engine.CurrentSetupPlayer;
+                    if (setter < 0) { reason = "It isn't time to place starting pieces."; return false; }
+                    if (cmd.Seat != setter) { reason = $"{engine.Players[setter].DisplayName} is setting up."; return false; }
+                    if (!engine.CanPlaceSetupTile(cmd.Seat, new HexCoord(cmd.A, cmd.B), out var why)) { reason = why; return false; }
+                    return true;
+                }
                 reason = "The game hasn't started yet.";
                 return false;
             }
-            if (cmd.Type == GameCommandType.RollDice || cmd.Type == GameCommandType.PickFaction)
+            if (cmd.Type == GameCommandType.RollDice || cmd.Type == GameCommandType.PickFaction || cmd.Type == GameCommandType.SetupPlace)
             {
                 reason = "Setup is already finished.";
                 return false;
@@ -183,6 +198,10 @@ namespace CrittersOfCalamity.Multiplayer
                     return engine.RollPreGameDice(cmd.Seat);
                 case GameCommandType.PickFaction:
                     return engine.PickFaction(cmd.Seat, (FactionId)cmd.A);
+                case GameCommandType.SetupPlace:
+                    return engine.PlaceSetupTile(cmd.Seat, new HexCoord(cmd.A, cmd.B));
+                case GameCommandType.UseTableRelic:
+                    return engine.UseTableRelic(cmd.Seat, cmd.S, cmd.A, cmd.B);
             }
             return false;
         }
@@ -206,6 +225,9 @@ namespace CrittersOfCalamity.Multiplayer
                 Mix(engine.ExcavationArea.Count);
                 Mix(engine.IsBattlePending ? 1 : 0);
                 Mix(engine.FactionPickCursor);
+                Mix(engine.SetupCursor);
+                Mix(engine.SetupPicks.Count);
+                Mix(engine.ExtraBattleActions);
                 Mix(engine.PreGameSeatsToRoll.Count);
                 foreach (var hist in engine.PreGameRollHistory)
                     foreach (var roll in hist) Mix(roll);

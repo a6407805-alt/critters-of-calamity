@@ -57,6 +57,8 @@ namespace CrittersOfCalamity.Engine
         public bool LootedThisTurn = false;
         public bool IsBoardEdge = false;
         public bool HasStatueOfGoddessBuff = false;
+        /// <summary>For an unflipped Fallen Leaves tile: whether it is a Trap Leaf (known only to the Tanuki player).</summary>
+        public bool LeafIsTrap = false;
 
         public TileTerrainType EffectiveTerrain
         {
@@ -102,7 +104,9 @@ namespace CrittersOfCalamity.Engine
         public bool PlatyPopeOnBoard = true;
 
         // Faction 4: Trouble Making Tanukis
-        public List<bool> FallenLeavesStack = new List<bool>(); // 13 tiles: true = Trap Leaf (5), false = Prank Leaf (8)
+        // Fallen Leaves tiles in the Tanuki player's supply (13: true = Trap Leaf (5), false = Prank Leaf (8)).
+        // Placing one takes a random tile from supply; removing one returns it here.
+        public List<bool> FallenLeavesStack = new List<bool>();
 
         // Faction 5: The Necro-mouser
         public int NecromouserCauldronDeadCount = 0;
@@ -238,7 +242,8 @@ namespace CrittersOfCalamity.Engine
         public List<FactionSubDeckCardDef> TradedGoodsDiscard = new List<FactionSubDeckCardDef>();
 
         public int CurrentTurnPlayerIndex = 0;
-        public int TurnNumber = 1;
+        public int TurnNumber = 1;   // counts every player's turn
+        public int RoundNumber = 1;  // goes up each time play comes back around to the first player
         public TurnPhase CurrentPhase = TurnPhase.PreGame_DraftRoll;
 
         // Excavation Phase flags (once each in any order per turn)
@@ -249,6 +254,8 @@ namespace CrittersOfCalamity.Engine
 
         // Main Phase actions (up to 3 per turn)
         public int MainPhaseActionsRemaining = 3;
+        /// <summary>Extra Battle actions from Abandoned Road this turn (they don't count toward the three Main Phase actions).</summary>
+        public int ExtraBattleActions = 0;
 
         public int WinnerPlayerIndex = -1;
         public List<string> GameLog = new List<string>();
@@ -314,6 +321,7 @@ namespace CrittersOfCalamity.Engine
             GameLog.Clear();
             WinnerPlayerIndex = -1;
             TurnNumber = 1;
+            RoundNumber = 1;
             PendingBattle = null;
             ResetPreGameRolls();
 
@@ -337,7 +345,7 @@ namespace CrittersOfCalamity.Engine
         /// 2 resource cards and 1 relic card, fill the Excavation Area, run faction setup in reverse turn
         /// order, then start the first player's turn.
         /// </summary>
-        private void FinishSetupAndBeginFirstTurn(int firstPlayerIndex)
+        private void FinishSetupAndBeginFirstTurn(int firstPlayerIndex, bool manualSetup = false)
         {
             // Build & Shuffle 40-Card Relic Deck and 50-Card Resource Deck (Part 2)
             RelicDeck = RulebookDatabase.BuildFull40RelicDeck();
@@ -383,8 +391,16 @@ namespace CrittersOfCalamity.Engine
             // Part 5: Place top 5 cards of relic deck faceup in the Excavation Area
             RefillExcavationArea();
 
-            PerformReverseOrderFactionSetups();
+            if (!manualSetup)
+            {
+                PerformReverseOrderFactionSetups();
+                BeginFirstTurn();
+            }
+        }
 
+        private void BeginFirstTurn()
+        {
+            int firstPlayerIndex = FirstPlayerIndex;
             CurrentTurnPlayerIndex = firstPlayerIndex;
             Log($"{Players[firstPlayerIndex].DisplayName} takes the first turn. Play continues clockwise.");
             BeginTurn(firstPlayerIndex);
@@ -464,27 +480,42 @@ namespace CrittersOfCalamity.Engine
                 $"{Board.Values.Count(t => t.BaseTerrain == TileTerrainType.Ruin)} Ruin).");
         }
 
+        // Well-separated quadrant start hexes used when setup is done automatically (tests and quick starts).
+        private static readonly HexCoord[] AutoSetupAnchors = new HexCoord[]
+        {
+            new HexCoord(-4, 0),
+            new HexCoord(4, 0),
+            new HexCoord(0, -4),
+            new HexCoord(0, 4)
+        };
+
+        /// <summary>Automatic setup: Capybara streams, every faction at a fixed anchor in reverse turn order, then Tanuki coins.</summary>
         private void PerformReverseOrderFactionSetups()
         {
-            // Well-separated quadrant start hexes (distance 7-8 from each other, satisfying Briared Flower's 4-tile setup rule & Curly Tail's 2-tile rule)
-            HexCoord[] spawnAnchors = new HexCoord[]
+            RunCapybaraSpecialSetup();
+            for (int k = Players.Count - 1; k >= 0; k--)
             {
-                new HexCoord(-4, 0),
-                new HexCoord(4, 0),
-                new HexCoord(0, -4),
-                new HexCoord(0, 4)
-            };
+                int i = (FirstPlayerIndex + k) % Players.Count; // last player in turn order sets up first
+                ApplyFactionSetup(Players[i], AutoSetupPicks(Players[i], AutoSetupAnchors[i % AutoSetupAnchors.Length]));
+            }
+            PlaceTanukiCoins();
+        }
 
-            // 1. Capybara Caravan Special Setup happens BEFORE any other player sets up (Part 17 Faction 7 Line 810)
+        /// <summary>
+        /// Part 17 Faction 7: the Capybara Caravan places its 8 Stream Tiles before any other player sets up.
+        /// Each Stream Tile goes on a forest tile next to another stream tile.
+        /// </summary>
+        private void RunCapybaraSpecialSetup()
+        {
             foreach (var p in Players.Where(pl => pl.Faction.Id == FactionId.CapybaraCaravan))
             {
                 int placedStreams = 0;
                 foreach (var tile in Board.Values)
                 {
-                    if (tile.BaseTerrain == TileTerrainType.Forest && placedStreams < 8)
+                    if (tile.BaseTerrain == TileTerrainType.Forest && tile.Overlay == FactionOverlayTileType.None && placedStreams < 8)
                     {
                         bool adjStream = tile.Coord.GetNeighbors().Any(n => Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Stream);
-                        if (adjStream && !spawnAnchors.Contains(tile.Coord))
+                        if (adjStream && !AutoSetupAnchors.Contains(tile.Coord))
                         {
                             tile.Overlay = FactionOverlayTileType.CapybaraStream;
                             tile.OverlayOwnerPlayerIndex = p.PlayerIndex;
@@ -494,104 +525,129 @@ namespace CrittersOfCalamity.Engine
                 }
                 Log($"{p.DisplayName} completed Capybara Caravan Special Setup (placed {placedStreams} connected Stream Tiles onto Forest Tiles).");
             }
+        }
 
-            // 2. Part 5 Line 121: Setup happens in REVERSE turn order (Player 4 -> Player 3 -> Player 2 -> Player 1),
-            // and stacking limit is ignored during setup (Part 5 Line 125).
-            for (int k = Players.Count - 1; k >= 0; k--)
+        /// <summary>Tiles an automatic setup uses for a faction, starting from an anchor tile.</summary>
+        private List<HexCoord> AutoSetupPicks(PlayerState p, HexCoord home)
+        {
+            var picks = new List<HexCoord> { home };
+            switch (p.Faction.Id)
             {
-                int i = (FirstPlayerIndex + k) % Players.Count; // last player in turn order sets up first
-                var p = Players[i];
-                var homeCoord = spawnAnchors[i % spawnAnchors.Length];
-                var homeTile = Board[homeCoord];
-
-                switch (p.Faction.Id)
+                case FactionId.HordeOfTheMillions:
                 {
-                    case FactionId.CurlyTail:
-                        // Place Curly Tail, 4 Warband units, and 1 War Party on a forest or ruin tile >= 2 tiles from enemy units
-                        PlaceBuilding(homeCoord, BuildingType.WarParty, p);
-                        SpawnUnit(homeCoord, "curly_tail", p, 1, ignoreStackingLimit: true);
-                        SpawnUnit(homeCoord, "warband", p, 4, ignoreStackingLimit: true);
-                        break;
-
-                    case FactionId.HordeOfTheMillions:
-                        // Place 2 Burrows on 2 separate forest tiles with no enemy units + 2 Millions units on each
-                        PlaceBuilding(homeCoord, BuildingType.Burrow, p);
-                        SpawnUnit(homeCoord, "millions", p, 2, ignoreStackingLimit: true);
-                        var secondBurrow = homeCoord.GetNeighbors().FirstOrDefault(n => Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Forest && Board[n].Units.Count == 0);
-                        if (Board.ContainsKey(secondBurrow))
-                        {
-                            PlaceBuilding(secondBurrow, BuildingType.Burrow, p);
-                            SpawnUnit(secondBurrow, "millions", p, 2, ignoreStackingLimit: true);
-                        }
-                        break;
-
-                    case FactionId.PlatypusPapacy:
-                        // Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units
-                        PlaceBuilding(homeCoord, BuildingType.TheCitadel, p);
-                        SpawnUnit(homeCoord, "pilgrim", p, 3, ignoreStackingLimit: true);
-                        SpawnUnit(homeCoord, "platy_pope", p, 1, ignoreStackingLimit: true);
-                        p.PlatyPopeOnBoard = true;
-                        break;
-
-                    case FactionId.TroubleMakingTanukis:
-                        // Step 1: Place 3 Tanuki units and 1 Shrine on a forest tile with no enemy units (Coins placed AFTER all players!)
-                        PlaceBuilding(homeCoord, BuildingType.Shrine, p);
-                        SpawnUnit(homeCoord, "tanuki", p, 3, ignoreStackingLimit: true);
-                        break;
-
-                    case FactionId.Necromouser:
-                        // Place 3 Miasma Tiles facedown (not directly adjacent or on same tile), start with 3 Skeletons on Cauldron
-                        p.NecromouserCauldronDeadCount = 3;
-                        PlaceOverlayTile(homeCoord, FactionOverlayTileType.Miasma_Hidden, p.PlayerIndex);
-                        var m2 = new HexCoord(homeCoord.q / 2, homeCoord.r / 2);
-                        var m3 = new HexCoord(-homeCoord.q / 2, -homeCoord.r / 2);
-                        if (Board.ContainsKey(m2) && HexCoord.Distance(homeCoord, m2) >= 2)
-                            PlaceOverlayTile(m2, FactionOverlayTileType.Miasma_Hidden, p.PlayerIndex);
-                        if (Board.ContainsKey(m3) && HexCoord.Distance(homeCoord, m3) >= 2 && HexCoord.Distance(m2, m3) >= 2)
-                            PlaceOverlayTile(m3, FactionOverlayTileType.Miasma_Hidden, p.PlayerIndex);
-                        break;
-
-                    case FactionId.FirestartingSquirrels:
-                        // Place 1 Squirrel Unit each on 3 adjacent forest tiles without enemy pieces, 1 Bunker on one, 2 Charcoal, 1 Acorn Firestarter
-                        PlaceBuilding(homeCoord, BuildingType.Bunker, p);
-                        SpawnUnit(homeCoord, "squirrel", p, 1, ignoreStackingLimit: true);
-                        int adjPlaced = 0;
-                        foreach (var n in homeCoord.GetNeighbors())
-                        {
-                            if (Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Forest && Board[n].Units.Count == 0 && adjPlaced < 2)
-                            {
-                                SpawnUnit(n, "squirrel", p, 1, ignoreStackingLimit: true);
-                                adjPlaced++;
-                            }
-                        }
-                        p.ResourcePile.Add(ResourceType.Charcoal);
-                        p.ResourcePile.Add(ResourceType.Charcoal);
-                        p.SquirrelsCraftedFirestarters = 1;
-                        break;
-
-                    case FactionId.CapybaraCaravan:
-                        // Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile
+                    var second = home.GetNeighbors().FirstOrDefault(n => Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Forest && Board[n].Units.Count == 0);
+                    if (Board.ContainsKey(second)) picks.Add(second);
+                    break;
+                }
+                case FactionId.Necromouser:
+                {
+                    var m2 = new HexCoord(home.q / 2, home.r / 2);
+                    var m3 = new HexCoord(-home.q / 2, -home.r / 2);
+                    if (Board.ContainsKey(m2) && HexCoord.Distance(home, m2) >= 2) picks.Add(m2);
+                    if (Board.ContainsKey(m3) && HexCoord.Distance(home, m3) >= 2 && HexCoord.Distance(m2, m3) >= 2) picks.Add(m3);
+                    break;
+                }
+                case FactionId.FirestartingSquirrels:
+                    foreach (var n in home.GetNeighbors())
+                        if (picks.Count < 3 && Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Forest && Board[n].Units.Count == 0)
+                            picks.Add(n);
+                    break;
+                case FactionId.CapybaraCaravan:
+                {
+                    // The Capybara home tile must be a stream; make the anchor one if needed.
+                    var homeTile = Board[home];
+                    if (homeTile.EffectiveTerrain != TileTerrainType.Stream && homeTile.Overlay == FactionOverlayTileType.None)
+                    {
                         homeTile.Overlay = FactionOverlayTileType.CapybaraStream;
                         homeTile.OverlayOwnerPlayerIndex = p.PlayerIndex;
-                        PlaceBuilding(homeCoord, BuildingType.Wallow, p);
-                        SpawnUnit(homeCoord, "capybara", p, 3, ignoreStackingLimit: true);
-                        SpawnUnit(homeCoord, "capybara_trader", p, 1, ignoreStackingLimit: true);
-                        break;
-
-                    case FactionId.BriaredFlower:
-                        // Place Blooming Briar with 6 Thorns, 2 Thorned Seeds, and 1 Prickly Thicket on a forest tile with no enemy pieces within 4 tiles
-                        p.BriaredFlowerThorns = 6;
-                        PlaceBuilding(homeCoord, BuildingType.PricklyThicket, p);
-                        SpawnUnit(homeCoord, "blooming_briar", p, 1, ignoreStackingLimit: true);
-                        SpawnUnit(homeCoord, "thorned_seed", p, 2, ignoreStackingLimit: true);
-                        break;
+                    }
+                    break;
                 }
+            }
+            return picks;
+        }
 
-                Log($"[Reverse Setup] {p.DisplayName} completed {p.Faction.Name} setup at hex {homeCoord}.");
+        /// <summary>
+        /// Places a faction's starting pieces (Part 17 "Setup") on the chosen tiles. The stacking limit is ignored
+        /// during setup (Part 5). picks[0] is the main tile; Horde uses 2 tiles, Necro-mouser 3, Squirrels 3.
+        /// </summary>
+        private void ApplyFactionSetup(PlayerState p, List<HexCoord> picks)
+        {
+            var homeCoord = picks[0];
+            switch (p.Faction.Id)
+            {
+                case FactionId.CurlyTail:
+                    // Curly Tail, 4 Warband units, and 1 War Party on a forest or ruin tile >= 2 tiles from enemy units
+                    PlaceBuilding(homeCoord, BuildingType.WarParty, p);
+                    SpawnUnit(homeCoord, "curly_tail", p, 1, ignoreStackingLimit: true);
+                    SpawnUnit(homeCoord, "warband", p, 4, ignoreStackingLimit: true);
+                    break;
+
+                case FactionId.HordeOfTheMillions:
+                    // 2 Burrows on 2 separate forest tiles with no enemy units, 2 Millions units on each
+                    foreach (var c in picks.Take(2))
+                    {
+                        PlaceBuilding(c, BuildingType.Burrow, p);
+                        SpawnUnit(c, "millions", p, 2, ignoreStackingLimit: true);
+                    }
+                    break;
+
+                case FactionId.PlatypusPapacy:
+                    // The Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units
+                    PlaceBuilding(homeCoord, BuildingType.TheCitadel, p);
+                    SpawnUnit(homeCoord, "pilgrim", p, 3, ignoreStackingLimit: true);
+                    SpawnUnit(homeCoord, "platy_pope", p, 1, ignoreStackingLimit: true);
+                    p.PlatyPopeOnBoard = true;
+                    break;
+
+                case FactionId.TroubleMakingTanukis:
+                    // 3 Tanuki units and 1 Shrine on a forest tile with no enemy units (Coins are placed after everyone's setup)
+                    PlaceBuilding(homeCoord, BuildingType.Shrine, p);
+                    SpawnUnit(homeCoord, "tanuki", p, 3, ignoreStackingLimit: true);
+                    break;
+
+                case FactionId.Necromouser:
+                    // 3 Miasma Tiles facedown (not adjacent to each other), 3 Skeletons start on the Cauldron
+                    p.NecromouserCauldronDeadCount = 3;
+                    foreach (var c in picks.Take(3))
+                        PlaceOverlayTile(c, FactionOverlayTileType.Miasma_Hidden, p.PlayerIndex);
+                    break;
+
+                case FactionId.FirestartingSquirrels:
+                    // 1 Squirrel each on 3 adjacent forest tiles, 1 Bunker on one of them, 2 Charcoal, 1 crafted Acorn Firestarter
+                    PlaceBuilding(homeCoord, BuildingType.Bunker, p);
+                    foreach (var c in picks.Take(3))
+                        SpawnUnit(c, "squirrel", p, 1, ignoreStackingLimit: true);
+                    p.ResourcePile.Add(ResourceType.Charcoal);
+                    p.ResourcePile.Add(ResourceType.Charcoal);
+                    p.SquirrelsCraftedFirestarters = 1;
+                    break;
+
+                case FactionId.CapybaraCaravan:
+                    // 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile
+                    PlaceBuilding(homeCoord, BuildingType.Wallow, p);
+                    SpawnUnit(homeCoord, "capybara", p, 3, ignoreStackingLimit: true);
+                    SpawnUnit(homeCoord, "capybara_trader", p, 1, ignoreStackingLimit: true);
+                    break;
+
+                case FactionId.BriaredFlower:
+                    // Blooming Briar with 6 Thorns, 2 Thorned Seeds, and 1 Prickly Thicket on a forest tile with no enemy pieces within 4 tiles
+                    p.BriaredFlowerThorns = 6;
+                    PlaceBuilding(homeCoord, BuildingType.PricklyThicket, p);
+                    SpawnUnit(homeCoord, "blooming_briar", p, 1, ignoreStackingLimit: true);
+                    SpawnUnit(homeCoord, "thorned_seed", p, 2, ignoreStackingLimit: true);
+                    break;
             }
 
-            // 3. Part 5 Line 126 & Part 17 Faction 4 Line 603:
-            // After all other players have finished their setup entirely, the Tanuki player places 12 Coin Tokens on 12 different forest tiles with no enemy units (>= 2 tiles apart).
+            Log($"[Setup] {p.DisplayName} set up {p.Faction.Name} at {string.Join(", ", picks)}.");
+        }
+
+        /// <summary>
+        /// Part 5 and Part 17 Faction 4: after every other player has finished setup, the Tanuki player places
+        /// 12 Coin Tokens on 12 different forest tiles with no enemy units, each at least 2 tiles from every other coin.
+        /// </summary>
+        private void PlaceTanukiCoins()
+        {
             foreach (var tanukiPlayer in Players.Where(pl => pl.Faction.Id == FactionId.TroubleMakingTanukis))
             {
                 var coinCoords = new List<HexCoord>();
@@ -613,6 +669,26 @@ namespace CrittersOfCalamity.Engine
             }
         }
 
+        private void EnterExcavationPhase(PlayerState p)
+        {
+            CurrentPhase = TurnPhase.ExcavationPhase;
+
+            // Platypus Papacy: Platy-Pope Return at the start of Excavation Phase (Part 17 Faction 3 Line 561)
+            if (p.Faction.Id == FactionId.PlatypusPapacy)
+            {
+                bool popePresent = Board.Values.SelectMany(t => t.Units).Any(u => u.OwnerPlayerIndex == p.PlayerIndex && u.Definition.Id == "platy_pope");
+                var citadelTile = Board.Values.FirstOrDefault(t => t.Building != null && t.Building.Type == BuildingType.TheCitadel && t.Building.OwnerPlayerIndex == p.PlayerIndex);
+                if (!popePresent && citadelTile != null)
+                {
+                    SpawnUnit(citadelTile.Coord, "platy_pope", p, 1);
+                    p.PlatyPopeOnBoard = true;
+                    p.PlatyPopeLevel = p.PlatyPopeLevel == 0 ? 0 : 1;
+                    p.PlatypusFaith = 0;
+                    Log($"Platy-Pope Return! The Platy-Pope returned at The Citadel ({citadelTile.Coord}) at Level {p.PlatyPopeLevel} with 0 Faith.");
+                }
+            }
+        }
+
         public void BeginTurn(int playerIndex)
         {
             if (WinnerPlayerIndex >= 0) return;
@@ -626,6 +702,7 @@ namespace CrittersOfCalamity.Engine
             UsedAssembleThisTurn = false;
             UsedDisassembleThisTurn = false;
             MainPhaseActionsRemaining = 3;
+            ExtraBattleActions = 0;
             p.CurlyTailWonBattleThisTurn = false;
             p.ThistleBarrageUsesThisTurn = 0;
             p.TraderUsedPeddlingThisTurn = false;
@@ -694,26 +771,6 @@ namespace CrittersOfCalamity.Engine
             // Transition into 2. Excavation Phase
             EnterExcavationPhase(p);
             OnStateChanged?.Invoke();
-        }
-
-        private void EnterExcavationPhase(PlayerState p)
-        {
-            CurrentPhase = TurnPhase.ExcavationPhase;
-
-            // Platypus Papacy: Platy-Pope Return at the start of Excavation Phase (Part 17 Faction 3 Line 561)
-            if (p.Faction.Id == FactionId.PlatypusPapacy)
-            {
-                bool popePresent = Board.Values.SelectMany(t => t.Units).Any(u => u.OwnerPlayerIndex == p.PlayerIndex && u.Definition.Id == "platy_pope");
-                var citadelTile = Board.Values.FirstOrDefault(t => t.Building != null && t.Building.Type == BuildingType.TheCitadel && t.Building.OwnerPlayerIndex == p.PlayerIndex);
-                if (!popePresent && citadelTile != null)
-                {
-                    SpawnUnit(citadelTile.Coord, "platy_pope", p, 1);
-                    p.PlatyPopeOnBoard = true;
-                    p.PlatyPopeLevel = p.PlatyPopeLevel == 0 ? 0 : 1;
-                    p.PlatypusFaith = 0;
-                    Log($"Platy-Pope Return! The Platy-Pope returned at The Citadel ({citadelTile.Coord}) at Level {p.PlatyPopeLevel} with 0 Faith.");
-                }
-            }
         }
 
         public void AdvancePhase()
@@ -958,7 +1015,8 @@ namespace CrittersOfCalamity.Engine
 
             // Advance to next player clockwise
             int nextPlayer = (CurrentTurnPlayerIndex + 1) % Players.Count;
-            if (nextPlayer == 0) TurnNumber++;
+            TurnNumber++;
+            if (nextPlayer == FirstPlayerIndex) RoundNumber++;
             BeginTurn(nextPlayer);
         }
 
@@ -1570,16 +1628,7 @@ namespace CrittersOfCalamity.Engine
             if (toTile.Overlay == FactionOverlayTileType.FallenLeaf_Unflipped && p.Faction.Id != FactionId.TroubleMakingTanukis)
             {
                 var tanukiOwner = Players.FirstOrDefault(pl => pl.Faction.Id == FactionId.TroubleMakingTanukis);
-                bool isTrap = false;
-                if (tanukiOwner != null && tanukiOwner.FallenLeavesStack.Count > 0)
-                {
-                    isTrap = tanukiOwner.FallenLeavesStack[0];
-                    tanukiOwner.FallenLeavesStack.RemoveAt(0);
-                }
-                else
-                {
-                    isTrap = _rng.Next(13) < 5;
-                }
+                bool isTrap = toTile.LeafIsTrap; // decided when the tile was placed from the Tanuki player's supply
 
                 if (isTrap)
                 {
@@ -1840,7 +1889,7 @@ namespace CrittersOfCalamity.Engine
         {
             if (PendingBattle != null) return null;
             if (CurrentPhase != TurnPhase.MainPhase) return null;
-            if (consumesMainPhaseAction && MainPhaseActionsRemaining <= 0) return null;
+            if (consumesMainPhaseAction && MainPhaseActionsRemaining <= 0 && ExtraBattleActions <= 0) return null;
             if (!Board.TryGetValue(coord, out var tile)) return null;
 
             var attacker = Players[CurrentTurnPlayerIndex];
@@ -1931,14 +1980,13 @@ namespace CrittersOfCalamity.Engine
                     if (defender.Faction.Id == FactionId.TroubleMakingTanukis &&
                         (oldOverlay == FactionOverlayTileType.FallenLeaf_Trap || oldOverlay == FactionOverlayTileType.FallenLeaf_Prank))
                     {
-                        defender.FallenLeavesStack.Add(wasTrap);
-                        Shuffle(defender.FallenLeavesStack);
+                        defender.FallenLeavesStack.Add(wasTrap); // back to the Tanuki player's supply
                     }
                 }
 
                 if (removedCount > 0)
                 {
-                    if (consumesMainPhaseAction) MainPhaseActionsRemaining--;
+                    if (consumesMainPhaseAction) SpendBattleAction();
                     OnStateChanged?.Invoke();
                 }
                 return null;
@@ -2038,6 +2086,61 @@ namespace CrittersOfCalamity.Engine
         }
 
         private bool HasTableRelic(PlayerState p, string relicId) => p.TableRelics.Any(r => r.Id == relicId);
+
+        /// <summary>A Battle action uses an Abandoned Road extra Battle action first, otherwise one of the three Main Phase actions.</summary>
+        private void SpendBattleAction()
+        {
+            if (ExtraBattleActions > 0) ExtraBattleActions--;
+            else MainPhaseActionsRemaining = Mathf.Max(0, MainPhaseActionsRemaining - 1);
+        }
+
+        /// <summary>Table relics the turn player may use right now on their own turn (Abandoned Road, Ceremonial Bow and Arrow).</summary>
+        public bool CanUseTableRelic(PlayerState p, string relicId)
+        {
+            if (PendingBattle != null || IsPreGame || CurrentPhase == TurnPhase.GameOver) return false;
+            if (p.PlayerIndex != CurrentTurnPlayerIndex || !HasTableRelic(p, relicId)) return false;
+            switch (relicId)
+            {
+                case "abandoned_road": return CurrentPhase == TurnPhase.MainPhase; // "During your Main phase"
+                case "ceremonial_bow_and_arrow": return Players.Any(o => o.PlayerIndex != p.PlayerIndex && o.TableRelics.Count > 0); // "During your turn"
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Use a relic card from your Table on your own turn.
+        /// Abandoned Road: discard it to take 1 extra Battle action (not one of your three).
+        /// Ceremonial Bow and Arrow: discard it to make another player discard a relic card from their Table
+        /// (targetPlayer, targetIndex). Cards on a Table are facedown, so the target is picked by position.
+        /// </summary>
+        public bool UseTableRelic(int seat, string relicId, int targetPlayer = -1, int targetIndex = -1)
+        {
+            if (seat < 0 || seat >= Players.Count) return false;
+            var p = Players[seat];
+            if (!CanUseTableRelic(p, relicId)) return false;
+
+            if (relicId == "abandoned_road")
+            {
+                DiscardTableRelic(p, relicId);
+                ExtraBattleActions++;
+                Log($"{p.DisplayName} discarded Abandoned Road for 1 extra Battle action this turn.");
+            }
+            else if (relicId == "ceremonial_bow_and_arrow")
+            {
+                if (targetPlayer < 0 || targetPlayer >= Players.Count || targetPlayer == seat) return false;
+                var victim = Players[targetPlayer];
+                if (targetIndex < 0 || targetIndex >= victim.TableRelics.Count) return false;
+                DiscardTableRelic(p, relicId);
+                var lost = victim.TableRelics[targetIndex];
+                victim.TableRelics.RemoveAt(targetIndex);
+                RelicDiscardPile.Add(lost);
+                Log($"{p.DisplayName} used Ceremonial Bow and Arrow: {victim.DisplayName} discarded '{lost.Name}' from their Table.");
+            }
+            else return false;
+
+            OnStateChanged?.Invoke();
+            return true;
+        }
 
         private bool DiscardTableRelic(PlayerState p, string relicId)
         {
@@ -2397,7 +2500,7 @@ namespace CrittersOfCalamity.Engine
                 }
             }
 
-            if (pb.ConsumesMainPhaseAction) MainPhaseActionsRemaining--;
+            if (pb.ConsumesMainPhaseAction) SpendBattleAction();
             report.SummaryLog = $"Battle at {report.TileCoord}: {attacker.DisplayName} ({report.AttackerTotal}) vs {defender.DisplayName} ({report.DefenderTotal}) -> " +
                                 (report.IsTie ? "Tie (1HP each)" : $"{Players[report.WinnerPlayerIndex].DisplayName} wins ({report.WinnerDamageDealt}HP dealt)!");
             Log(report.SummaryLog);
@@ -2406,6 +2509,23 @@ namespace CrittersOfCalamity.Engine
             LastBattleReport = report;
             OnBattleResolved?.Invoke(report);
             OnStateChanged?.Invoke();
+        }
+
+        /// <summary>The tile a unit is standing on (null if it isn't on the board).</summary>
+        public HexTileState FindUnitTile(UnitInstance u) => Board.Values.FirstOrDefault(t => t.Units.Contains(u));
+
+        /// <summary>A unit's Attack right now, including meters, Crusade, equipment and tile effects.</summary>
+        public int DisplayAttack(UnitInstance u)
+        {
+            var tile = FindUnitTile(u);
+            return tile == null ? u.EffectiveAttack : GetUnitBattleAttack(Players[u.OwnerPlayerIndex], tile, u);
+        }
+
+        /// <summary>A unit's Defense right now, including meters, Crusade, equipment and tile effects.</summary>
+        public int DisplayDefense(UnitInstance u)
+        {
+            var tile = FindUnitTile(u);
+            return tile == null ? u.EffectiveDefense : GetUnitBattleDefense(Players[u.OwnerPlayerIndex], tile, u);
         }
 
         private int GetUnitBattleAttack(PlayerState owner, HexTileState tile, UnitInstance u)
@@ -3410,6 +3530,20 @@ namespace CrittersOfCalamity.Engine
         {
             if (!Board.TryGetValue(coord, out var tile)) return;
             if (tile.Overlay != FactionOverlayTileType.None) return; // A unique faction tile cannot replace another unique faction tile (Line 102)
+            if (overlay == FactionOverlayTileType.FallenLeaf_Unflipped)
+            {
+                // Take a random Fallen Leaves tile from the Tanuki player's supply; none left means none can be placed.
+                if (ownerPlayerIndex < 0 || ownerPlayerIndex >= Players.Count) return;
+                var leaves = Players[ownerPlayerIndex].FallenLeavesStack;
+                if (leaves.Count == 0)
+                {
+                    Log($"{Players[ownerPlayerIndex].DisplayName} has no Fallen Leaves tiles left in supply.");
+                    return;
+                }
+                int pick = _rng.Next(leaves.Count);
+                tile.LeafIsTrap = leaves[pick];
+                leaves.RemoveAt(pick);
+            }
             tile.Overlay = overlay;
             tile.OverlayOwnerPlayerIndex = ownerPlayerIndex;
         }

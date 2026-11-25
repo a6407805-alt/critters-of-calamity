@@ -250,6 +250,7 @@ namespace CrittersOfCalamity.Model
         public FactionDifficultyTier Tier;
         public int DifficultyRatingOutOf10;
         public string ShortSummary;
+        public string HowToScoreAuthority; // plain-language summary of the faction's Authority sources (Part 17)
         public string LoreDescription;
         public string SetupInstructions;
         public Color PrimaryColor;

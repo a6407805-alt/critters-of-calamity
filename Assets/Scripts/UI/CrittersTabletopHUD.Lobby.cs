@@ -125,17 +125,6 @@ namespace CrittersOfCalamity.UI
             CreateButton(lobby, "BtnLeaveLobby", "Back", new Vector2(0.78f, 0.04f), new Vector2(0.96f, 0.16f),
                 Palette.FromHex("#7A2828"), async () => await _mpManager.LeaveAsync());
 
-            // In-game way back to the menu: a Leave button inside the Factions Codex window.
-            if (_lobbyCodexModal != null)
-            {
-                CreateButton(_lobbyCodexModal.transform, "BtnLeaveGame", "Leave Game",
-                    new Vector2(0.80f, 0.925f), new Vector2(0.915f, 0.985f), Palette.FromHex("#5A2A2A"), async () =>
-                    {
-                        _lobbyCodexModal.SetActive(false);
-                        await _mpManager.LeaveAsync();
-                    });
-            }
-
             _lobbyView.SetActive(false);
         }
 

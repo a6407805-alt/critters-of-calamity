@@ -11,7 +11,7 @@ namespace CrittersOfCalamity.Visuals
     /// <summary>
     /// Procedural 3D Tabletop Hexagonal Board Renderer using URP Lit materials from Palette.cs.
     /// Renders the canonical 108-Tile Continent Map (90 Forest, 14 Stream, 4 Ruin - Part 2 Line 43)
-    /// with water surrounding the island, a 0-30 Authority Score Track around the edge,
+    /// with water surrounding the island and a wooden rim around the edge,
     /// Forest pine groves, Anankian ruin pillars, light-blue Stream channels, Unique Faction Overlay Tiles
     /// (Fallen Leaves, Fire, Miasma, Capybara Stream), Buildings, Tokens, and stylized 3D Critter Miniatures.
     /// </summary>
@@ -22,6 +22,12 @@ namespace CrittersOfCalamity.Visuals
 
         public HexCoord? SelectedCoord = null;
         public event Action<HexCoord> OnHexClicked;
+        /// <summary>Raised after OnHexClicked when the click landed on a piece (unit, building, token or faction tile).</summary>
+        public event Action<PieceRef> OnPieceClicked;
+        /// <summary>The piece under the mouse right now (null if none or the mouse is over the HUD).</summary>
+        public PieceRef HoveredPiece { get; private set; }
+
+        private Transform _highlightRoot;
 
         private CrittersGameEngine _engine;
         private Transform _boardRoot;
@@ -67,7 +73,57 @@ namespace CrittersOfCalamity.Visuals
         void Update()
         {
             HandleCameraControls();
+            UpdateHover();
             HandleMouseHexSelection();
+        }
+
+        private void UpdateHover()
+        {
+            HoveredPiece = null;
+            var mouse = Mouse.current;
+            var cam = Camera.main;
+            if (mouse == null || cam == null) return;
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+            Ray ray = cam.ScreenPointToRay(mouse.position.ReadValue());
+            if (Physics.Raycast(ray, out RaycastHit hit, 150f))
+                HoveredPiece = hit.collider.GetComponentInParent<PieceRef>();
+        }
+
+        /// <summary>Marks tiles on the board (for example, legal setup tiles). Pass null to clear.</summary>
+        public void SetHighlights(IEnumerable<HexCoord> legal, Color legalColor, IEnumerable<HexCoord> picked, Color pickedColor)
+        {
+            if (_highlightRoot != null) Destroy(_highlightRoot.gameObject);
+            _highlightRoot = null;
+            if (_engine == null || (legal == null && picked == null)) return;
+
+            _highlightRoot = new GameObject("TileHighlights").transform;
+            _highlightRoot.SetParent(transform, false);
+            var mesh = CreateHexPrismMesh(HexRadius * 0.80f, 0.02f);
+            void Mark(HexCoord c, Color col)
+            {
+                if (!_engine.Board.ContainsKey(c)) return;
+                var go = new GameObject($"Highlight_{c}");
+                go.transform.SetParent(_highlightRoot, false);
+                go.transform.localPosition = c.ToWorldPosition(HexRadius) + new Vector3(0f, TileThickness + 0.08f, 0f);
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                go.AddComponent<MeshRenderer>().sharedMaterial = GetMaterial(col, 0.2f);
+            }
+            if (legal != null) foreach (var c in legal) Mark(c, legalColor);
+            if (picked != null) foreach (var c in picked) Mark(c, pickedColor);
+        }
+
+        private static void TagPiece(GameObject go, PieceKind kind, HexCoord coord, Vector3 colliderCenter, Vector3 colliderSize,
+            UnitInstance unit = null, BuildingInstance building = null, TokenInstance token = null)
+        {
+            var box = go.AddComponent<BoxCollider>();
+            box.center = colliderCenter;
+            box.size = colliderSize;
+            var tag = go.AddComponent<PieceRef>();
+            tag.Kind = kind;
+            tag.Coord = coord;
+            tag.Unit = unit;
+            tag.Building = building;
+            tag.Token = token;
         }
 
         private void HandleCameraControls()
@@ -144,6 +200,14 @@ namespace CrittersOfCalamity.Visuals
             Ray ray = cam.ScreenPointToRay(mPos);
             if (Physics.Raycast(ray, out RaycastHit hit, 150f))
             {
+                // A click on a piece counts as a click on its tile, then reports the piece.
+                var piece = hit.collider.GetComponentInParent<PieceRef>();
+                if (piece != null)
+                {
+                    SelectHex(piece.Coord);
+                    OnPieceClicked?.Invoke(piece);
+                    return;
+                }
                 var relay = hit.collider.GetComponentInParent<HexTileClickRelay>();
                 if (relay != null)
                 {
@@ -340,6 +404,7 @@ namespace CrittersOfCalamity.Visuals
                     mf.sharedMesh = CreateHexPrismMesh(HexRadius * 0.88f, 0.055f);
                     var mr = overlayGo.AddComponent<MeshRenderer>();
                     mr.sharedMaterial = GetOverlayMaterial(tile.Overlay);
+                    TagPiece(overlayGo, PieceKind.FactionTile, coord, new Vector3(0f, 0.03f, 0f), new Vector3(HexRadius * 1.4f, 0.06f, HexRadius * 1.4f));
                     tileCenter.y += 0.055f;
                 }
 
@@ -347,7 +412,8 @@ namespace CrittersOfCalamity.Visuals
                 if (tile.Building != null)
                 {
                     var owner = _engine.Players[tile.Building.OwnerPlayerIndex];
-                    CreateBuildingMiniature(tileCenter + new Vector3(0f, 0f, 0.36f), tile.Building, owner);
+                    var bGo = CreateBuildingMiniature(tileCenter + new Vector3(0f, 0f, 0.36f), tile.Building, owner);
+                    TagPiece(bGo, PieceKind.Building, coord, new Vector3(0f, 0.25f, 0f), new Vector3(0.5f, 0.6f, 0.5f), building: tile.Building);
                 }
 
                 // 3. Tokens (Max 2 per tile, Part 4 Line 97)
@@ -355,7 +421,8 @@ namespace CrittersOfCalamity.Visuals
                 {
                     var tk = tile.Tokens[tIdx];
                     float xOff = (tIdx == 0) ? -0.45f : 0.45f;
-                    CreateTokenMiniature(tileCenter + new Vector3(xOff, 0.03f, -0.36f), tk);
+                    var tGo = CreateTokenMiniature(tileCenter + new Vector3(xOff, 0.03f, -0.36f), tk);
+                    TagPiece(tGo, PieceKind.Token, coord, Vector3.zero, new Vector3(1.2f, 6f, 1.2f), token: tk);
                 }
 
                 // 4. Units & Special Units (Max 6 per faction per tile, Part 10 Line 175)
@@ -367,12 +434,13 @@ namespace CrittersOfCalamity.Visuals
                     float angle = (uIdx / (float)Mathf.Max(1, unitCount)) * Mathf.PI * 2f;
                     float radius = unitCount == 1 ? 0f : 0.39f;
                     Vector3 uPos = tileCenter + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius - 0.04f);
-                    CreateCritterMiniature(uPos, u, owner, uIdx);
+                    var uGo = CreateCritterMiniature(uPos, u, owner, uIdx);
+                    TagPiece(uGo, PieceKind.Unit, coord, new Vector3(0f, 0.2f, 0f), new Vector3(0.32f, 0.45f, 0.32f), unit: u);
                 }
             }
         }
 
-        private void CreateBuildingMiniature(Vector3 pos, BuildingInstance b, PlayerState owner)
+        private GameObject CreateBuildingMiniature(Vector3 pos, BuildingInstance b, PlayerState owner)
         {
             var root = new GameObject($"Building_{b.Type}");
             root.transform.SetParent(_piecesRoot, false);
@@ -392,9 +460,10 @@ namespace CrittersOfCalamity.Visuals
             tower.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
             tower.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
             tower.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.PrimaryColor);
+            return root;
         }
 
-        private void CreateTokenMiniature(Vector3 pos, TokenInstance tk)
+        private GameObject CreateTokenMiniature(Vector3 pos, TokenInstance tk)
         {
             var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Destroy(disc.GetComponent<Collider>());
@@ -407,9 +476,10 @@ namespace CrittersOfCalamity.Visuals
                             tk.Type == TokenType.TarPit ? Palette.ShadowSlate :
                             _engine.Players[tk.OwnerPlayerIndex].Faction.SecondaryColor;
             disc.GetComponent<Renderer>().sharedMaterial = GetMaterial(tkColor, 0.65f);
+            return disc;
         }
 
-        private void CreateCritterMiniature(Vector3 pos, UnitInstance u, PlayerState owner, int idxOnTile)
+        private GameObject CreateCritterMiniature(Vector3 pos, UnitInstance u, PlayerState owner, int idxOnTile)
         {
             var root = new GameObject($"Unit_{u.Definition.Name}");
             root.transform.SetParent(_piecesRoot, false);
@@ -480,6 +550,7 @@ namespace CrittersOfCalamity.Visuals
                     pip.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.AuthorityGold, 0.8f);
                 }
             }
+            return root;
         }
 
         private Material GetTerrainMaterial(TileTerrainType terrain)
