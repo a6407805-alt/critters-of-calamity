@@ -20,7 +20,9 @@ namespace CrittersOfCalamity.Multiplayer
         FactionAction = 9,   // A = action index, B,C = selected tile (q,r)
         CraftEquipment = 10, // S = equipment id
         BuyTradedGood = 11,  // A = stall slot
-        BattleDecision = 12  // A = 1 use / 0 pass
+        BattleDecision = 12, // A = 1 use / 0 pass
+        RollDice = 13,       // pre-game roll for pick order / turn order (the seat rolls for itself)
+        PickFaction = 14     // A = FactionId
     }
 
     /// <summary>
@@ -45,6 +47,8 @@ namespace CrittersOfCalamity.Multiplayer
         public static GameCommand FactionAction(int index, HexCoord at) => Make(GameCommandType.FactionAction, index, at.q, at.r);
         public static GameCommand CraftEquipment(string equipmentId) => Make(GameCommandType.CraftEquipment, s: equipmentId);
         public static GameCommand BattleDecision(bool use) => Make(GameCommandType.BattleDecision, use ? 1 : 0);
+        public static GameCommand RollDice() => Make(GameCommandType.RollDice);
+        public static GameCommand PickFaction(FactionId faction) => Make(GameCommandType.PickFaction, (int)faction);
 
         /// <summary>Compact text form for the network: seat|type|a|b|c|d|s</summary>
         public string Encode()
@@ -86,6 +90,10 @@ namespace CrittersOfCalamity.Multiplayer
         {
             if (cmd.Type == GameCommandType.BattleDecision)
                 return engine.PendingBattle?.CurrentDecision != null ? engine.PendingBattle.CurrentDecision.PlayerIndex : -1;
+            if (cmd.Type == GameCommandType.PickFaction)
+                return engine.CurrentFactionPicker;
+            if (cmd.Type == GameCommandType.RollDice)
+                return engine.PreGameSeatsToRoll.Count > 0 ? engine.PreGameSeatsToRoll[0] : -1; // any seat that still has to roll may
             return engine.CurrentTurnPlayerIndex;
         }
 
@@ -94,6 +102,32 @@ namespace CrittersOfCalamity.Multiplayer
             reason = null;
             if (engine == null || engine.Players.Count == 0) { reason = "The game hasn't started yet."; return false; }
             if (engine.CurrentPhase == TurnPhase.GameOver) { reason = "The game is over."; return false; }
+
+            if (engine.IsPreGame)
+            {
+                if (cmd.Type == GameCommandType.RollDice)
+                {
+                    if (engine.CanRollPreGameDice(cmd.Seat)) return true;
+                    reason = "You don't need to roll right now.";
+                    return false;
+                }
+                if (cmd.Type == GameCommandType.PickFaction)
+                {
+                    int picker = engine.CurrentFactionPicker;
+                    if (picker < 0) { reason = "It isn't time to pick factions."; return false; }
+                    if (cmd.Seat != picker) { reason = $"It's {engine.Players[picker].DisplayName}'s pick."; return false; }
+                    if (!engine.CanPickFaction(cmd.Seat, (FactionId)cmd.A)) { reason = "That faction is already taken."; return false; }
+                    return true;
+                }
+                reason = "The game hasn't started yet.";
+                return false;
+            }
+            if (cmd.Type == GameCommandType.RollDice || cmd.Type == GameCommandType.PickFaction)
+            {
+                reason = "Setup is already finished.";
+                return false;
+            }
+
             int required = RequiredSeat(engine, cmd);
             if (required < 0) { reason = "There's nothing to decide right now."; return false; }
             if (cmd.Seat != required)
@@ -145,6 +179,10 @@ namespace CrittersOfCalamity.Multiplayer
                 case GameCommandType.BattleDecision:
                     engine.RespondToBattleDecision(cmd.A == 1);
                     return true;
+                case GameCommandType.RollDice:
+                    return engine.RollPreGameDice(cmd.Seat);
+                case GameCommandType.PickFaction:
+                    return engine.PickFaction(cmd.Seat, (FactionId)cmd.A);
             }
             return false;
         }
@@ -167,8 +205,13 @@ namespace CrittersOfCalamity.Multiplayer
                 Mix(engine.ResourceDeck.Count);
                 Mix(engine.ExcavationArea.Count);
                 Mix(engine.IsBattlePending ? 1 : 0);
+                Mix(engine.FactionPickCursor);
+                Mix(engine.PreGameSeatsToRoll.Count);
+                foreach (var hist in engine.PreGameRollHistory)
+                    foreach (var roll in hist) Mix(roll);
                 foreach (var p in engine.Players)
                 {
+                    Mix(p.Faction != null ? (int)p.Faction.Id : -1);
                     Mix(p.Authority);
                     Mix(p.ResourcePile.Count);
                     foreach (var r in p.ResourcePile) Mix((int)r);

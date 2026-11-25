@@ -177,27 +177,27 @@ namespace CrittersOfCalamity.UI
 
             foreach (Transform child in _lobbySeatsRoot) Destroy(child.gameObject);
 
-            var allFactions = RulebookDatabase.GetAllFactions();
             for (int seatIdx = 0; seatIdx < lobby.MaxSeats; seatIdx++)
             {
                 var seat = lobby.Seats.FirstOrDefault(s => s.Seat == seatIdx);
-                BuildSeatRow(seatIdx, seat, allFactions);
+                BuildSeatRow(seatIdx, seat);
             }
 
             bool canStart = _mpManager.CanStartMatch(out var reason);
             _lobbyStartButton.gameObject.SetActive(_mpManager.Mode != SessionMode.Client);
             _lobbyStartButton.interactable = canStart;
-            _lobbyStartHintText.text = canStart ? "Everyone's ready." : reason;
+            _lobbyStartHintText.text = (canStart ? "Everyone's here." : reason) +
+                "\nOnce the game starts, everyone rolls dice to decide who picks a faction first.";
         }
 
-        private void BuildSeatRow(int seatIdx, LobbySeat seat, System.Collections.Generic.List<FactionDef> allFactions)
+        private void BuildSeatRow(int seatIdx, LobbySeat seat)
         {
             var rowGo = new GameObject($"Seat_{seatIdx}");
             rowGo.transform.SetParent(_lobbySeatsRoot, false);
             var rowRt = rowGo.AddComponent<RectTransform>();
             var rowImg = rowGo.AddComponent<Image>();
             var le = rowGo.AddComponent<LayoutElement>();
-            le.preferredHeight = 96f;
+            le.preferredHeight = 70f;
 
             if (seat == null)
             {
@@ -207,40 +207,24 @@ namespace CrittersOfCalamity.UI
                 return;
             }
 
-            var faction = allFactions.FirstOrDefault(f => (int)f.Id == seat.Faction) ?? allFactions[0];
-            rowImg.color = faction.PrimaryColor * 0.45f + new Color(0.08f, 0.08f, 0.08f, 0.9f);
-
-            bool isMine = _mpManager.Mode == SessionMode.Local || seat.Seat == _mpManager.LocalSeat;
+            rowImg.color = new Color(0.20f, 0.24f, 0.30f, 0.95f);
             string you = _mpManager.IsOnline && seat.Seat == _mpManager.LocalSeat ? " (you)" : "";
             string offline = seat.Connected ? "" : " [disconnected]";
 
             if (_mpManager.Mode == SessionMode.Local)
             {
-                CreateText(rowRt, "SeatLabel", $"Seat {seatIdx + 1}", 14, TextAnchor.MiddleLeft,
-                    new Vector2(0.02f, 0.55f), new Vector2(0.14f, 0.95f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
+                CreateText(rowRt, "SeatLabel", $"Seat {seatIdx + 1}", 16, TextAnchor.MiddleLeft,
+                    new Vector2(0.03f, 0f), new Vector2(0.16f, 1f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
                 var nameInput = CreateInputField(rowRt, "SeatName", seat.Name, $"Player {seatIdx + 1}",
-                    new Vector2(0.02f, 0.10f), new Vector2(0.30f, 0.52f));
+                    new Vector2(0.17f, 0.18f), new Vector2(0.60f, 0.82f));
                 nameInput.characterLimit = 20;
                 int captured = seatIdx;
                 nameInput.onEndEdit.AddListener(v => _mpManager.RenameLocalSeat(captured, v));
             }
             else
             {
-                CreateText(rowRt, "SeatName", $"Seat {seatIdx + 1}: <b>{seat.Name}</b>{you}{offline}", 16, TextAnchor.MiddleLeft,
-                    new Vector2(0.02f, 0.05f), new Vector2(0.32f, 0.95f), Vector2.zero, Vector2.zero, Color.white);
-            }
-
-            CreateText(rowRt, "Faction",
-                $"<b>{faction.Name}</b>  (difficulty {faction.DifficultyRatingOutOf10}/10)\n<size=12>{faction.ShortSummary}</size>",
-                15, TextAnchor.MiddleLeft, new Vector2(0.40f, 0.05f), new Vector2(0.97f, 0.95f), Vector2.zero, Vector2.zero, Color.white);
-
-            if (isMine && !_mpManager.InMatch)
-            {
-                int captured = seatIdx;
-                CreateButton(rowRt, "Prev", "<", new Vector2(0.32f, 0.25f), new Vector2(0.355f, 0.75f),
-                    Palette.FromHex("#3A4B63"), () => _mpManager.CycleFaction(captured, -1));
-                CreateButton(rowRt, "Next", ">", new Vector2(0.36f, 0.25f), new Vector2(0.395f, 0.75f),
-                    Palette.FromHex("#3A4B63"), () => _mpManager.CycleFaction(captured, +1));
+                CreateText(rowRt, "SeatName", $"Seat {seatIdx + 1}: <b>{seat.Name}</b>{you}{offline}", 18, TextAnchor.MiddleLeft,
+                    new Vector2(0.03f, 0f), new Vector2(0.97f, 1f), Vector2.zero, Vector2.zero, Color.white);
             }
         }
 

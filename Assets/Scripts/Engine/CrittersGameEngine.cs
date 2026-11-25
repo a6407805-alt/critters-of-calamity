@@ -215,7 +215,7 @@ namespace CrittersOfCalamity.Engine
     /// - 4-Phase Turn Structure (Draw, Excavation, Main [3 actions], End)
     /// - 5-Phase 2d6 Battle Calculator with Damage Cap & Mandatory Loser Damage
     /// </summary>
-    public class CrittersGameEngine
+    public partial class CrittersGameEngine
     {
         public const int VictoryAuthorityThreshold = 30;
         public const int ExcavationAreaCapacity = 5;
@@ -287,18 +287,59 @@ namespace CrittersOfCalamity.Engine
             return d1 + d2;
         }
 
+        /// <summary>
+        /// Starts a match with factions already chosen and Player 1 going first (used by tests and quick starts).
+        /// Online and local games use StartPreGame instead, which rolls for pick order, lets players pick
+        /// factions, and rolls for turn order (Part 3 and Part 5).
+        /// </summary>
         public void StartNewMatch(List<FactionId> chosenFactions, List<string> playerNames = null)
+        {
+            var names = new List<string>();
+            for (int i = 0; i < chosenFactions.Count; i++)
+                names.Add((playerNames != null && i < playerNames.Count) ? playerNames[i] : $"Player {i + 1}");
+            PrepareTableAndPlayers(names);
+
+            var allFactions = RulebookDatabase.GetAllFactions();
+            for (int i = 0; i < chosenFactions.Count; i++)
+                Players[i].Faction = allFactions.First(f => f.Id == chosenFactions[i]);
+
+            FinishSetupAndBeginFirstTurn(0);
+        }
+
+        /// <summary>Clears everything, builds the 108-tile board, and seats the players (no factions yet).</summary>
+        private void PrepareTableAndPlayers(List<string> names)
         {
             Players.Clear();
             Board.Clear();
             GameLog.Clear();
             WinnerPlayerIndex = -1;
             TurnNumber = 1;
+            PendingBattle = null;
+            ResetPreGameRolls();
 
             // 1. Build Exact 108-Tile Hexagonal Continent Map: 90 Forest, 14 Stream, 4 Ruin (Part 2 Line 43)
             GenerateCanonical108TileBoard();
 
-            // 2. Build & Shuffle 40-Card Relic Deck and 50-Card Resource Deck (Part 2)
+            for (int i = 0; i < names.Count; i++)
+            {
+                Players.Add(new PlayerState
+                {
+                    PlayerIndex = i,
+                    DisplayName = names[i],
+                    Faction = null,
+                    Authority = 0
+                });
+            }
+        }
+
+        /// <summary>
+        /// Part 2 and Part 5, once factions and turn order are known: shuffle every deck, deal each player
+        /// 2 resource cards and 1 relic card, fill the Excavation Area, run faction setup in reverse turn
+        /// order, then start the first player's turn.
+        /// </summary>
+        private void FinishSetupAndBeginFirstTurn(int firstPlayerIndex)
+        {
+            // Build & Shuffle 40-Card Relic Deck and 50-Card Resource Deck (Part 2)
             RelicDeck = RulebookDatabase.BuildFull40RelicDeck();
             Shuffle(RelicDeck);
             RelicDiscardPile.Clear();
@@ -308,7 +349,7 @@ namespace CrittersOfCalamity.Engine
             Shuffle(ResourceDeck);
             BurnedResources.Clear();
 
-            // 3. Build & Shuffle Faction-Specific Decks (Forage 8, Traded Goods 8)
+            // Faction-Specific Decks (Forage 8, Traded Goods 8)
             ForageDeck = RulebookDatabase.BuildMillionsForageDeck8();
             Shuffle(ForageDeck);
 
@@ -318,20 +359,15 @@ namespace CrittersOfCalamity.Engine
             TradedGoodsDiscard.Clear();
             RefillTradedGoodsStall();
 
-            // 4. Initialize 4 Players with their chosen Factions (Part 5)
-            var allFactions = RulebookDatabase.GetAllFactions();
-            for (int i = 0; i < chosenFactions.Count; i++)
+            FirstPlayerIndex = firstPlayerIndex;
+            for (int k = 0; k < Players.Count; k++)
             {
-                var fDef = allFactions.First(f => f.Id == chosenFactions[i]);
-                var p = new PlayerState
-                {
-                    PlayerIndex = i,
-                    DisplayName = (playerNames != null && i < playerNames.Count) ? playerNames[i] : $"Player {i + 1}",
-                    Faction = fDef,
-                    Authority = 0
-                };
+                var p = Players[(firstPlayerIndex + k) % Players.Count];
+                p.ResourcePile.Clear();
+                p.RelicHand.Clear();
+                p.FallenLeavesStack.Clear();
 
-                // Initialize Tanukis 13 Fallen Leaves stack (8 Prank = false, 5 Trap = true)
+                // Tanukis' 13 Fallen Leaves (8 Prank = false, 5 Trap = true)
                 for (int pr = 0; pr < 8; pr++) p.FallenLeavesStack.Add(false);
                 for (int tr = 0; tr < 5; tr++) p.FallenLeavesStack.Add(true);
                 Shuffle(p.FallenLeavesStack);
@@ -342,24 +378,16 @@ namespace CrittersOfCalamity.Engine
                 var startRelic = DrawRelicCard();
                 if (startRelic != null)
                     p.RelicHand.Add(startRelic);
-
-                Players.Add(p);
             }
 
             // Part 5: Place top 5 cards of relic deck faceup in the Excavation Area
             RefillExcavationArea();
 
-            // Part 5: Roll 2d6 for turn order; Setup happens in REVERSE turn order (last player sets up first!)
-            foreach (var p in Players)
-            {
-                p.SetupDiceRoll = Roll2D6(out int d1, out int d2);
-                Log($"{p.DisplayName} ({p.Faction.Name}) rolled {d1}+{d2}={p.SetupDiceRoll} for Turn Order.");
-            }
-
             PerformReverseOrderFactionSetups();
 
-            CurrentTurnPlayerIndex = 0;
-            BeginTurn(0);
+            CurrentTurnPlayerIndex = firstPlayerIndex;
+            Log($"{Players[firstPlayerIndex].DisplayName} takes the first turn. Play continues clockwise.");
+            BeginTurn(firstPlayerIndex);
         }
 
         /// <summary>
@@ -469,8 +497,9 @@ namespace CrittersOfCalamity.Engine
 
             // 2. Part 5 Line 121: Setup happens in REVERSE turn order (Player 4 -> Player 3 -> Player 2 -> Player 1),
             // and stacking limit is ignored during setup (Part 5 Line 125).
-            for (int i = Players.Count - 1; i >= 0; i--)
+            for (int k = Players.Count - 1; k >= 0; k--)
             {
+                int i = (FirstPlayerIndex + k) % Players.Count; // last player in turn order sets up first
                 var p = Players[i];
                 var homeCoord = spawnAnchors[i % spawnAnchors.Length];
                 var homeTile = Board[homeCoord];

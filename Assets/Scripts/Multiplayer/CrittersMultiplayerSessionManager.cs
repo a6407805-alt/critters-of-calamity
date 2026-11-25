@@ -26,7 +26,6 @@ namespace CrittersOfCalamity.Multiplayer
     {
         public int Seat;
         public string Name;
-        public int Faction;        // FactionId as int
         public ulong ClientId;     // network client id (online only)
         public bool Connected = true;
     }
@@ -44,7 +43,6 @@ namespace CrittersOfCalamity.Multiplayer
     public class MatchStartInfo
     {
         public int Seed;
-        public List<int> Factions = new List<int>();
         public List<string> Names = new List<string>();
     }
 
@@ -105,7 +103,7 @@ namespace CrittersOfCalamity.Multiplayer
             Mode = SessionMode.Local;
             Lobby = new LobbySnapshot { Code = "", MaxSeats = playerCount };
             for (int i = 0; i < playerCount; i++)
-                Lobby.Seats.Add(new LobbySeat { Seat = i, Name = $"Player {i + 1}", Faction = FirstFreeFaction(i) });
+                Lobby.Seats.Add(new LobbySeat { Seat = i, Name = $"Player {i + 1}" });
             LocalSeat = -1;
             StatusMessage = $"Local game for {playerCount} players on this computer.";
             Changed();
@@ -137,7 +135,7 @@ namespace CrittersOfCalamity.Multiplayer
                 RegisterHandlers();
 
                 Lobby = new LobbySnapshot { Code = ActiveJoinCode, MaxSeats = playerCount };
-                Lobby.Seats.Add(new LobbySeat { Seat = 0, Name = _localName, Faction = FirstFreeFaction(0), ClientId = nm.LocalClientId });
+                Lobby.Seats.Add(new LobbySeat { Seat = 0, Name = _localName, ClientId = nm.LocalClientId });
                 LocalSeat = 0;
                 SetStatus($"Room open. Share the join code: {ActiveJoinCode}");
                 BroadcastLobby();
@@ -199,47 +197,11 @@ namespace CrittersOfCalamity.Multiplayer
             await ResetToMenuAsync("You left the game.");
         }
 
-        /// <summary>Change a seat's faction in the lobby. Local: any seat. Online: only your own seat.</summary>
-        public void CycleFaction(int seat, int direction)
-        {
-            if (InMatch || seat < 0 || seat >= Lobby.Seats.Count) return;
-            int count = Enum.GetValues(typeof(FactionId)).Length;
-            int current = Lobby.Seats[seat].Faction;
-            for (int step = 1; step <= count; step++)
-            {
-                int candidate = ((current + direction * step) % count + count) % count;
-                if (!Lobby.Seats.Any(s => s.Seat != seat && s.Faction == candidate))
-                {
-                    RequestFaction(seat, candidate);
-                    return;
-                }
-            }
-        }
-
         public void RenameLocalSeat(int seat, string name)
         {
             if (Mode != SessionMode.Local || InMatch || seat < 0 || seat >= Lobby.Seats.Count) return;
             Lobby.Seats[seat].Name = string.IsNullOrWhiteSpace(name) ? $"Player {seat + 1}" : name.Trim();
             Changed();
-        }
-
-        void RequestFaction(int seat, int faction)
-        {
-            switch (Mode)
-            {
-                case SessionMode.Local:
-                    Lobby.Seats[seat].Faction = faction;
-                    Changed();
-                    break;
-                case SessionMode.Host:
-                    if (seat != LocalSeat) return;
-                    TryAssignFaction(seat, faction);
-                    break;
-                case SessionMode.Client:
-                    if (seat != LocalSeat) return;
-                    SendToHost("PICK", faction.ToString());
-                    break;
-            }
         }
 
         public bool CanStartMatch(out string reason)
@@ -248,7 +210,6 @@ namespace CrittersOfCalamity.Multiplayer
             if (Mode == SessionMode.Client) { reason = "Waiting for the host to start."; return false; }
             if (Mode == SessionMode.Menu) { reason = ""; return false; }
             if (Lobby.Seats.Count < Lobby.MaxSeats) { reason = $"Waiting for players ({Lobby.Seats.Count}/{Lobby.MaxSeats})."; return false; }
-            if (Lobby.Seats.Select(s => s.Faction).Distinct().Count() != Lobby.Seats.Count) { reason = "Each player needs a different faction."; return false; }
             return true;
         }
 
@@ -258,10 +219,7 @@ namespace CrittersOfCalamity.Multiplayer
             if (!CanStartMatch(out var why)) { SetStatus(why); return; }
             var info = new MatchStartInfo { Seed = NewSeed() };
             foreach (var s in Lobby.Seats.OrderBy(x => x.Seat))
-            {
-                info.Factions.Add(s.Faction);
                 info.Names.Add(s.Name);
-            }
             Lobby.Started = true;
             if (Mode == SessionMode.Host)
             {
@@ -286,11 +244,16 @@ namespace CrittersOfCalamity.Multiplayer
             }
         }
 
-        /// <summary>Send an action. Locally it runs right away; online it goes through the host.</summary>
-        public void Submit(GameCommand cmd)
+        /// <summary>
+        /// Send an action. Locally it runs right away; online it goes through the host.
+        /// localSeat: in a game on one computer, which player is acting (for dice rolls, where every seat has its
+        /// own button). Online it's ignored: you always act as your own seat.
+        /// </summary>
+        public void Submit(GameCommand cmd, int localSeat = -1)
         {
             if (Engine == null || !InMatch) return;
-            cmd.Seat = IsOnline ? LocalSeat : GameCommandExecutor.RequiredSeat(Engine, cmd);
+            if (IsOnline) cmd.Seat = LocalSeat;
+            else cmd.Seat = localSeat >= 0 ? localSeat : GameCommandExecutor.RequiredSeat(Engine, cmd);
 
             if (!GameCommandExecutor.IsAllowed(Engine, cmd, out var reason))
             {
@@ -344,7 +307,7 @@ namespace CrittersOfCalamity.Multiplayer
         void BeginMatch(MatchStartInfo info)
         {
             Engine = new CrittersGameEngine(info.Seed);
-            Engine.StartNewMatch(info.Factions.Select(f => (FactionId)f).ToList(), info.Names.ToList());
+            Engine.StartPreGame(info.Names.ToList());
             InMatch = true;
             OutOfSync = false;
             _commandSequence = 0;
@@ -451,16 +414,10 @@ namespace CrittersOfCalamity.Multiplayer
                         int seat = Enumerable.Range(0, Lobby.MaxSeats).First(i => Lobby.Seats.All(s => s.Seat != i));
                         string name = string.IsNullOrWhiteSpace(body) ? $"Player {seat + 1}" : body.Trim();
                         if (name.Length > 20) name = name.Substring(0, 20);
-                        Lobby.Seats.Add(new LobbySeat { Seat = seat, Name = name, Faction = FirstFreeFaction(seat), ClientId = senderClientId });
+                        Lobby.Seats.Add(new LobbySeat { Seat = seat, Name = name, ClientId = senderClientId });
                         Lobby.Seats = Lobby.Seats.OrderBy(s => s.Seat).ToList();
                     }
                     BroadcastLobby();
-                    break;
-                }
-                case "PICK":
-                {
-                    var seat = Lobby.Seats.FirstOrDefault(s => s.ClientId == senderClientId);
-                    if (seat != null && int.TryParse(body, out int faction)) TryAssignFaction(seat.Seat, faction);
                     break;
                 }
                 case "REQ":
@@ -493,7 +450,7 @@ namespace CrittersOfCalamity.Multiplayer
                     var mine = Lobby.Seats.FirstOrDefault(s => nm != null && s.ClientId == nm.LocalClientId);
                     LocalSeat = mine != null ? mine.Seat : -1;
                     if (!InMatch)
-                        SetStatus(LocalSeat >= 0 ? $"You're in seat {LocalSeat + 1}. Pick your faction, then wait for the host to start." : "Waiting for a seat...");
+                        SetStatus(LocalSeat >= 0 ? $"You're in seat {LocalSeat + 1}. Waiting for the host to start." : "Waiting for a seat...");
                     Changed();
                     break;
                 }
@@ -527,15 +484,6 @@ namespace CrittersOfCalamity.Multiplayer
                     OnLocalNotice?.Invoke(body);
                     break;
             }
-        }
-
-        void TryAssignFaction(int seat, int faction)
-        {
-            var s = Lobby.Seats.FirstOrDefault(x => x.Seat == seat);
-            if (s == null || Lobby.Started) return;
-            if (Lobby.Seats.Any(x => x.Seat != seat && x.Faction == faction)) return;
-            s.Faction = faction;
-            BroadcastLobby();
         }
 
         void HandleClientDisconnected(ulong clientId)
@@ -669,17 +617,6 @@ namespace CrittersOfCalamity.Multiplayer
         // ------------------------------------------------------------------
         // HELPERS
         // ------------------------------------------------------------------
-
-        int FirstFreeFaction(int seat)
-        {
-            int count = Enum.GetValues(typeof(FactionId)).Length;
-            for (int i = 0; i < count; i++)
-            {
-                int candidate = (seat + i) % count;
-                if (!Lobby.Seats.Any(s => s.Faction == candidate)) return candidate;
-            }
-            return seat % count;
-        }
 
         static int NewSeed()
         {

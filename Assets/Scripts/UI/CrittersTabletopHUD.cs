@@ -122,6 +122,8 @@ namespace CrittersOfCalamity.UI
         /// <summary>Every computer builds the same match from the same seed; this hooks the HUD and board up to it.</summary>
         private void HandleMatchStarted(MatchStartInfo info)
         {
+            ResetActivity();
+            _guideMinimized = false;
             BindToEngine(_mpManager.Engine);
             HideMainMenu();
         }
@@ -165,6 +167,7 @@ namespace CrittersOfCalamity.UI
             if (_engine != null && _engine.Players.Count > 0)
             {
                 _engine.Log($"[You] {message}");
+                AddActivity($"<color=#E07070>{message}</color>");
                 RefreshHUD();
             }
             else
@@ -195,7 +198,10 @@ namespace CrittersOfCalamity.UI
                     default: why = "That action isn't allowed right now."; break;
                 }
                 _engine.Log($"[You] {why}");
+                AddActivity($"<color=#E07070>{why}</color>");
             }
+            RecordActivity(cmd, ok);
+            if (cmd.Type == GameCommandType.RollDice && ok) PlayDiceRollAnimation(cmd.Seat);
             RefreshHUD();
             if (_factionActionsModal != null && _factionActionsModal.activeSelf) RefreshFactionActionsModal();
             if (_stallModal != null && _stallModal.activeSelf) RefreshStallModal();
@@ -203,6 +209,11 @@ namespace CrittersOfCalamity.UI
 
         private void HandleHexClicked(HexCoord coord)
         {
+            if (HandleGuideTileClick(coord))
+            {
+                RefreshHUD();
+                return;
+            }
             if (_awaitingMoveDestination)
             {
                 _awaitingMoveDestination = false;
@@ -308,10 +319,13 @@ namespace CrittersOfCalamity.UI
                 Vector2.zero, Vector2.zero, new Color(0.11f, 0.14f, 0.19f, 0.90f));
 
             _factionBoardText = CreateText(_rightPanelRt, "FactionBoardText", "Faction Board", 12, TextAnchor.UpperLeft,
-                new Vector2(0.04f, 0.43f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero, Color.white);
+                new Vector2(0.04f, 0.58f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero, Color.white);
 
-            _gameLogText = CreateText(_rightPanelRt, "GameLogText", "Turn & Battle Log", 11, TextAnchor.LowerLeft,
-                new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.41f), Vector2.zero, Vector2.zero, Palette.FromHex("#D0DCE8"));
+            _activityText = CreateText(_rightPanelRt, "ActivityText", "<b>ACTIVITY</b>", 12, TextAnchor.LowerLeft,
+                new Vector2(0.04f, 0.27f), new Vector2(0.96f, 0.57f), Vector2.zero, Vector2.zero, Color.white);
+
+            _gameLogText = CreateText(_rightPanelRt, "GameLogText", "Turn & Battle Log", 10, TextAnchor.LowerLeft,
+                new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.26f), Vector2.zero, Vector2.zero, Palette.FromHex("#AAB8C6"));
 
             // 4. BOTTOM BAR: Active Player's Resource Pile, Relic Hand & Turn Phase Actions
             var bottomBar = CreatePanel(canvasGo.transform, "BottomBar",
@@ -338,43 +352,7 @@ namespace CrittersOfCalamity.UI
             _handButtonsRoot = handRootGo.transform;
 
             // Phase Action Buttons (Excavation & Main Phase)
-            CreateButton(bottomBar, "BtnCraftBuilding", "2. Excavation: Craft Building",
-                new Vector2(0.56f, 0.53f), new Vector2(0.665f, 0.93f), Palette.FromHex("#4A6B48"), () =>
-                {
-                    if (_boardRenderer.SelectedCoord.HasValue)
-                        _mpManager.Submit(GameCommand.CraftBuilding(_boardRenderer.SelectedCoord.Value));
-                    else
-                        _engine.Log("Click a legal 3D hex tile first to craft your faction's building.");
-                    RefreshHUD();
-                });
-
-            CreateButton(bottomBar, "BtnMove", "3. Main: Move Units",
-                new Vector2(0.67f, 0.53f), new Vector2(0.775f, 0.93f), Palette.FromHex("#35688C"), () =>
-                {
-                    if (_boardRenderer.SelectedCoord.HasValue)
-                    {
-                        _moveOriginCoord = _boardRenderer.SelectedCoord.Value;
-                        _awaitingMoveDestination = true;
-                        _engine.Log($"Move Origin set to {_moveOriginCoord}. Now click an adjacent destination hex tile!");
-                        RefreshHUD();
-                    }
-                    else
-                    {
-                        _engine.Log("Click the hex tile holding your units first, then click 'Move Units'.");
-                        RefreshHUD();
-                    }
-                });
-
-            CreateButton(bottomBar, "BtnBattle", "3. Main: Battle (2d6)",
-                new Vector2(0.78f, 0.53f), new Vector2(0.885f, 0.93f), Palette.FromHex("#9C2F2F"), () =>
-                {
-                    if (_boardRenderer.SelectedCoord.HasValue)
-                        _mpManager.Submit(GameCommand.Battle(_boardRenderer.SelectedCoord.Value));
-                    else
-                        _engine.Log("Select a hex tile with both friendly and enemy pieces to initiate a Battle!");
-                    RefreshHUD();
-                });
-
+            // Phase actions live in the Turn Guide panel now; the bottom bar keeps the hand and a panel toggle.
             CreateButton(bottomBar, "BtnToggleSidebars", "Hide/Show Side Panels",
                 new Vector2(0.89f, 0.53f), new Vector2(0.992f, 0.93f), Palette.FromHex("#3E4A59"), () =>
                 {
@@ -383,44 +361,14 @@ namespace CrittersOfCalamity.UI
                     _rightPanelRt.gameObject.SetActive(show);
                 });
 
-            CreateButton(bottomBar, "BtnLoot", "3. Main: Loot Tile",
-                new Vector2(0.56f, 0.07f), new Vector2(0.665f, 0.47f), Palette.FromHex("#8A6E2F"), () =>
-                {
-                    if (_boardRenderer.SelectedCoord.HasValue)
-                        _mpManager.Submit(GameCommand.Loot(_boardRenderer.SelectedCoord.Value));
-                    else
-                        _engine.Log("Select a hex tile occupied by your units (and no enemies) to Loot.");
-                    RefreshHUD();
-                });
-
-            CreateButton(bottomBar, "BtnRecruit", "3. Main: Recruit Units",
-                new Vector2(0.67f, 0.07f), new Vector2(0.775f, 0.47f), Palette.FromHex("#4E568C"), () =>
-                {
-                    _mpManager.Submit(GameCommand.Make(GameCommandType.Recruit));
-                    RefreshHUD();
-                });
-
-            CreateButton(bottomBar, "BtnFactionActionsDrawer", "Faction Abilities & Summons...",
-                new Vector2(0.78f, 0.07f), new Vector2(0.885f, 0.47f), Palette.FromHex("#72428C"), () =>
-                {
-                    ToggleModal(_factionActionsModal);
-                    RefreshFactionActionsModal();
-                });
-
-            CreateButton(bottomBar, "BtnAdvancePhase", "NEXT PHASE >>",
-                new Vector2(0.89f, 0.07f), new Vector2(0.992f, 0.47f), Palette.FromHex("#C87A28"), () =>
-                {
-                    _awaitingMoveDestination = false;
-                    _mpManager.Submit(GameCommand.Make(GameCommandType.AdvancePhase));
-                    RefreshHUD();
-                });
-
             // 5. MODALS
             BuildLobbyCodexModal(canvasGo.transform);
             BuildFactionActionsModal(canvasGo.transform);
             BuildStallModal(canvasGo.transform);
             BuildBattlePopupModal(canvasGo.transform);
             BuildBattleDecisionModal(canvasGo.transform);
+            BuildTurnGuide(canvasGo.transform);
+            BuildPreGamePanel(canvasGo.transform);
             BuildMainMenu(canvasGo.transform);
         }
 
@@ -733,6 +681,25 @@ namespace CrittersOfCalamity.UI
         {
             if (_engine == null || _engine.Players.Count == 0) return;
 
+            RefreshPreGame();
+            RefreshTurnGuide();
+            RefreshWinPopup();
+
+            if (_engine.IsPreGame)
+            {
+                _topStatusText.text = $"<b>CRITTERS OF CALAMITY</b>\nSetting up: {PhaseName(_engine.CurrentPhase)}";
+                for (int i = 0; i < 4; i++)
+                {
+                    bool exists = i < _engine.Players.Count;
+                    _playerScoreBadges[i].transform.parent.gameObject.SetActive(exists);
+                    if (!exists) continue;
+                    var pp = _engine.Players[i];
+                    _playerScoreBadges[i].text = $"<b>{pp.DisplayName}</b>\n{(pp.Faction != null ? pp.Faction.Name : "No faction yet")}";
+                    _playerScoreBadges[i].color = Color.white;
+                }
+                return;
+            }
+
             var activePlayer = _engine.Players[_engine.CurrentTurnPlayerIndex];
             int viewSeat = Mathf.Clamp(_mpManager.ViewingSeat, 0, _engine.Players.Count - 1);
             var viewer = _engine.Players[viewSeat]; // whose hand and Resource Pile this screen shows
@@ -743,8 +710,8 @@ namespace CrittersOfCalamity.UI
                 moveHint += $" | [BATTLE PAUSED: waiting on {_engine.Players[_engine.PendingBattle.CurrentDecision.PlayerIndex].DisplayName}]";
             if (_mpManager.IsOnline)
                 moveHint += $" | You: {viewer.DisplayName} ({viewer.Faction.Name})" + (_mpManager.OutOfSync ? " | OUT OF SYNC" : "");
-            _topStatusText.text = $"<b>TURN {_engine.TurnNumber} — {activePlayer.DisplayName} ({activePlayer.Faction.Name})</b>\n" +
-                                  $"Phase: <b>{_engine.CurrentPhase}</b> (Main Actions: {_engine.MainPhaseActionsRemaining}/3) | Board: {_engine.Board.Count} Tiles{moveHint}";
+            _topStatusText.text = $"<b>TURN {_engine.TurnNumber}: {activePlayer.DisplayName} ({activePlayer.Faction.Name})</b>\n" +
+                                  $"{PhaseName(_engine.CurrentPhase)}" + (_engine.CurrentPhase == TurnPhase.MainPhase ? $" ({_engine.MainPhaseActionsRemaining}/3 actions left)" : "") + moveHint;
 
             for (int i = 0; i < 4; i++)
                 _playerScoreBadges[i].transform.parent.gameObject.SetActive(i < _engine.Players.Count);
@@ -752,9 +719,9 @@ namespace CrittersOfCalamity.UI
             {
                 var p = _engine.Players[i];
                 bool isTurn = (i == _engine.CurrentTurnPlayerIndex);
-                string turnStar = isTurn ? "★ " : "";
-                _playerScoreBadges[i].text = $"{turnStar}<b>{p.DisplayName}: {p.Faction.Name}</b>\n" +
-                                             $"Authority: <b>{p.Authority}/30</b> | Res: {p.ResourcePile.Count} | Hand: {p.RelicHand.Count}";
+                string turnMark = isTurn ? "> " : "";
+                _playerScoreBadges[i].text = $"{turnMark}<b>{p.DisplayName}</b> ({p.Faction.Name})\n" +
+                                             $"<size=15><b>{p.Authority}</b> Authority</size>  <size=10>Res {p.ResourcePile.Count} | Hand {p.RelicHand.Count}</size>";
                 _playerScoreBadges[i].color = isTurn ? Palette.AuthorityGold : Color.white;
             }
 
@@ -799,7 +766,7 @@ namespace CrittersOfCalamity.UI
             else
             {
                 _selectedHexText.text = $"<b>108-TILE CONTINENT BOARD & DECKS</b>\n" +
-                                        $"Board: 90 Forest · 14 Stream · 4 Ruin (0-30 Authority Track)\n" +
+                                        $"Board: 90 Forest (green) · 14 Stream (light blue) · 4 Ruin (gray)\n" +
                                         $"Relic Deck: {_engine.RelicDeck.Count}/40 (Discard: {_engine.RelicDiscardPile.Count})\n" +
                                         $"Resource Deck: {_engine.ResourceDeck.Count}/50 (Burned: {_engine.BurnedResources.Count})\n" +
                                         $"Forage Deck: 8 (Reshuffled each draw) | Traded Goods: {_engine.TradedGoodsDeck.Count}/8\n\n" +

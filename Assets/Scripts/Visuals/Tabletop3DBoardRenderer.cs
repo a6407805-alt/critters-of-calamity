@@ -230,18 +230,7 @@ namespace CrittersOfCalamity.Visuals
             oceanWater.transform.localScale = new Vector3(26.2f, 0.05f, 26.2f);
             oceanWater.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.FromHex("#2E5D7B"), 0.8f);
 
-            // 30 Authority Score Track Markers around the perimeter of the board (0 to 30)
-            for (int a = 0; a <= 30; a++)
-            {
-                float angle = (a / 31f) * Mathf.PI * 2f;
-                var pip = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                Destroy(pip.GetComponent<Collider>());
-                pip.name = $"ScorePip_{a}";
-                pip.transform.SetParent(_boardRoot, false);
-                pip.transform.localPosition = new Vector3(Mathf.Cos(angle) * 13.6f, 0.02f, Mathf.Sin(angle) * 13.6f);
-                pip.transform.localScale = (a % 5 == 0) ? new Vector3(0.32f, 0.08f, 0.32f) : new Vector3(0.18f, 0.05f, 0.18f);
-                pip.GetComponent<Renderer>().sharedMaterial = GetMaterial((a == 30) ? Palette.AuthorityGold : Palette.TableOak, 0.6f);
-            }
+            // (Authority is shown under each player's name in the HUD, not on the board border.)
 
             // 2. Selection Highlight Ring
             _selectionRing = new GameObject("HexSelectionRing");
