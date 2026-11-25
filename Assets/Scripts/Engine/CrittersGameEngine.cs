@@ -148,9 +148,9 @@ namespace CrittersOfCalamity.Engine
 
     public enum BattleDecisionKind
     {
-        WarHorn,           // Defender, end of Attack Declaration
-        OvergrownWall,     // Defender, start of Dice Roll
         IronHalberd,       // Attacker, start of Attack and Defense Points (after the dice)
+        WarHorn,           // Defender, start of Attack and Defense Points (after the dice)
+        OvergrownWall,     // Defender, start of Attack and Defense Points (after the dice)
         PoliticalTreatise, // Defender, start of Attack and Defense Points (after the dice)
         BrassShield,       // Winner only, Damage Calculation
         QuickFeet          // Trouble Making Tanukis trait, after 0 HP units are removed
@@ -166,10 +166,10 @@ namespace CrittersOfCalamity.Engine
 
     public enum PendingBattleStage
     {
-        WarHornWindow,
-        OvergrownWallWindow,
         RollDice,
         HalberdWindow,
+        WarHornWindow,
+        OvergrownWallWindow,
         TreatiseWindow,
         DamageCalculation,
         ApplyDamage,
@@ -1924,7 +1924,7 @@ namespace CrittersOfCalamity.Engine
                 AttackerUnits = attackerUnits,
                 DefenderUnits = defenderUnits,
                 ConsumesMainPhaseAction = consumesMainPhaseAction,
-                Stage = PendingBattleStage.WarHornWindow,
+                Stage = PendingBattleStage.RollDice,
                 Report = new BattleReport
                 {
                     TileCoord = coord,
@@ -2028,8 +2028,20 @@ namespace CrittersOfCalamity.Engine
             OnStateChanged?.Invoke();
         }
 
+        /// <summary>Phase 3 inputs: Attack and Defense Points of the participating units (Part 12 Lines 197-202).</summary>
+        private void RecomputeBattlePoints(PendingBattleState pb)
+        {
+            pb.AttackerAttackPoints = pb.AttackerUnits.Sum(u => GetUnitBattleAttack(pb.Attacker, pb.Tile, u));
+            pb.AttackerDefensePoints = pb.AttackerUnits.Sum(u => GetUnitBattleDefense(pb.Attacker, pb.Tile, u));
+            pb.DefenderAttackPoints = pb.DefenderUnits.Sum(u => GetUnitBattleAttack(pb.Defender, pb.Tile, u));
+            pb.DefenderDefensePoints = pb.DefenderUnits.Sum(u => GetUnitBattleDefense(pb.Defender, pb.Tile, u));
+            pb.Report.AttackerUnitAttackSum = pb.AttackerAttackPoints;
+            pb.Report.DefenderUnitDefenseSum = pb.DefenderDefensePoints;
+        }
+
         private string DescribeBattleTotals(PendingBattleState pb)
         {
+            RecomputeBattlePoints(pb);
             int atk = Mathf.Max(0, pb.AttackerRoll + pb.Report.AttackerDiceBonus) + pb.AttackerAttackPoints;
             int def = Mathf.Max(0, pb.DefenderRoll + pb.Report.DefenderDiceBonus) + pb.DefenderDefensePoints;
             return $"Attacker rolled {pb.Report.AttackerDice1}+{pb.Report.AttackerDice2} (mod {pb.Report.AttackerDiceBonus:+#;-#;0}) + {pb.AttackerAttackPoints} Attack Points = {atk}\n" +
@@ -2049,47 +2061,18 @@ namespace CrittersOfCalamity.Engine
 
                 switch (pb.Stage)
                 {
-                    case PendingBattleStage.WarHornWindow:
-                        // War Horn: Defender, at the end of the Attack Declaration phase
-                        pb.Stage = PendingBattleStage.OvergrownWallWindow;
-                        if (HasTableRelic(defender, "war_horn") && CanAddUnitToTile(tile, defender.PlayerIndex) &&
-                            defender.Faction.Units.Any(u => !u.IsSpecialUnit))
-                        {
-                            AskBattleDecision(BattleDecisionKind.WarHorn, defender, "War Horn",
-                                $"{attacker.DisplayName} is attacking you at {tile.Coord}.\nDiscard War Horn to place 1 basic unit from your supply on the battle tile? It joins the battle.");
-                        }
-                        break;
-
-                    case PendingBattleStage.OvergrownWallWindow:
-                        // Overgrown Wall: Defender, at the start of the Dice Roll phase
-                        pb.Stage = PendingBattleStage.RollDice;
-                        if (HasTableRelic(defender, "overgrown_wall"))
-                        {
-                            AskBattleDecision(BattleDecisionKind.OvergrownWall, defender, "Overgrown Wall",
-                                "The dice are about to be rolled.\nDiscard Overgrown Wall so the Attacker subtracts 2 from their dice roll?");
-                        }
-                        break;
-
                     case PendingBattleStage.RollDice:
                         // Phase 2: Dice Roll (2d6 each)
                         pb.AttackerRoll = Roll2D6(out report.AttackerDice1, out report.AttackerDice2);
                         pb.DefenderRoll = Roll2D6(out report.DefenderDice1, out report.DefenderDice2);
-
-                        // Phase 3 inputs: Attack and Defense Points of the participating units (Part 12 Lines 197-202)
-                        pb.AttackerAttackPoints = pb.AttackerUnits.Sum(u => GetUnitBattleAttack(attacker, tile, u));
-                        pb.AttackerDefensePoints = pb.AttackerUnits.Sum(u => GetUnitBattleDefense(attacker, tile, u));
-                        pb.DefenderAttackPoints = pb.DefenderUnits.Sum(u => GetUnitBattleAttack(defender, tile, u));
-                        pb.DefenderDefensePoints = pb.DefenderUnits.Sum(u => GetUnitBattleDefense(defender, tile, u));
-                        report.AttackerUnitAttackSum = pb.AttackerAttackPoints;
-                        report.DefenderUnitDefenseSum = pb.DefenderDefensePoints;
-                        tile.HasStatueOfGoddessBuff = false;
-
+                        RecomputeBattlePoints(pb);
                         pb.Stage = PendingBattleStage.HalberdWindow;
                         break;
 
+                    // All relic dice effects are offered after the dice, at the start of the Attack and Defense Points
+                    // phase. Turn player (the Attacker) first, then the Defender (Part 6 timing rule).
                     case PendingBattleStage.HalberdWindow:
-                        // Iron Halberd: Attacker, at the start of the Attack and Defense Points phase (after seeing the dice)
-                        pb.Stage = PendingBattleStage.TreatiseWindow;
+                        pb.Stage = PendingBattleStage.WarHornWindow;
                         if (HasTableRelic(attacker, "iron_halberd"))
                         {
                             AskBattleDecision(BattleDecisionKind.IronHalberd, attacker, "Iron Halberd",
@@ -2097,8 +2080,26 @@ namespace CrittersOfCalamity.Engine
                         }
                         break;
 
+                    case PendingBattleStage.WarHornWindow:
+                        pb.Stage = PendingBattleStage.OvergrownWallWindow;
+                        if (HasTableRelic(defender, "war_horn") && CanAddUnitToTile(tile, defender.PlayerIndex) &&
+                            defender.Faction.Units.Any(u => !u.IsSpecialUnit))
+                        {
+                            AskBattleDecision(BattleDecisionKind.WarHorn, defender, "War Horn",
+                                DescribeBattleTotals(pb) + "\nDiscard War Horn to place 1 basic unit from your supply on the battle tile? It joins the battle.");
+                        }
+                        break;
+
+                    case PendingBattleStage.OvergrownWallWindow:
+                        pb.Stage = PendingBattleStage.TreatiseWindow;
+                        if (HasTableRelic(defender, "overgrown_wall"))
+                        {
+                            AskBattleDecision(BattleDecisionKind.OvergrownWall, defender, "Overgrown Wall",
+                                DescribeBattleTotals(pb) + "\nDiscard Overgrown Wall so the Attacker subtracts 2 from their dice roll?");
+                        }
+                        break;
+
                     case PendingBattleStage.TreatiseWindow:
-                        // Political Treatise: Defender, at the start of the Attack and Defense Points phase (after seeing the dice)
                         pb.Stage = PendingBattleStage.DamageCalculation;
                         if (HasTableRelic(defender, "political_treatise"))
                         {
@@ -2108,6 +2109,8 @@ namespace CrittersOfCalamity.Engine
                         break;
 
                     case PendingBattleStage.DamageCalculation:
+                        RecomputeBattlePoints(pb); // War Horn may have added a unit
+                        tile.HasStatueOfGoddessBuff = false;
                         report.AttackerTotal = Mathf.Max(0, pb.AttackerRoll + report.AttackerDiceBonus) + pb.AttackerAttackPoints;
                         report.DefenderTotal = Mathf.Max(0, pb.DefenderRoll + report.DefenderDiceBonus) + pb.DefenderDefensePoints;
                         pb.Stage = PendingBattleStage.ApplyDamage;

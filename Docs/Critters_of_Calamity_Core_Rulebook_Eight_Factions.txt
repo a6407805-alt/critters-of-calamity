@@ -305,7 +305,7 @@ When Crafted: Recruit 1 basic unit at each of your recruitment buildings. Those 
 Disassemble: Gain 2 Stone.
 War Horn (2 copies)
 Cost: 3 Wood
-Effect: When you are the Defender, at the end of the Attack Declaration phase, you may discard this card to place 1 of your basic units from your supply on the battle tile. It participates in the battle.
+Effect: When you are the Defender, at the start of the Attack and Defense Points phase (after the dice are rolled), you may discard this card to place 1 of your basic units from your supply on the battle tile. It participates in the battle.
 Disassemble: Gain 2 Wood.
 Iron Halberd (2 copies)
 Cost: 1 Stone
@@ -321,7 +321,7 @@ When Crafted: Choose 1 tile with your units. Those units gain +1 Attack in their
 Disassemble: Gain 1 Gold.
 Overgrown Wall (2 copies)
 Cost: 1 Wood, 1 Gold
-Effect: When you are the Defender, at the start of the Dice Roll phase, you may discard this card. The Attacker subtracts 2 from their dice roll.
+Effect: When you are the Defender, at the start of the Attack and Defense Points phase (after the dice are rolled), you may discard this card. The Attacker subtracts 2 from their dice roll.
 Disassemble: Gain 1 Gold.
 Abandoned Road (2 copies)
 Cost: 1 Wood, 1 Gold

@@ -87,7 +87,7 @@ namespace CrittersOfCalamity.Model
                     Cost = new ResourceCost(wood: 3),
                     DisassembleGain = new ResourceCost(wood: 2),
                     KeepOnTableWhenCrafted = true, HasCraftedEffect = true,
-                    EffectText = "Effect: When you are the Defender, at the end of Attack Declaration, discard to place 1 basic unit from supply on the battle tile."
+                    EffectText = "Effect: When you are the Defender, at the start of the Attack and Defense Points phase (after the dice are rolled), discard to place 1 basic unit from supply on the battle tile. It participates in the battle."
                 },
                 new RelicCardDef
                 {
@@ -119,7 +119,7 @@ namespace CrittersOfCalamity.Model
                     Cost = new ResourceCost(wood: 1, gold: 1),
                     DisassembleGain = new ResourceCost(gold: 1),
                     KeepOnTableWhenCrafted = true, HasCraftedEffect = true,
-                    EffectText = "Effect: When you are the Defender, at the start of the Dice Roll phase, discard this card. The Attacker subtracts 2 from their dice roll."
+                    EffectText = "Effect: When you are the Defender, at the start of the Attack and Defense Points phase (after the dice are rolled), discard this card. The Attacker subtracts 2 from their dice roll."
                 },
                 new RelicCardDef
                 {
