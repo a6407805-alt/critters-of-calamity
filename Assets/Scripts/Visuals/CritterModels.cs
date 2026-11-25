@@ -87,11 +87,13 @@ namespace CrittersOfCalamity.Visuals
                 case "platy_pope": if (!SculptedModel(body, "Models/PlatyPope", a, b, 0.72f, u)) { Platypus(body, a, b); Mitre(body); } break;
                 case "tanuki": if (!SculptedModel(body, "Models/Tanuki", a, b, 0.48f, u)) Tanuki(body, a, b); break;
                 case "band_of_troublemakers": if (!SculptedModel(body, "Models/BandOfTroublemakers", a, b, 0.64f, u)) { Tanuki(body, a, b); BellyDrum(body, b); } break;
-                case "skeleton": Mouse(body, Palette.BoneWhite, Palette.BoneWhite, a); break;
-                case "necromouser": Mouse(body, a, b, b); NecroHood(body, a, b); break;
-                case "the_bloat": Bloat(body, a, b); break;
-                case "the_vanguard": Mouse(body, a, b, b); Shield(body, b, new Vector3(-0.13f, 0.14f, -0.12f)); Helmet(body, b, 0.30f); break;
-                case "the_brute": Brute(body, a, b); break;
+                case "skeleton": if (!SculptedModel(body, "Models/Skeleton", a, b, 0.46f, u)) Mouse(body, Palette.BoneWhite, Palette.BoneWhite, a); break;
+                case "necromouser": if (!SculptedModel(body, "Models/Necromouser", a, b, 0.66f, u)) { Mouse(body, a, b, b); NecroHood(body, a, b); } break;
+                case "the_bloat": if (!SculptedModel(body, "Models/TheBloat", a, b, 0.52f, u)) Bloat(body, a, b); break;
+                case "the_vanguard":
+                    if (!SculptedModel(body, "Models/TheVanguard", a, b, 0.60f, u)) { Mouse(body, a, b, b); Shield(body, b, new Vector3(-0.13f, 0.14f, -0.12f)); Helmet(body, b, 0.30f); }
+                    break;
+                case "the_brute": if (!SculptedModel(body, "Models/TheBrute", a, b, 0.62f, u)) Brute(body, a, b); break;
                 case "squirrel": Squirrel(body, a, b); break;
                 case "pyromaniac": Squirrel(body, a, b); Flame(body, new Vector3(0f, 0.42f, -0.06f), 0.10f); break;
                 case "capybara": Capybara(body, a, b); break;
@@ -165,6 +167,7 @@ namespace CrittersOfCalamity.Visuals
                             : n.StartsWith("Cloth") ? Color.Lerp(a, Palette.InkAccent, 0.55f)
                             : n.StartsWith("Leather") ? Color.Lerp(Palette.InkAccent, Palette.WoodPlank, 0.5f)
                             : n.StartsWith("Bone") ? Palette.BoneWhite
+                            : n.StartsWith("Rot") ? new Color(0.62f, 0.66f, 0.55f)
                             : n.StartsWith("Robe") ? Palette.HolyWhite
                             : n.StartsWith("Bill") ? Color.Lerp(Palette.InkAccent, Palette.ShadowSlate, 0.4f)
                             : n.StartsWith("Iron") ? Palette.RuinStoneLight
