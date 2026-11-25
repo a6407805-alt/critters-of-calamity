@@ -22,7 +22,6 @@ namespace CrittersOfCalamity.Visuals
         // Unique Faction Overlay Tiles (Rulebook Part 3 Material 6)
         public static readonly Color MiasmaTile      = FromHex("#6B3FA0"); // Necromouser creeping purple miasma
         public static readonly Color FireTile        = FromHex("#E85D2A"); // Firestarting Squirrels blazing ember orange
-        public static readonly Color GlacierTile     = FromHex("#B8E3F8"); // Glacier Kingdom frost crystal blue
         public static readonly Color FallenLeafTile  = FromHex("#C97A36"); // Trouble-Making Tanukis autumn leaf amber
 
         // Accents & Resources
@@ -31,6 +30,26 @@ namespace CrittersOfCalamity.Visuals
         public static readonly Color AmbientSkyCool  = FromHex("#7892AB"); // Cool sky bounce
         public static readonly Color AmbientEquator  = FromHex("#8C8275"); // Neutral mid
         public static readonly Color AmbientGround   = FromHex("#42362B"); // Dark warm ground bounce
+
+        // Miniature & prop details (every color in the board traces back here)
+        public static readonly Color OceanDeep       = FromHex("#2E5D7B"); // Water ring around the Continent
+        public static readonly Color CanopyGreen     = FromHex("#3A6335"); // Pine canopy
+        public static readonly Color CanopyLight     = FromHex("#5C8A4A"); // Sunlit canopy tips
+        public static readonly Color RuinStoneLight  = FromHex("#B0B2B8"); // Carved pillar stone
+        public static readonly Color RuinStoneDark   = FromHex("#A2A5AC"); // Fallen arch stone
+        public static readonly Color LilyPad         = FromHex("#4F8F4A"); // Stream lily pads and reeds
+        public static readonly Color InkAccent       = FromHex("#2A2320"); // Eyes, noses, paw tips, masks
+        public static readonly Color BoneWhite       = FromHex("#E8E0CC"); // Skeletons, tusks, cotton tails
+        public static readonly Color EmberYellow     = FromHex("#F7C948"); // Flame tips
+        public static readonly Color CharredGround   = FromHex("#5A3A2A"); // Ground under Fire Tiles
+        public static readonly Color MiasmaHidden    = FromHex("#452766"); // Facedown Miasma Tile
+        public static readonly Color MiasmaMist      = FromHex("#9B7BC9"); // Miasma wisps
+        public static readonly Color TrapLeafRed     = FromHex("#9E2A2B"); // Flipped Trap Leaf
+        public static readonly Color LeafRust        = FromHex("#A4532A"); // Scattered leaves
+        public static readonly Color TarBlack        = FromHex("#1A1714"); // Tar Pit
+        public static readonly Color CarrotOrange    = FromHex("#E8822C"); // Gluttony carrot
+        public static readonly Color WoodPlank       = FromHex("#8A6440"); // Catapult frame
+        public static readonly Color HolyWhite       = FromHex("#F4EEDC"); // Holy Relic, Pope vestments
 
         public static Color FromHex(string hex)
         {

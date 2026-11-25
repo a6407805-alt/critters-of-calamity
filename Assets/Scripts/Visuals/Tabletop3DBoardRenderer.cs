@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -17,7 +18,7 @@ namespace CrittersOfCalamity.Visuals
     /// </summary>
     public class Tabletop3DBoardRenderer : MonoBehaviour
     {
-        public float HexRadius = 1.15f;
+        public float HexRadius = 1.9f;   // big enough for 12 units, 2 tokens and a building on one tile
         public float TileThickness = 0.25f;
 
         public HexCoord? SelectedCoord = null;
@@ -36,12 +37,13 @@ namespace CrittersOfCalamity.Visuals
         private Material _baseUrpMat;
         private Dictionary<Color, Material> _matCache = new Dictionary<Color, Material>();
         private Dictionary<HexCoord, GameObject> _tileObjects = new Dictionary<HexCoord, GameObject>();
+        private Dictionary<HexCoord, GameObject> _tileDecos = new Dictionary<HexCoord, GameObject>();
         private GameObject _selectionRing;
 
         // Camera orbit / pan state sized for the 108-tile Continent board
         private float _camYaw = 0f;
         private float _camPitch = 52f;
-        private float _camDistance = 21f;
+        private float _camDistance = 34f;
         private Vector3 _camPivot = Vector3.zero;
 
         public void BindEngine(CrittersGameEngine engine)
@@ -60,14 +62,14 @@ namespace CrittersOfCalamity.Visuals
         public void FocusCameraOnCoord(HexCoord coord, float targetDistance = 13f)
         {
             _camPivot = coord.ToWorldPosition(HexRadius);
-            _camDistance = Mathf.Clamp(targetDistance, 6f, 38f);
+            _camDistance = Mathf.Clamp(targetDistance * K, 6f * K, 38f * K);
         }
 
         public void ResetCameraToOverview()
         {
             _camPivot = Vector3.zero;
             _camPitch = 53f;
-            _camDistance = 21f;
+            _camDistance = 21f * K;
         }
 
         void Update()
@@ -139,7 +141,7 @@ namespace CrittersOfCalamity.Visuals
             {
                 Vector3 forward = Quaternion.Euler(0f, _camYaw, 0f) * Vector3.forward;
                 Vector3 right = Quaternion.Euler(0f, _camYaw, 0f) * Vector3.right;
-                float panSpeed = Mathf.Lerp(9f, 20f, (_camDistance - 6f) / 32f);
+                float panSpeed = Mathf.Lerp(9f, 20f, (_camDistance / K - 6f) / 32f) * K;
 
                 if (kb.wKey.isPressed || kb.upArrowKey.isPressed) _camPivot += forward * (panSpeed * dt);
                 if (kb.sKey.isPressed || kb.downArrowKey.isPressed) _camPivot -= forward * (panSpeed * dt);
@@ -163,7 +165,7 @@ namespace CrittersOfCalamity.Visuals
                     Vector2 delta = mouse.delta.ReadValue();
                     Vector3 forward = Quaternion.Euler(0f, _camYaw, 0f) * Vector3.forward;
                     Vector3 right = Quaternion.Euler(0f, _camYaw, 0f) * Vector3.right;
-                    _camPivot -= (right * delta.x + forward * delta.y) * 0.03f;
+                    _camPivot -= (right * delta.x + forward * delta.y) * 0.03f * K;
                 }
 
                 bool pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
@@ -172,13 +174,13 @@ namespace CrittersOfCalamity.Visuals
                     float scroll = mouse.scroll.ReadValue().y;
                     if (Mathf.Abs(scroll) > 0.01f)
                     {
-                        _camDistance = Mathf.Clamp(_camDistance - Mathf.Sign(scroll) * 1.6f, 6f, 38f);
+                        _camDistance = Mathf.Clamp(_camDistance - Mathf.Sign(scroll) * 1.6f * K, 6f * K, 38f * K);
                     }
                 }
             }
 
-            _camPivot.x = Mathf.Clamp(_camPivot.x, -18f, 18f);
-            _camPivot.z = Mathf.Clamp(_camPivot.z, -18f, 18f);
+            _camPivot.x = Mathf.Clamp(_camPivot.x, -18f * K, 18f * K);
+            _camPivot.z = Mathf.Clamp(_camPivot.z, -18f * K, 18f * K);
 
             Quaternion rot = Quaternion.Euler(_camPitch, _camYaw, 0f);
             cam.transform.position = _camPivot - (rot * Vector3.forward * _camDistance);
@@ -260,6 +262,9 @@ namespace CrittersOfCalamity.Visuals
             return mat;
         }
 
+        /// <summary>How much bigger tiles are than the original 1.15 board (environment and camera scale with it).</summary>
+        private float K => HexRadius / 1.15f;
+
         private void BuildStaticTableAndHexGrid()
         {
             if (_boardRoot != null)
@@ -268,115 +273,165 @@ namespace CrittersOfCalamity.Visuals
             _boardRoot = new GameObject("TabletopBoard3D").transform;
             _boardRoot.SetParent(transform, false);
             _tileObjects.Clear();
+            _tileDecos.Clear();
+            CritterModels.Mat = GetMaterial;
 
-            // 1. Carved Oak Tabletop, 0-30 Authority Score Track Rim, and Ocean Water around the Continent (Part 1 Line 20 & Part 2 Line 43)
+            // 1. Carved oak tabletop, brown border rim and the dark blue water ring around the Continent
             var table = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Destroy(table.GetComponent<Collider>());
             table.name = "AnankianOakTable";
             table.transform.SetParent(_boardRoot, false);
             table.transform.localPosition = new Vector3(0f, -0.38f, 0f);
-            table.transform.localScale = new Vector3(36f, 0.25f, 36f);
+            table.transform.localScale = new Vector3(36f * K, 0.25f, 36f * K);
             table.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.TableOak, 0.4f);
 
-            var scoreTrackRim = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(scoreTrackRim.GetComponent<Collider>());
-            scoreTrackRim.name = "AuthorityScoreTrack0To30";
-            scoreTrackRim.transform.SetParent(_boardRoot, false);
-            scoreTrackRim.transform.localPosition = new Vector3(0f, -0.10f, 0f);
-            scoreTrackRim.transform.localScale = new Vector3(28.5f, 0.06f, 28.5f);
-            scoreTrackRim.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.ParchmentMap, 0.3f);
+            var rim = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Destroy(rim.GetComponent<Collider>());
+            rim.name = "BoardBorder";
+            rim.transform.SetParent(_boardRoot, false);
+            rim.transform.localPosition = new Vector3(0f, -0.10f, 0f);
+            rim.transform.localScale = new Vector3(28.5f * K, 0.06f, 28.5f * K);
+            rim.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.ParchmentMap, 0.3f);
 
             var oceanWater = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Destroy(oceanWater.GetComponent<Collider>());
             oceanWater.name = "SurroundingWater";
             oceanWater.transform.SetParent(_boardRoot, false);
             oceanWater.transform.localPosition = new Vector3(0f, -0.04f, 0f);
-            oceanWater.transform.localScale = new Vector3(26.2f, 0.05f, 26.2f);
-            oceanWater.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.FromHex("#2E5D7B"), 0.8f);
+            oceanWater.transform.localScale = new Vector3(26.2f * K, 0.05f, 26.2f * K);
+            oceanWater.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.OceanDeep, 0.8f);
 
-            // (Authority is shown under each player's name in the HUD, not on the board border.)
-
-            // 2. Selection Highlight Ring
+            // 2. Selection ring
             _selectionRing = new GameObject("HexSelectionRing");
             _selectionRing.transform.SetParent(_boardRoot, false);
-            var ringFilter = _selectionRing.AddComponent<MeshFilter>();
-            ringFilter.sharedMesh = CreateHexPrismMesh(HexRadius * 1.02f, 0.055f);
-            var ringRenderer = _selectionRing.AddComponent<MeshRenderer>();
-            ringRenderer.sharedMaterial = GetMaterial(Palette.AuthorityGold, 0.8f);
+            _selectionRing.AddComponent<MeshFilter>().sharedMesh = CreateHexPrismMesh(HexRadius * 1.02f, 0.055f);
+            _selectionRing.AddComponent<MeshRenderer>().sharedMaterial = GetMaterial(Palette.AuthorityGold, 0.8f);
             _selectionRing.SetActive(false);
 
-            // 3. Build 3D Hex Tiles for the 108-Tile Continent
+            // 3. The 108 tiles. Terrain props sit in a "Deco" child so a faction tile can replace the whole look.
             foreach (var kvp in _engine.Board)
             {
                 var coord = kvp.Key;
                 var tileState = kvp.Value;
-                Vector3 worldPos = coord.ToWorldPosition(HexRadius);
 
                 var hexGo = new GameObject($"Hex_{coord.q}_{coord.r}");
                 hexGo.transform.SetParent(_boardRoot, false);
-                hexGo.transform.localPosition = worldPos;
+                hexGo.transform.localPosition = coord.ToWorldPosition(HexRadius);
 
                 var relay = hexGo.AddComponent<HexTileClickRelay>();
                 relay.Coord = coord;
                 relay.BoardRenderer = this;
+                hexGo.AddComponent<MeshFilter>().sharedMesh = _hexCylinderMesh;
+                hexGo.AddComponent<MeshRenderer>().sharedMaterial = GetTerrainMaterial(tileState.BaseTerrain);
+                hexGo.AddComponent<MeshCollider>().sharedMesh = _hexCylinderMesh;
 
-                var mf = hexGo.AddComponent<MeshFilter>();
-                mf.sharedMesh = _hexCylinderMesh;
-
-                var mr = hexGo.AddComponent<MeshRenderer>();
-                mr.sharedMaterial = GetTerrainMaterial(tileState.BaseTerrain);
-
-                var mc = hexGo.AddComponent<MeshCollider>();
-                mc.sharedMesh = _hexCylinderMesh;
-
-                CreateTerrainDecorations(hexGo.transform, tileState.BaseTerrain);
+                var deco = new GameObject("Deco").transform;
+                deco.SetParent(hexGo.transform, false);
+                CreateTerrainDecorations(deco, tileState.BaseTerrain);
                 _tileObjects[coord] = hexGo;
+                _tileDecos[coord] = deco.gameObject;
             }
         }
 
-        private void CreateTerrainDecorations(Transform tileParent, TileTerrainType terrain)
+        // Tile layout (pointy-top hex, tips toward +Z/back and -Z/front, camera looks from the front):
+        // building at the back tip, two token spots either side of it, units in faction blocks across the front,
+        // terrain props in the left/right back corners. Room for 12 units (two full factions), 2 tokens and a building.
+        private Vector3 BuildingSpot => new Vector3(0f, 0f, 0.55f * K);
+        private Vector3 TokenSpot(int i) => new Vector3((i == 0 ? -0.43f : 0.43f) * K, 0f, 0.26f * K);
+        private Vector3[] PropSpots => new[] { new Vector3(-0.66f * K, 0f, 0.48f * K), new Vector3(0.66f * K, 0f, 0.48f * K) };
+
+        private Transform Prop(Transform parent, PrimitiveType type, Vector3 pos, Vector3 scale, Vector3 euler, Color c, float smooth = 0.35f)
         {
-            if (terrain == TileTerrainType.Forest)
-            {
-                Vector3[] treeOffsets = new Vector3[]
-                {
-                    new Vector3(-0.56f, TileThickness, 0.44f),
-                    new Vector3(0.58f, TileThickness, 0.38f)
-                };
-                foreach (var pos in treeOffsets)
-                {
-                    var trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                    Destroy(trunk.GetComponent<Collider>());
-                    trunk.transform.SetParent(tileParent, false);
-                    trunk.transform.localPosition = pos + new Vector3(0f, 0.08f, 0f);
-                    trunk.transform.localScale = new Vector3(0.07f, 0.08f, 0.07f);
-                    trunk.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.TableOak);
+            var go = GameObject.CreatePrimitive(type);
+            Destroy(go.GetComponent<Collider>());
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = pos;
+            go.transform.localScale = scale;
+            go.transform.localRotation = Quaternion.Euler(euler);
+            go.GetComponent<Renderer>().sharedMaterial = GetMaterial(c, smooth);
+            return go.transform;
+        }
 
-                    var canopy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                    Destroy(canopy.GetComponent<Collider>());
-                    canopy.transform.SetParent(tileParent, false);
-                    canopy.transform.localPosition = pos + new Vector3(0f, 0.22f, 0f);
-                    canopy.transform.localScale = new Vector3(0.22f, 0.28f, 0.22f);
-                    canopy.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.FromHex("#3A6335"));
+        private void CreateTerrainDecorations(Transform parent, TileTerrainType terrain)
+        {
+            float top = TileThickness;
+            int i = 0;
+            foreach (var spot in PropSpots)
+            {
+                var at = spot + new Vector3(0f, top, 0f);
+                if (terrain == TileTerrainType.Forest)
+                {
+                    // small pine: trunk + two tapered canopy tiers, tilted a few degrees
+                    float tilt = i == 0 ? 4f : -5f;
+                    Prop(parent, PrimitiveType.Cylinder, at + new Vector3(0f, 0.08f, 0f), new Vector3(0.07f, 0.08f, 0.07f), new Vector3(0f, 0f, tilt), Palette.TableOak);
+                    Prop(parent, PrimitiveType.Sphere, at + new Vector3(0f, 0.24f, 0f), new Vector3(0.26f, 0.22f, 0.26f), new Vector3(0f, 0f, tilt), Palette.CanopyGreen);
+                    Prop(parent, PrimitiveType.Sphere, at + new Vector3(0f, 0.38f, 0f), new Vector3(0.17f, 0.18f, 0.17f), new Vector3(0f, 0f, tilt), Palette.CanopyLight);
                 }
+                else if (terrain == TileTerrainType.Ruin)
+                {
+                    if (i == 0)
+                        Prop(parent, PrimitiveType.Cylinder, at + new Vector3(0f, 0.16f, 0f), new Vector3(0.14f, 0.16f, 0.14f), new Vector3(6f, 15f, -5f), Palette.RuinStoneLight);
+                    else
+                        Prop(parent, PrimitiveType.Cube, at + new Vector3(0f, 0.07f, 0f), new Vector3(0.24f, 0.12f, 0.12f), new Vector3(0f, 25f, 8f), Palette.RuinStoneDark);
+                }
+                else if (terrain == TileTerrainType.Stream)
+                {
+                    Prop(parent, PrimitiveType.Cylinder, at + new Vector3(0f, 0.01f, 0f), new Vector3(0.18f, 0.008f, 0.18f), Vector3.zero, Palette.LilyPad, 0.6f);
+                    Prop(parent, PrimitiveType.Cube, at + new Vector3(0.12f, 0.09f, 0.05f), new Vector3(0.02f, 0.18f, 0.02f), new Vector3(0f, 0f, 8f), Palette.LilyPad);
+                }
+                i++;
             }
-            else if (terrain == TileTerrainType.Ruin)
-            {
-                var col = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                Destroy(col.GetComponent<Collider>());
-                col.transform.SetParent(tileParent, false);
-                col.transform.localPosition = new Vector3(-0.55f, TileThickness + 0.14f, -0.4f);
-                col.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
-                col.transform.localRotation = Quaternion.Euler(6f, 15f, -5f);
-                col.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.FromHex("#B0B2B8"));
+        }
 
-                var arch = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                Destroy(arch.GetComponent<Collider>());
-                arch.transform.SetParent(tileParent, false);
-                arch.transform.localPosition = new Vector3(0.52f, TileThickness + 0.09f, -0.42f);
-                arch.transform.localScale = new Vector3(0.18f, 0.12f, 0.10f);
-                arch.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.FromHex("#A2A5AC"));
+        /// <summary>A faction tile replaces the tile it covers (Part 4): new top color, the old props hidden, its own props shown.</summary>
+        private void ApplyOverlayLook(HexTileState tile)
+        {
+            if (!_tileObjects.TryGetValue(tile.Coord, out var hexGo)) return;
+            bool overlay = tile.Overlay != FactionOverlayTileType.None;
+            hexGo.GetComponent<MeshRenderer>().sharedMaterial = overlay ? GetOverlayMaterial(tile.Overlay) : GetTerrainMaterial(tile.BaseTerrain);
+            if (_tileDecos.TryGetValue(tile.Coord, out var deco))
+                deco.SetActive(!overlay || tile.Overlay == FactionOverlayTileType.Miasma_Hidden);
+            if (!overlay) return;
+
+            var root = new GameObject($"FactionTile_{tile.Overlay}").transform;
+            root.SetParent(_piecesRoot, false);
+            root.localPosition = tile.Coord.ToWorldPosition(HexRadius) + new Vector3(0f, TileThickness, 0f);
+            float top = 0f;
+            int n = 0;
+            foreach (var spot in PropSpots)
+            {
+                var at = spot + new Vector3(0f, top, 0f);
+                switch (tile.Overlay)
+                {
+                    case FactionOverlayTileType.Fire:
+                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0f, 0.10f, 0f), new Vector3(0.20f, 0.22f, 0.20f), Vector3.zero, Palette.FireTile, 0.6f);
+                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0f, 0.24f, 0f), new Vector3(0.13f, 0.20f, 0.13f), Vector3.zero, Palette.CarrotOrange, 0.6f);
+                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0f, 0.36f, 0f), new Vector3(0.07f, 0.14f, 0.07f), Vector3.zero, Palette.EmberYellow, 0.7f);
+                        Prop(root, PrimitiveType.Cylinder, at + new Vector3(0.1f, 0.04f, 0.1f), new Vector3(0.05f, 0.08f, 0.05f), new Vector3(70f, 30f, 0f), Palette.InkAccent);
+                        break;
+                    case FactionOverlayTileType.FallenLeaf_Unflipped:
+                    case FactionOverlayTileType.FallenLeaf_Prank:
+                    case FactionOverlayTileType.FallenLeaf_Trap:
+                        for (int l = 0; l < 3; l++)
+                            Prop(root, PrimitiveType.Cube, at + new Vector3((l - 1) * 0.12f, 0.02f + l * 0.01f, (l % 2) * 0.09f),
+                                 new Vector3(0.14f, 0.01f, 0.08f), new Vector3(0f, n * 70f + l * 47f, l * 6f), l == 1 ? Palette.LeafRust : Palette.FallenLeafTile);
+                        if (tile.Overlay == FactionOverlayTileType.FallenLeaf_Trap && n == 0)
+                            for (int j = 0; j < 4; j++) // snapped trap jaws
+                                Prop(root, PrimitiveType.Cube, at + new Vector3((j - 1.5f) * 0.07f, 0.06f, -0.12f), new Vector3(0.03f, 0.09f, 0.03f), new Vector3(20f, 0f, 0f), Palette.InkAccent);
+                        break;
+                    case FactionOverlayTileType.Miasma_Revealed:
+                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0f, 0.14f, 0f), new Vector3(0.22f, 0.12f, 0.22f), Vector3.zero, Palette.MiasmaMist, 0.2f);
+                        Prop(root, PrimitiveType.Sphere, at + new Vector3(0.08f, 0.26f, 0.05f), new Vector3(0.13f, 0.08f, 0.13f), Vector3.zero, Palette.MiasmaMist, 0.2f);
+                        Prop(root, PrimitiveType.Cube, at + new Vector3(-0.05f, 0.05f, -0.08f), new Vector3(0.06f, 0.10f, 0.03f), new Vector3(0f, 20f, 6f), Palette.BoneWhite); // grave marker
+                        break;
+                    case FactionOverlayTileType.CapybaraStream:
+                        Prop(root, PrimitiveType.Cylinder, at + new Vector3(0f, 0.01f, 0f), new Vector3(0.18f, 0.008f, 0.18f), Vector3.zero, Palette.LilyPad, 0.6f);
+                        Prop(root, PrimitiveType.Cube, at + new Vector3(0.12f, 0.09f, 0.05f), new Vector3(0.02f, 0.18f, 0.02f), new Vector3(0f, 0f, 8f), Palette.LilyPad);
+                        break;
+                }
+                n++;
             }
+            TagPiece(root.gameObject, PieceKind.FactionTile, tile.Coord, new Vector3(0f, 0.03f, 0.45f * K), new Vector3(1.6f * K, 0.06f, 0.6f * K));
         }
 
         public void RebuildPieces()
@@ -387,6 +442,7 @@ namespace CrittersOfCalamity.Visuals
 
             _piecesRoot = new GameObject("TabletopPieces3D").transform;
             _piecesRoot.SetParent(transform, false);
+            CritterModels.Mat = GetMaterial;
 
             foreach (var kvp in _engine.Board)
             {
@@ -394,48 +450,46 @@ namespace CrittersOfCalamity.Visuals
                 var tile = kvp.Value;
                 Vector3 tileCenter = coord.ToWorldPosition(HexRadius) + new Vector3(0f, TileThickness, 0f);
 
-                // 1. Unique Faction Overlay Tile (Part 4 Line 98)
-                if (tile.Overlay != FactionOverlayTileType.None)
-                {
-                    var overlayGo = new GameObject($"Overlay_{tile.Overlay}");
-                    overlayGo.transform.SetParent(_piecesRoot, false);
-                    overlayGo.transform.localPosition = tileCenter + new Vector3(0f, 0.01f, 0f);
-                    var mf = overlayGo.AddComponent<MeshFilter>();
-                    mf.sharedMesh = CreateHexPrismMesh(HexRadius * 0.88f, 0.055f);
-                    var mr = overlayGo.AddComponent<MeshRenderer>();
-                    mr.sharedMaterial = GetOverlayMaterial(tile.Overlay);
-                    TagPiece(overlayGo, PieceKind.FactionTile, coord, new Vector3(0f, 0.03f, 0f), new Vector3(HexRadius * 1.4f, 0.06f, HexRadius * 1.4f));
-                    tileCenter.y += 0.055f;
-                }
+                // 1. Faction tile: replaces the tile's look (Part 4)
+                ApplyOverlayLook(tile);
 
-                // 2. Building (Max 1 per tile, Part 4 Line 97)
+                // 2. Building (max 1 per tile)
                 if (tile.Building != null)
                 {
                     var owner = _engine.Players[tile.Building.OwnerPlayerIndex];
-                    var bGo = CreateBuildingMiniature(tileCenter + new Vector3(0f, 0f, 0.36f), tile.Building, owner);
-                    TagPiece(bGo, PieceKind.Building, coord, new Vector3(0f, 0.25f, 0f), new Vector3(0.5f, 0.6f, 0.5f), building: tile.Building);
+                    var bGo = CreateBuildingMiniature(tileCenter + BuildingSpot, tile.Building, owner);
+                    TagPiece(bGo, PieceKind.Building, coord, new Vector3(0f, 0.25f, 0f), new Vector3(0.6f, 0.6f, 0.6f), building: tile.Building);
                 }
 
-                // 3. Tokens (Max 2 per tile, Part 4 Line 97)
-                for (int tIdx = 0; tIdx < tile.Tokens.Count; tIdx++)
+                // 3. Tokens (max 2 per tile)
+                for (int tIdx = 0; tIdx < tile.Tokens.Count && tIdx < 2; tIdx++)
                 {
                     var tk = tile.Tokens[tIdx];
-                    float xOff = (tIdx == 0) ? -0.45f : 0.45f;
-                    var tGo = CreateTokenMiniature(tileCenter + new Vector3(xOff, 0.03f, -0.36f), tk);
-                    TagPiece(tGo, PieceKind.Token, coord, Vector3.zero, new Vector3(1.2f, 6f, 1.2f), token: tk);
+                    var tGo = CreateTokenMiniature(tileCenter + TokenSpot(tIdx) + new Vector3(0f, 0.02f, 0f), tk);
+                    TagPiece(tGo, PieceKind.Token, coord, new Vector3(0f, 0.1f, 0f), new Vector3(0.5f, 0.3f, 0.5f), token: tk);
                 }
 
-                // 4. Units & Special Units (Max 6 per faction per tile, Part 10 Line 175)
-                int unitCount = tile.Units.Count;
-                for (int uIdx = 0; uIdx < unitCount; uIdx++)
+                // 4. Units: one block per faction across the front of the tile (up to 6 each; 12 fit side by side)
+                var owners = tile.Units.Select(x => x.OwnerPlayerIndex).Distinct().OrderBy(x => x).ToList();
+                int blocks = Mathf.Max(1, owners.Count);
+                float usable = 1.30f * K;                                   // tile width available for unit blocks
+                float blockW = usable / blocks;
+                float spacing = Mathf.Min(0.215f * K, blockW / 3f);
+                float unitScale = Mathf.Clamp(spacing / (0.215f * K), 0.6f, 1f) * K * 0.62f;
+                for (int bi = 0; bi < owners.Count; bi++)
                 {
-                    var u = tile.Units[uIdx];
-                    var owner = _engine.Players[u.OwnerPlayerIndex];
-                    float angle = (uIdx / (float)Mathf.Max(1, unitCount)) * Mathf.PI * 2f;
-                    float radius = unitCount == 1 ? 0f : 0.39f;
-                    Vector3 uPos = tileCenter + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius - 0.04f);
-                    var uGo = CreateCritterMiniature(uPos, u, owner, uIdx);
-                    TagPiece(uGo, PieceKind.Unit, coord, new Vector3(0f, 0.2f, 0f), new Vector3(0.32f, 0.45f, 0.32f), unit: u);
+                    var mine = tile.Units.Where(x => x.OwnerPlayerIndex == owners[bi])
+                                         .OrderByDescending(x => x.Definition.IsSpecialUnit).ToList();
+                    float bx = -usable * 0.5f + blockW * (bi + 0.5f);
+                    for (int ui = 0; ui < mine.Count; ui++)
+                    {
+                        int col = ui % 3, row = ui / 3;
+                        var pos = tileCenter + new Vector3(bx + (col - 1) * spacing, 0f, (-0.02f - row * 0.26f) * K);
+                        if (mine.Count == 1) pos.x = tileCenter.x + bx;
+                        var u = mine[ui];
+                        var uGo = CreateCritterMiniature(pos, u, _engine.Players[u.OwnerPlayerIndex], ui, unitScale);
+                        TagPiece(uGo, PieceKind.Unit, coord, new Vector3(0f, 0.25f, 0f), new Vector3(0.4f, 0.55f, 0.4f), unit: u);
+                    }
                 }
             }
         }
@@ -445,111 +499,123 @@ namespace CrittersOfCalamity.Visuals
             var root = new GameObject($"Building_{b.Type}");
             root.transform.SetParent(_piecesRoot, false);
             root.transform.localPosition = pos;
+            root.transform.localScale = Vector3.one * K * 0.75f;
+            var t = root.transform;
+            Color a = owner.Faction.PrimaryColor, s = owner.Faction.SecondaryColor;
+            Prop(t, PrimitiveType.Cylinder, new Vector3(0f, 0.02f, 0f), new Vector3(0.46f, 0.02f, 0.46f), Vector3.zero, a, 0.5f); // owner base
 
-            var basePlinth = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(basePlinth.GetComponent<Collider>());
-            basePlinth.transform.SetParent(root.transform, false);
-            basePlinth.transform.localPosition = new Vector3(0f, 0.06f, 0f);
-            basePlinth.transform.localScale = new Vector3(0.40f, 0.06f, 0.40f);
-            basePlinth.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.SecondaryColor);
-
-            var tower = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            Destroy(tower.GetComponent<Collider>());
-            tower.transform.SetParent(root.transform, false);
-            tower.transform.localPosition = new Vector3(0f, 0.22f, 0f);
-            tower.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
-            tower.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
-            tower.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.PrimaryColor);
+            switch (b.Type)
+            {
+                case BuildingType.WarParty: // war tent with banner
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.14f, 0f), new Vector3(0.26f, 0.26f, 0.26f), new Vector3(45f, 0f, 0f), s);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0.14f, 0.30f, 0.05f), new Vector3(0.015f, 0.34f, 0.015f), Vector3.zero, Palette.WoodPlank);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0.20f, 0.40f, 0.05f), new Vector3(0.12f, 0.08f, 0.01f), Vector3.zero, a);
+                    break;
+                case BuildingType.Burrow: // earth mound with a dark hole
+                    Prop(t, PrimitiveType.Sphere, new Vector3(0f, 0.08f, 0f), new Vector3(0.40f, 0.20f, 0.36f), Vector3.zero, Palette.TableOak);
+                    Prop(t, PrimitiveType.Sphere, new Vector3(0f, 0.09f, -0.15f), new Vector3(0.16f, 0.12f, 0.06f), Vector3.zero, Palette.InkAccent);
+                    break;
+                case BuildingType.TheCitadel: // white tower with gold dome
+                    Prop(t, PrimitiveType.Cylinder, new Vector3(0f, 0.22f, 0f), new Vector3(0.22f, 0.22f, 0.22f), Vector3.zero, Palette.HolyWhite);
+                    Prop(t, PrimitiveType.Sphere, new Vector3(0f, 0.46f, 0f), new Vector3(0.24f, 0.18f, 0.24f), Vector3.zero, Palette.AuthorityGold, 0.8f);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.60f, 0f), new Vector3(0.02f, 0.12f, 0.02f), Vector3.zero, Palette.AuthorityGold);
+                    break;
+                case BuildingType.Shrine: // little torii gate
+                    Prop(t, PrimitiveType.Cube, new Vector3(-0.12f, 0.17f, 0f), new Vector3(0.035f, 0.32f, 0.035f), Vector3.zero, a);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0.12f, 0.17f, 0f), new Vector3(0.035f, 0.32f, 0.035f), Vector3.zero, a);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.34f, 0f), new Vector3(0.36f, 0.035f, 0.05f), Vector3.zero, a);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.28f, 0f), new Vector3(0.28f, 0.025f, 0.04f), Vector3.zero, Palette.InkAccent);
+                    break;
+                case BuildingType.Bunker: // log dugout
+                    for (int i = 0; i < 3; i++)
+                        Prop(t, PrimitiveType.Capsule, new Vector3(0f, 0.05f + i * 0.07f, 0f), new Vector3(0.07f, 0.17f - i * 0.03f, 0.07f), new Vector3(0f, 0f, 90f), Palette.WoodPlank);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.09f, -0.06f), new Vector3(0.10f, 0.06f, 0.02f), Vector3.zero, Palette.InkAccent);
+                    break;
+                case BuildingType.Wallow: // muddy pool with a reed
+                    Prop(t, PrimitiveType.Cylinder, new Vector3(0f, 0.035f, 0f), new Vector3(0.38f, 0.02f, 0.30f), Vector3.zero, Palette.RiverTile, 0.85f);
+                    Prop(t, PrimitiveType.Cylinder, new Vector3(0f, 0.03f, 0f), new Vector3(0.42f, 0.015f, 0.34f), Vector3.zero, Palette.TableOak);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0.16f, 0.14f, 0.06f), new Vector3(0.02f, 0.22f, 0.02f), new Vector3(0f, 0f, 8f), Palette.LilyPad);
+                    break;
+                case BuildingType.PricklyThicket: // bramble of thorny stalks
+                    for (int i = 0; i < 5; i++)
+                    {
+                        float ang = i * 72f;
+                        var dir = Quaternion.Euler(0f, ang, 0f) * Vector3.forward * 0.09f;
+                        Prop(t, PrimitiveType.Capsule, new Vector3(dir.x, 0.13f, dir.z), new Vector3(0.035f, 0.12f, 0.035f), new Vector3(dir.z * 160f, ang, -dir.x * 160f), s);
+                    }
+                    Prop(t, PrimitiveType.Sphere, new Vector3(0f, 0.22f, 0f), Vector3.one * 0.08f, Vector3.zero, a);
+                    break;
+                default:
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.18f, 0f), new Vector3(0.25f, 0.25f, 0.25f), new Vector3(0f, 45f, 0f), a);
+                    break;
+            }
             return root;
         }
 
+        /// <summary>Tokens are discs with a raised emblem so each kind reads at a glance.</summary>
         private GameObject CreateTokenMiniature(Vector3 pos, TokenInstance tk)
         {
-            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(disc.GetComponent<Collider>());
-            disc.name = $"Token_{tk.Type}";
-            disc.transform.SetParent(_piecesRoot, false);
-            disc.transform.localPosition = pos;
-            disc.transform.localScale = new Vector3(0.25f, 0.035f, 0.25f);
+            var root = new GameObject($"Token_{tk.Type}");
+            root.transform.SetParent(_piecesRoot, false);
+            root.transform.localPosition = pos;
+            root.transform.localScale = Vector3.one * K * 0.72f;
+            var t = root.transform;
+            var owner = _engine.Players[tk.OwnerPlayerIndex];
+            Color own = owner.Faction.PrimaryColor;
 
-            Color tkColor = tk.Type == TokenType.Coin ? Palette.AuthorityGold :
-                            tk.Type == TokenType.TarPit ? Palette.ShadowSlate :
-                            _engine.Players[tk.OwnerPlayerIndex].Faction.SecondaryColor;
-            disc.GetComponent<Renderer>().sharedMaterial = GetMaterial(tkColor, 0.65f);
-            return disc;
+            Color disc = tk.Type == TokenType.Coin ? Palette.AuthorityGold
+                       : tk.Type == TokenType.TarPit ? Palette.TarBlack
+                       : tk.Type == TokenType.HolyRelic ? Palette.HolyWhite
+                       : owner.Faction.SecondaryColor;
+            Prop(t, PrimitiveType.Cylinder, Vector3.zero + new Vector3(0f, 0.02f, 0f), new Vector3(0.30f, 0.02f, 0.30f), Vector3.zero, disc, 0.65f);
+            Prop(t, PrimitiveType.Cylinder, new Vector3(0f, 0.01f, 0f), new Vector3(0.33f, 0.012f, 0.33f), Vector3.zero, own, 0.5f); // owner ring
+
+            switch (tk.Type)
+            {
+                case TokenType.SupplyLine: // forward chevron
+                    Prop(t, PrimitiveType.Cube, new Vector3(-0.04f, 0.05f, 0f), new Vector3(0.14f, 0.03f, 0.035f), new Vector3(0f, 45f, 0f), own);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0.04f, 0.05f, 0f), new Vector3(0.14f, 0.03f, 0.035f), new Vector3(0f, -45f, 0f), own);
+                    break;
+                case TokenType.Gluttony: // carrot
+                    Prop(t, PrimitiveType.Capsule, new Vector3(0f, 0.06f, 0f), new Vector3(0.05f, 0.08f, 0.05f), new Vector3(90f, 30f, 0f), Palette.CarrotOrange);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0.05f, 0.07f, 0.08f), new Vector3(0.02f, 0.02f, 0.06f), new Vector3(0f, 40f, 0f), Palette.LilyPad);
+                    break;
+                case TokenType.Catapult: // frame, arm and cup; pips show uses left
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.05f, 0f), new Vector3(0.16f, 0.04f, 0.10f), Vector3.zero, Palette.WoodPlank);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.11f, 0.02f), new Vector3(0.025f, 0.025f, 0.18f), new Vector3(-30f, 0f, 0f), Palette.WoodPlank);
+                    Prop(t, PrimitiveType.Sphere, new Vector3(0f, 0.16f, 0.09f), Vector3.one * 0.05f, Vector3.zero, Palette.InkAccent);
+                    for (int i = 0; i < tk.RemainingUses; i++)
+                        Prop(t, PrimitiveType.Sphere, new Vector3(-0.09f + i * 0.05f, 0.05f, -0.10f), Vector3.one * 0.035f, Vector3.zero, Palette.AuthorityGold);
+                    break;
+                case TokenType.HolyRelic: // gold cross
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.09f, 0f), new Vector3(0.03f, 0.13f, 0.03f), Vector3.zero, Palette.AuthorityGold, 0.85f);
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.11f, 0f), new Vector3(0.09f, 0.03f, 0.03f), Vector3.zero, Palette.AuthorityGold, 0.85f);
+                    break;
+                case TokenType.Coin: // gold coin with a square hole
+                    Prop(t, PrimitiveType.Cube, new Vector3(0f, 0.035f, 0f), new Vector3(0.07f, 0.01f, 0.07f), new Vector3(0f, 45f, 0f), Palette.InkAccent);
+                    break;
+                case TokenType.TarPit: // glossy bubbles
+                    Prop(t, PrimitiveType.Sphere, new Vector3(-0.04f, 0.04f, 0.02f), new Vector3(0.09f, 0.05f, 0.09f), Vector3.zero, Palette.TarBlack, 0.95f);
+                    Prop(t, PrimitiveType.Sphere, new Vector3(0.05f, 0.04f, -0.03f), new Vector3(0.06f, 0.04f, 0.06f), Vector3.zero, Palette.TarBlack, 0.95f);
+                    break;
+            }
+            return root;
         }
 
-        private GameObject CreateCritterMiniature(Vector3 pos, UnitInstance u, PlayerState owner, int idxOnTile)
+        private GameObject CreateCritterMiniature(Vector3 pos, UnitInstance u, PlayerState owner, int idxOnTile, float scale)
         {
             var root = new GameObject($"Unit_{u.Definition.Name}");
             root.transform.SetParent(_piecesRoot, false);
             root.transform.localPosition = pos;
-
-            float scaleMult = u.Definition.IsSpecialUnit ? 1.42f : 0.94f;
-            root.transform.localScale = Vector3.one * scaleMult;
+            root.transform.localScale = Vector3.one * scale * (u.Definition.IsSpecialUnit ? 1.35f : 1f);
 
             var anim = root.AddComponent<IdleCritterAnimator>();
             anim.BaseY = pos.y;
             anim.PhaseOffset = idxOnTile * 1.3f + pos.x;
+            anim.BobAmplitude = 0.012f * scale;  // gentle breathing bob (~2% of height)
+            anim.BobFrequency = 3.8f;            // ~0.6 Hz
 
-            Color pedestalCol = u.Definition.IsSpecialUnit ? Palette.AuthorityGold : Palette.ShadowSlate;
-            var pedestal = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(pedestal.GetComponent<Collider>());
-            pedestal.transform.SetParent(root.transform, false);
-            pedestal.transform.localPosition = new Vector3(0f, 0.03f, 0f);
-            pedestal.transform.localScale = new Vector3(0.26f, 0.03f, 0.26f);
-            pedestal.GetComponent<Renderer>().sharedMaterial = GetMaterial(pedestalCol, 0.6f);
-
-            // Body
-            var body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Destroy(body.GetComponent<Collider>());
-            body.transform.SetParent(root.transform, false);
-            body.transform.localPosition = new Vector3(0f, 0.16f, 0f);
-            body.transform.localScale = new Vector3(0.20f, 0.22f, 0.24f);
-            body.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.PrimaryColor);
-
-            // Chest / Belly
-            var chest = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Destroy(chest.GetComponent<Collider>());
-            chest.transform.SetParent(root.transform, false);
-            chest.transform.localPosition = new Vector3(0f, 0.15f, 0.05f);
-            chest.transform.localScale = new Vector3(0.14f, 0.15f, 0.15f);
-            chest.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.SecondaryColor);
-
-            // Head
-            var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Destroy(head.GetComponent<Collider>());
-            head.transform.SetParent(root.transform, false);
-            head.transform.localPosition = new Vector3(0f, 0.31f, 0.03f);
-            head.transform.localScale = new Vector3(0.16f, 0.15f, 0.16f);
-            head.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.PrimaryColor);
-
-            // Exaggerated Silhouette Ears / Crest
-            for (int side = -1; side <= 1; side += 2)
-            {
-                var ear = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                Destroy(ear.GetComponent<Collider>());
-                ear.transform.SetParent(root.transform, false);
-                ear.transform.localPosition = new Vector3(side * 0.055f, 0.42f, 0.02f);
-                ear.transform.localScale = new Vector3(0.045f, 0.11f, 0.03f);
-                ear.transform.localRotation = Quaternion.Euler(0f, 0f, -side * 14f);
-                ear.GetComponent<Renderer>().sharedMaterial = GetMaterial(owner.Faction.SecondaryColor);
-            }
-
-            // Part 11 Line 185: Tracking damage on Special Units & multi-HP units
-            if (u.Definition.IsSpecialUnit || u.MaxHP > 1)
-            {
-                for (int hp = 0; hp < u.CurrentHP; hp++)
-                {
-                    var pip = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    Destroy(pip.GetComponent<Collider>());
-                    pip.transform.SetParent(root.transform, false);
-                    float xOffset = (hp - (u.CurrentHP - 1) * 0.5f) * 0.08f;
-                    pip.transform.localPosition = new Vector3(xOffset, 0.53f, 0f);
-                    pip.transform.localScale = Vector3.one * 0.055f;
-                    pip.GetComponent<Renderer>().sharedMaterial = GetMaterial(Palette.AuthorityGold, 0.8f);
-                }
-            }
+            CritterModels.Build(root.transform, u, owner);
             return root;
         }
 
@@ -568,22 +634,14 @@ namespace CrittersOfCalamity.Visuals
         {
             switch (overlay)
             {
-                case FactionOverlayTileType.Miasma_Hidden:
-                    return GetMaterial(Palette.FromHex("#452766"), 0.35f);
-                case FactionOverlayTileType.Miasma_Revealed:
-                    return GetMaterial(Palette.MiasmaTile, 0.55f);
-                case FactionOverlayTileType.Fire:
-                    return GetMaterial(Palette.FireTile, 0.6f);
-                case FactionOverlayTileType.FallenLeaf_Unflipped:
-                    return GetMaterial(Palette.FallenLeafTile, 0.3f);
-                case FactionOverlayTileType.FallenLeaf_Trap:
-                    return GetMaterial(Palette.FromHex("#9E2A2B"), 0.4f);
-                case FactionOverlayTileType.FallenLeaf_Prank:
-                    return GetMaterial(Palette.AuthorityGold, 0.7f);
-                case FactionOverlayTileType.CapybaraStream:
-                    return GetMaterial(Palette.RiverTile, 0.75f);
-                default:
-                    return GetMaterial(Palette.ParchmentMap);
+                case FactionOverlayTileType.Miasma_Hidden:        return GetMaterial(Palette.MiasmaHidden, 0.35f);
+                case FactionOverlayTileType.Miasma_Revealed:      return GetMaterial(Palette.MiasmaTile, 0.55f);
+                case FactionOverlayTileType.Fire:                 return GetMaterial(Palette.CharredGround, 0.3f);
+                case FactionOverlayTileType.FallenLeaf_Unflipped: return GetMaterial(Palette.FallenLeafTile, 0.3f);
+                case FactionOverlayTileType.FallenLeaf_Trap:      return GetMaterial(Palette.TrapLeafRed, 0.4f);
+                case FactionOverlayTileType.FallenLeaf_Prank:     return GetMaterial(Palette.AuthorityGold, 0.5f);
+                case FactionOverlayTileType.CapybaraStream:       return GetMaterial(Palette.RiverTile, 0.75f);
+                default:                                          return GetMaterial(Palette.ParchmentMap);
             }
         }
 
