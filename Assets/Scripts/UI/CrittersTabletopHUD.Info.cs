@@ -338,7 +338,7 @@ namespace CrittersOfCalamity.UI
 
         void Update()
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
             DebugHotkeys();
 #endif
             if (_boardRenderer == null || _tooltipRoot == null) return;

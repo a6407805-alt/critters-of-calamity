@@ -1,4 +1,4 @@
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -14,6 +14,7 @@ namespace CrittersOfCalamity.UI
     ///   F9  start a local 4-player game and play through dice, faction picks and setup automatically
     ///   F10 play 40 random legal actions (moves, abilities, recruits, battles...) to fill the board
     ///   F11 point the camera at the busiest tile (press again for the next busiest)
+    ///   F8  hide or show the whole HUD (for clean screenshots of the board)
     /// Everything goes through the normal command path, exactly like button clicks.
     /// </summary>
     public partial class CrittersTabletopHUD
@@ -32,6 +33,7 @@ namespace CrittersOfCalamity.UI
             if (kb.f9Key.wasPressedThisFrame) StartCoroutine(DebugAutoStart());
             else if (kb.f10Key.wasPressedThisFrame) StartCoroutine(DebugRandomActions(40));
             else if (kb.f11Key.wasPressedThisFrame) DebugFocusBusiestTile();
+            else if (kb.f8Key.wasPressedThisFrame && _canvas != null) _canvas.enabled = !_canvas.enabled;
         }
 
         private IEnumerator DebugAutoStart()
