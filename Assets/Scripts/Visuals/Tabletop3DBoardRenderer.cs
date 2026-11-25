@@ -44,7 +44,9 @@ namespace CrittersOfCalamity.Visuals
         private float _camYaw = 0f;
         private float _camPitch = 52f;
         private float _camDistance = 34f;
-        private Vector3 _camPivot = Vector3.zero;
+        private Vector3 _camPivot = new Vector3(6f, 0f, 0f);
+        /// <summary>The overview looks a little right of center so the board sits in the space left of the Turn Guide column.</summary>
+        private Vector3 OverviewPivot => new Vector3(3.6f * K, 0f, 0f);
 
         public void BindEngine(CrittersGameEngine engine)
         {
@@ -57,6 +59,7 @@ namespace CrittersOfCalamity.Visuals
             EnsureHexMeshAndBaseMaterial();
             BuildStaticTableAndHexGrid();
             RebuildPieces();
+            ResetCameraToOverview();
         }
 
         public void FocusCameraOnCoord(HexCoord coord, float targetDistance = 13f)
@@ -67,7 +70,7 @@ namespace CrittersOfCalamity.Visuals
 
         public void ResetCameraToOverview()
         {
-            _camPivot = Vector3.zero;
+            _camPivot = OverviewPivot;
             _camPitch = 53f;
             _camDistance = 21f * K;
         }
