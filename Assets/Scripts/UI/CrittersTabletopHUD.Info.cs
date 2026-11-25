@@ -338,6 +338,16 @@ namespace CrittersOfCalamity.UI
 
         void Update()
         {
+            // TEMPORARY click diagnostic: logs what UI is under the mouse on each click (remove after testing).
+            var m = UnityEngine.InputSystem.Mouse.current;
+            if (m != null && m.leftButton.wasPressedThisFrame && UnityEngine.EventSystems.EventSystem.current != null)
+            {
+                var data = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current) { position = m.position.ReadValue() };
+                var hits = new List<UnityEngine.EventSystems.RaycastResult>();
+                UnityEngine.EventSystems.EventSystem.current.RaycastAll(data, hits);
+                Debug.Log($"[ClickDiag] pos={data.position} screen={Screen.width}x{Screen.height} hits: {string.Join(" | ", hits.Select(h => h.gameObject.name + "(" + h.gameObject.transform.parent?.name + ")"))}");
+            }
+
             if (_boardRenderer == null || _tooltipRoot == null) return;
             var hovered = _boardRenderer.HoveredPiece;
             bool inGame = _engine != null && _engine.Players.Count > 0;
