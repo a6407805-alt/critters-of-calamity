@@ -338,6 +338,9 @@ namespace CrittersOfCalamity.UI
 
         void Update()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DebugHotkeys();
+#endif
             if (_boardRenderer == null || _tooltipRoot == null) return;
             var hovered = _boardRenderer.HoveredPiece;
             bool inGame = _engine != null && _engine.Players.Count > 0;
