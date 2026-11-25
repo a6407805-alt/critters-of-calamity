@@ -77,7 +77,7 @@ namespace CrittersOfCalamity.Visuals
             switch (u.Definition.Id)
             {
                 case "warband": Boar(body, a, b, false); break;
-                case "curly_tail": if (!SculptedModel(body, "Models/CurlyTail", a, b, 0.58f, u)) Boar(body, a, b, true); break;
+                case "curly_tail": if (!SculptedModel(body, "Models/CurlyTail", a, b, 0.66f, u)) Boar(body, a, b, true); break;
                 case "millions": Rabbit(body, a, b); break;
                 case "king_of_the_millions": Rabbit(body, a, b); Crown(body, new Vector3(0f, 0.43f, -0.07f), 0.13f); break;
                 case "pilgrim": Platypus(body, a, b); Hood(body, b); break;
