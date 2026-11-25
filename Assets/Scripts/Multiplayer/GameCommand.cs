@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using CrittersOfCalamity.Engine;
 using CrittersOfCalamity.Model;
 
@@ -17,14 +19,15 @@ namespace CrittersOfCalamity.Multiplayer
         Unearth = 6,         // A = Excavation Area slot
         Assemble = 7,        // A = hand index
         Disassemble = 8,     // A = hand index
-        FactionAction = 9,   // A = action index, B,C = selected tile (q,r)
+        FactionAction = 9,   // S = ability id[#option], A,B = first tile (q,r), C,D = second tile (q,r)
         CraftEquipment = 10, // S = equipment id
         BuyTradedGood = 11,  // A = stall slot
         BattleDecision = 12, // A = 1 use / 0 pass
         RollDice = 13,       // pre-game roll for pick order / turn order (the seat rolls for itself)
         PickFaction = 14,    // A = FactionId
         SetupPlace = 15,     // A,B = tile (q,r) for your starting pieces (click again to un-pick)
-        UseTableRelic = 16   // S = relic id, A = target player, B = target Table card index
+        UseTableRelic = 16,  // S = relic id, A = target player, B = target Table card index
+        ResolveChoice = 17   // A = option (-1 tile, -2 skip), B,C = tile (q,r)
     }
 
     /// <summary>
@@ -46,7 +49,14 @@ namespace CrittersOfCalamity.Multiplayer
         public static GameCommand Battle(HexCoord at) => Make(GameCommandType.Battle, at.q, at.r);
         public static GameCommand Loot(HexCoord at) => Make(GameCommandType.Loot, at.q, at.r);
         public static GameCommand CraftBuilding(HexCoord at) => Make(GameCommandType.CraftBuilding, at.q, at.r);
-        public static GameCommand FactionAction(int index, HexCoord at) => Make(GameCommandType.FactionAction, index, at.q, at.r);
+        public static GameCommand Ability(string id, HexCoord t1, HexCoord t2, int option = 0) =>
+            Make(GameCommandType.FactionAction, t1.q, t1.r, t2.q, t2.r, option > 0 ? id + "#" + option : id);
+        public static GameCommand Choice(int option, HexCoord tile) => Make(GameCommandType.ResolveChoice, option, tile.q, tile.r);
+        public static GameCommand MoveUnits(HexCoord from, HexCoord to, IEnumerable<string> unitIds) =>
+            Make(GameCommandType.Move, from.q, from.r, to.q, to.r, unitIds == null ? "" : string.Join(",", unitIds));
+        public static GameCommand Disassemble(int index, bool fromTable, int woodOrStone) =>
+            Make(GameCommandType.Disassemble, index, fromTable ? 1 : 0, woodOrStone);
+        public static GameCommand BattleAgainst(HexCoord at, int defenderSeat) => Make(GameCommandType.Battle, at.q, at.r, defenderSeat + 1);
         public static GameCommand CraftEquipment(string equipmentId) => Make(GameCommandType.CraftEquipment, s: equipmentId);
         public static GameCommand BattleDecision(bool use) => Make(GameCommandType.BattleDecision, use ? 1 : 0);
         public static GameCommand RollDice() => Make(GameCommandType.RollDice);
@@ -95,6 +105,8 @@ namespace CrittersOfCalamity.Multiplayer
         {
             if (cmd.Type == GameCommandType.BattleDecision)
                 return engine.PendingBattle?.CurrentDecision != null ? engine.PendingBattle.CurrentDecision.PlayerIndex : -1;
+            if (cmd.Type == GameCommandType.ResolveChoice)
+                return engine.PendingChoice != null ? engine.PendingChoice.PlayerIndex : -1;
             if (cmd.Type == GameCommandType.PickFaction)
                 return engine.CurrentFactionPicker;
             if (cmd.Type == GameCommandType.SetupPlace)
@@ -147,7 +159,7 @@ namespace CrittersOfCalamity.Multiplayer
             if (required < 0) { reason = "There's nothing to decide right now."; return false; }
             if (cmd.Seat != required)
             {
-                reason = cmd.Type == GameCommandType.BattleDecision
+                reason = cmd.Type == GameCommandType.BattleDecision || cmd.Type == GameCommandType.ResolveChoice
                     ? $"Waiting on {engine.Players[required].DisplayName} to decide."
                     : $"It's {engine.Players[required].DisplayName}'s turn.";
                 return false;
@@ -157,6 +169,14 @@ namespace CrittersOfCalamity.Multiplayer
                 reason = "Finish the current battle first.";
                 return false;
             }
+            if (engine.IsChoicePending && cmd.Type != GameCommandType.ResolveChoice)
+            {
+                reason = $"Waiting on {engine.Players[engine.PendingChoice.PlayerIndex].DisplayName}: {engine.PendingChoice.Title}.";
+                return false;
+            }
+            if (cmd.Type == GameCommandType.ResolveChoice &&
+                !engine.CanResolveChoice(cmd.Seat, cmd.A, new HexCoord(cmd.B, cmd.C), out reason))
+                return false;
             return true;
         }
 
@@ -169,9 +189,10 @@ namespace CrittersOfCalamity.Multiplayer
                     engine.AdvancePhase();
                     return true;
                 case GameCommandType.Move:
-                    return engine.TryMoveUnits(new HexCoord(cmd.A, cmd.B), new HexCoord(cmd.C, cmd.D));
+                    return engine.TryMoveUnits(new HexCoord(cmd.A, cmd.B), new HexCoord(cmd.C, cmd.D),
+                        string.IsNullOrEmpty(cmd.S) ? null : cmd.S.Split(','));
                 case GameCommandType.Battle:
-                    engine.TryBattleOnTile(new HexCoord(cmd.A, cmd.B));
+                    engine.TryBattleOnTile(new HexCoord(cmd.A, cmd.B), cmd.C - 1); // C = defender seat + 1 (0 = first enemy found)
                     return true; // results (or the pause for a decision) show up through engine events
                 case GameCommandType.Loot:
                     return engine.TryLootTile(new HexCoord(cmd.A, cmd.B));
@@ -184,9 +205,14 @@ namespace CrittersOfCalamity.Multiplayer
                 case GameCommandType.Assemble:
                     return engine.TryAssembleRelicFromHand(cmd.A);
                 case GameCommandType.Disassemble:
-                    return engine.TryDisassembleRelicFromHand(cmd.A);
+                    return engine.TryDisassembleRelicFromHand(cmd.A, cmd.B == 1, cmd.C);
                 case GameCommandType.FactionAction:
-                    return engine.ExecuteSpecificFactionAction(cmd.A, new HexCoord(cmd.B, cmd.C));
+                {
+                    string id = cmd.S ?? "";
+                    int option = 0, hash = id.IndexOf('#');
+                    if (hash >= 0) { int.TryParse(id.Substring(hash + 1), out option); id = id.Substring(0, hash); }
+                    return engine.UseFactionAbility(id, new HexCoord(cmd.A, cmd.B), new HexCoord(cmd.C, cmd.D), option);
+                }
                 case GameCommandType.CraftEquipment:
                     return engine.TryCraftAndEquipFactionEquipment(cmd.S);
                 case GameCommandType.BuyTradedGood:
@@ -202,6 +228,8 @@ namespace CrittersOfCalamity.Multiplayer
                     return engine.PlaceSetupTile(cmd.Seat, new HexCoord(cmd.A, cmd.B));
                 case GameCommandType.UseTableRelic:
                     return engine.UseTableRelic(cmd.Seat, cmd.S, cmd.A, cmd.B);
+                case GameCommandType.ResolveChoice:
+                    return engine.ResolveChoice(cmd.Seat, cmd.A, new HexCoord(cmd.B, cmd.C));
             }
             return false;
         }
@@ -228,6 +256,8 @@ namespace CrittersOfCalamity.Multiplayer
                 Mix(engine.SetupCursor);
                 Mix(engine.SetupPicks.Count);
                 Mix(engine.ExtraBattleActions);
+                Mix(engine.IsChoicePending ? 1000 + engine.PendingChoice.PlayerIndex * 37 + engine.PendingChoice.Options.Count * 7 + engine.PendingChoice.Tiles.Count : 0);
+                foreach (var kv in engine.AbilityUses.OrderBy(k => k.Key, StringComparer.Ordinal)) { Mix(kv.Key.Length); Mix(kv.Value); }
                 Mix(engine.PreGameSeatsToRoll.Count);
                 foreach (var hist in engine.PreGameRollHistory)
                     foreach (var roll in hist) Mix(roll);
@@ -239,6 +269,8 @@ namespace CrittersOfCalamity.Multiplayer
                     foreach (var r in p.ResourcePile) Mix((int)r);
                     Mix(p.RelicHand.Count);
                     Mix(p.TableRelics.Count);
+                    Mix(p.PlatypusFaith); Mix(p.PlatyPopeLevel); Mix(p.CrusadeTurnsRemaining);
+                    Mix(p.BriaredFlowerThorns); Mix(p.NecromouserCauldronDeadCount);
                 }
                 foreach (var tile in engine.Board.Values)
                 {

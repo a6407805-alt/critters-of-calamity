@@ -21,6 +21,8 @@ namespace CrittersOfCalamity.Engine
         public bool CannotMoveThisTurn;
         public bool HasMovedThisTurn;
         public int TrapLeafTurnsRemaining; // Trap Leaf immobilizes for rest of turn + next turn (Part 17 Faction 4)
+        public bool IsTrapped;             // held by a Trap Leaf (a debuff): can't move or be moved by effects
+        public bool CleansedThisTurn;      // Papacy Level 2: debuffs removed (ignores Gluttony this turn)
         public List<EquipmentDef> EquippedItems = new List<EquipmentDef>();
 
         public int EffectiveAttack => Mathf.Max(0, Definition.BaseAttack + BonusAttack + EquippedItems.Sum(e => e.BonusAttack));
@@ -100,7 +102,8 @@ namespace CrittersOfCalamity.Engine
         // Faction 3: Platypus Papacy Meters & State
         public int PlatypusFaith = 0;           // 0-5
         public int PlatyPopeLevel = 0;          // 0-5
-        public int CrusadeTurnsRemaining = 0;
+        public int CrusadeTurnsRemaining = 0;   // Crusade turns still to come
+        public bool CrusadeActive = false;      // this turn is a Crusade turn ("for your next 2 turns")
         public bool PlatyPopeOnBoard = true;
 
         // Faction 4: Trouble Making Tanukis
@@ -703,80 +706,67 @@ namespace CrittersOfCalamity.Engine
             UsedDisassembleThisTurn = false;
             MainPhaseActionsRemaining = 3;
             ExtraBattleActions = 0;
+            AbilityUses.Clear();
             p.CurlyTailWonBattleThisTurn = false;
             p.ThistleBarrageUsesThisTurn = 0;
             p.TraderUsedPeddlingThisTurn = false;
+
+            // Crusade: "for your next 2 turns" (Part 17 Faction 3)
+            p.CrusadeActive = p.CrusadeTurnsRemaining > 0;
+            if (p.CrusadeActive)
+            {
+                p.CrusadeTurnsRemaining--;
+                Log($"{p.DisplayName} is on Crusade this turn ({p.CrusadeTurnsRemaining} Crusade turn(s) left after this one).");
+            }
 
             foreach (var tile in Board.Values)
             {
                 tile.LootedThisTurn = false;
                 foreach (var u in tile.Units)
                 {
-                    if (u.OwnerPlayerIndex == playerIndex)
+                    if (u.OwnerPlayerIndex != playerIndex) continue;
+                    u.CleansedThisTurn = false;
+                    if (u.TrapLeafTurnsRemaining > 0)
                     {
-                        if (u.TrapLeafTurnsRemaining > 0)
-                        {
-                            u.TrapLeafTurnsRemaining--;
-                            u.CannotMoveThisTurn = true;
-                        }
-                        else
-                        {
-                            u.CannotMoveThisTurn = false;
-                        }
-                        u.HasMovedThisTurn = false;
+                        u.TrapLeafTurnsRemaining--;   // Trap Leaf: still stuck during this, their next turn
+                        u.CannotMoveThisTurn = true;
+                        u.IsTrapped = true;
                     }
+                    else
+                    {
+                        u.CannotMoveThisTurn = false;
+                        u.IsTrapped = false;
+                    }
+                    u.HasMovedThisTurn = false;
                 }
             }
 
-            // 1. Draw Phase (Part 6 Line 130)
+            // 1. Draw Phase (Part 6). Prophetic Vision happens first, before the normal draw.
             CurrentPhase = TurnPhase.DrawPhase;
+            Log($"{p.DisplayName} began turn {TurnNumber} (1. Draw Phase).");
+            if (!OfferPropheticVision(p))
+                FinishDrawPhaseDraw(p);
+            OnStateChanged?.Invoke();
+        }
 
-            // Platypus Papacy Prophetic Vision (Part 17 Faction 3 Line 542): Look at top 3 Relic cards, add 1 to Hand, put 2 on bottom
-            if (p.Faction.Id == FactionId.PlatypusPapacy && RelicDeck.Count >= 3)
-            {
-                var c1 = DrawRelicCard();
-                var c2 = DrawRelicCard();
-                var c3 = DrawRelicCard();
-                p.RelicHand.Add(c1);
-                RelicDeck.Insert(0, c2);
-                RelicDeck.Insert(0, c3);
-                Log($"{p.DisplayName} used Prophetic Vision -> Added '{c1.Name}' to Hand and placed 2 cards on the bottom of the Relic Deck.");
-            }
-
+        /// <summary>The normal Draw phase draw. The phase stays open only if the player has Draw-phase abilities to use.</summary>
+        private void FinishDrawPhaseDraw(PlayerState p)
+        {
             var drawn = DrawRelicCard();
             if (drawn != null)
             {
                 p.RelicHand.Add(drawn);
-                Log($"{p.DisplayName} began Turn {TurnNumber} (1. Draw Phase) and drew '{drawn.Name}'.");
+                Log($"{p.DisplayName} drew '{drawn.Name}'.");
             }
-
-            // Trouble Making Tanukis Draw Phase: Rustling in the Trees (Line 619)
-            if (p.Faction.Id == FactionId.TroubleMakingTanukis)
-            {
-                var shrineTile = Board.Values.FirstOrDefault(t => t.Building != null && t.Building.Type == BuildingType.Shrine && t.Building.OwnerPlayerIndex == p.PlayerIndex);
-                if (shrineTile != null)
-                {
-                    var leafTarget = shrineTile.Coord.GetNeighbors()
-                        .FirstOrDefault(n => Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Forest &&
-                                             Board[n].Overlay == FactionOverlayTileType.None &&
-                                             !Board[n].Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex));
-                    if (Board.ContainsKey(leafTarget))
-                    {
-                        PlaceOverlayTile(leafTarget, FactionOverlayTileType.FallenLeaf_Unflipped, p.PlayerIndex);
-                        Log($"{p.DisplayName} triggered Rustling in the Trees -> Placed Fallen Leaves Tile at {leafTarget}.");
-                    }
-                }
-            }
-
-            // Transition into 2. Excavation Phase
-            EnterExcavationPhase(p);
-            OnStateChanged?.Invoke();
+            if (!HasDrawPhaseOptions(p))
+                EnterExcavationPhase(p);
         }
 
         public void AdvancePhase()
         {
             if (CurrentPhase == TurnPhase.GameOver) return;
             if (PendingBattle != null) return; // finish the battle first
+            if (PendingChoice != null) return; // answer the choice first
 
             var p = Players[CurrentTurnPlayerIndex];
             if (CurrentPhase == TurnPhase.DrawPhase)
@@ -869,8 +859,20 @@ namespace CrittersOfCalamity.Engine
         private void ExecuteEndPhase()
         {
             CurrentPhase = TurnPhase.EndPhase;
+            Log($"{Players[CurrentTurnPlayerIndex].DisplayName} entered 4. End Phase.");
+            _endPhaseIgniteAsked = false;
+            ContinueEndPhase();
+        }
+
+        /// <summary>The End phase, resumable after the Squirrels' Ignite choice.</summary>
+        private void ContinueEndPhase()
+        {
             var p = Players[CurrentTurnPlayerIndex];
-            Log($"{p.DisplayName} entered 4. End Phase.");
+            if (!_endPhaseIgniteAsked)
+            {
+                _endPhaseIgniteAsked = true;
+                if (OfferIgnite(p)) { OnStateChanged?.Invoke(); return; }
+            }
 
             // Step 1: Resolve "start of your end phase" effects (Part 6 Line 152)
             if (p.Faction.Id == FactionId.HordeOfTheMillions)
@@ -936,7 +938,6 @@ namespace CrittersOfCalamity.Engine
                 case FactionId.PlatypusPapacy:
                     int holyRelics = Board.Values.Sum(t => t.Tokens.Count(tk => tk.Type == TokenType.HolyRelic && tk.OwnerPlayerIndex == p.PlayerIndex));
                     p.PlatypusFaith = Mathf.Min(5, p.PlatypusFaith + holyRelics);
-                    if (p.CrusadeTurnsRemaining > 0) p.CrusadeTurnsRemaining--;
                     break;
 
                 case FactionId.Necromouser:
@@ -1022,106 +1023,119 @@ namespace CrittersOfCalamity.Engine
 
         private void ResolveSquirrelsFireTilesEndPhase(PlayerState squirrelPlayer)
         {
-            // Part 17 Faction 6 Lines 767-777: 5-step Fire Tile End Phase Resolution
+            // Part 17 Faction 6: resolve each Fire Tile one at a time, steps 1-5 in order.
+            int me = squirrelPlayer.PlayerIndex;
             int totalEnemyDamageDealt = 0;
             int totalEnemiesDrivenOut = 0;
-            var damagedThisEndPhase = new HashSet<string>();
-            var drivenOutThisEndPhase = new HashSet<string>();
-            var fireTiles = Board.Values.Where(t => t.Overlay == FactionOverlayTileType.Fire).ToList();
+            var damagedThisEndPhase = new HashSet<string>();   // end phase damage cap: 1 HP per unit (Tar Pit extra excepted)
+            var drivenOutThisEndPhase = new HashSet<string>(); // a unit is driven out at most once per end phase
+            var fireTiles = Board.Values.Where(t => t.Overlay == FactionOverlayTileType.Fire && t.OverlayOwnerPlayerIndex == me).ToList();
+
+            Func<UnitInstance, HexTileState, bool> Protected = (u, at) =>
+                u.Definition.Id == "pyromaniac" ||                                         // Affinity
+                (u.Faction == FactionId.FirestartingSquirrels && at.Building != null && at.Building.Type == BuildingType.Bunker);
+
+            // Deals 1 HP from the resolution, respecting the cap; returns true if dealt
+            Func<UnitInstance, HexTileState, bool, bool> Burn = (u, at, tarPitExtra) =>
+            {
+                if (Protected(u, at)) return false;
+                int dmg = 0;
+                if (!damagedThisEndPhase.Contains(u.InstanceId)) { dmg++; damagedThisEndPhase.Add(u.InstanceId); }
+                if (tarPitExtra) dmg++;
+                if (dmg == 0) return false;
+                u.CurrentHP -= dmg;
+                if (u.OwnerPlayerIndex != me) totalEnemyDamageDealt += dmg;
+                if (u.CurrentHP <= 0) RemoveUnitFromBoard(at, u, u.OwnerPlayerIndex == me ? -1 : me);
+                return true;
+            };
 
             foreach (var ft in fireTiles)
             {
-                bool hasBunker = ft.Building != null && ft.Building.Type == BuildingType.Bunker;
-                // 1. Clear Squirrels (unless protected by Bunker)
-                if (!hasBunker)
+                if (ft.Overlay != FactionOverlayTileType.Fire) continue; // put out earlier this phase
+                bool tarPit = ft.Tokens.Any(tk => tk.Type == TokenType.TarPit);
+
+                // 1. Clear Squirrels: return your Squirrels here to supply for 1 Charcoal each (Bunker squirrels are untouched)
+                foreach (var sq in ft.Units.Where(u => u.OwnerPlayerIndex == me && u.Definition.Id == "squirrel" && !Protected(u, ft)).ToList())
                 {
-                    var squirrelsHere = ft.Units.Where(u => u.Definition.Id == "squirrel").ToList();
-                    foreach (var sq in squirrelsHere)
-                    {
-                        ft.Units.Remove(sq);
-                        squirrelPlayer.ResourcePile.Add(ResourceType.Charcoal);
-                    }
+                    ft.Units.Remove(sq);
+                    squirrelPlayer.ResourcePile.Add(ResourceType.Charcoal);
                 }
 
-                // 2. Burn structures (roll 2d6; on doubles remove every building/token on every Fire Tile except Tar Pit)
-                if (ft.Building != null && ft.Building.Type != BuildingType.Bunker)
+                // 2. Burn structures: remove 1 building or token (never Tar Pits, never Coins); doubles burn every one on every Fire Tile
+                if (ft.Building != null && !(ft.Building.Type == BuildingType.Bunker && ft.Building.OwnerPlayerIndex == me))
                     ft.Building = null;
+                else
+                {
+                    var tk = ft.Tokens.FirstOrDefault(k => k.Type != TokenType.TarPit && k.Type != TokenType.Coin && k.OwnerPlayerIndex != me);
+                    if (tk != null) ft.Tokens.Remove(tk);
+                }
                 Roll2D6(out int d1, out int d2);
                 if (d1 == d2)
                 {
+                    Log($"Fire rolled doubles ({d1}-{d2}): every building and token on every Fire Tile burns.");
                     foreach (var allFt in Board.Values.Where(t => t.Overlay == FactionOverlayTileType.Fire))
                     {
-                        if (allFt.Building != null && allFt.Building.Type != BuildingType.Bunker)
+                        if (allFt.Building != null && !(allFt.Building.Type == BuildingType.Bunker && allFt.Building.OwnerPlayerIndex == me))
                             allFt.Building = null;
-                        allFt.Tokens.RemoveAll(tk => tk.Type != TokenType.TarPit);
+                        allFt.Tokens.RemoveAll(k => k.Type != TokenType.TarPit && k.Type != TokenType.Coin);
                     }
                 }
 
-                // 3. Drive out enemies
-                var enemies = ft.Units.Where(u => u.OwnerPlayerIndex != squirrelPlayer.PlayerIndex).ToList();
-                HexCoord? lastDrivenForest = null;
-                foreach (var enemy in enemies)
+                // 3. Drive out enemies: each goes to an adjacent tile (the controller would pick; the game picks the
+                //    least harmful: no Fire, then stream/ruin over forest). Forest costs 1 HP (cap applies).
+                var drivenForest = new List<HexCoord>();
+                foreach (var enemy in ft.Units.Where(u => u.OwnerPlayerIndex != me).ToList())
                 {
-                    if (drivenOutThisEndPhase.Contains(enemy.InstanceId)) continue;
-                    var adjCoord = ft.Coord.GetNeighbors().FirstOrDefault(n => Board.ContainsKey(n) && CanAddUnitToTile(Board[n], enemy.OwnerPlayerIndex));
-                    if (Board.ContainsKey(adjCoord))
+                    if (drivenOutThisEndPhase.Contains(enemy.InstanceId) || Protected(enemy, ft) || !CanBeMovedByEnemyEffect(enemy))
                     {
-                        ft.Units.Remove(enemy);
-                        var destTile = Board[adjCoord];
-                        destTile.Units.Add(enemy);
-                        drivenOutThisEndPhase.Add(enemy.InstanceId);
-                        totalEnemiesDrivenOut++;
-
-                        if (destTile.EffectiveTerrain == TileTerrainType.Forest)
-                        {
-                            lastDrivenForest = adjCoord;
-                            int dmg = 0;
-                            if (!damagedThisEndPhase.Contains(enemy.InstanceId))
-                            {
-                                dmg += 1;
-                                damagedThisEndPhase.Add(enemy.InstanceId);
-                            }
-                            if (ft.Tokens.Any(tk => tk.Type == TokenType.TarPit))
-                                dmg += 1; // Tar Pit extra 1HP bypasses end phase damage cap (Line 761)
-
-                            if (dmg > 0)
-                            {
-                                enemy.CurrentHP -= dmg;
-                                totalEnemyDamageDealt += dmg;
-                                if (enemy.CurrentHP <= 0)
-                                    RemoveUnitFromBoard(destTile, enemy, squirrelPlayer.PlayerIndex);
-                            }
-                        }
+                        // already driven out once (or can't be moved): still burns where it stands if on forest
+                        if (ft.EffectiveTerrain == TileTerrainType.Forest) Burn(enemy, ft, false);
+                        continue;
+                    }
+                    var dest = Neighbors(ft).Where(n => CanAddUnitToTile(n, enemy.OwnerPlayerIndex))
+                        .OrderBy(n => n.Overlay == FactionOverlayTileType.Fire ? 1 : 0)
+                        .ThenBy(n => n.EffectiveTerrain == TileTerrainType.Forest ? 1 : 0)
+                        .FirstOrDefault();
+                    if (dest == null) continue; // no legal tile: stays (Part 10)
+                    RelocateUnits(ft, dest, new List<UnitInstance> { enemy });
+                    drivenOutThisEndPhase.Add(enemy.InstanceId);
+                    totalEnemiesDrivenOut++;
+                    if (dest.Overlay == FactionOverlayTileType.Fire)
+                        ApplyFireEntryDamage(dest, new List<UnitInstance> { enemy }, me); // entering another Fire Tile
+                    if (dest.EffectiveTerrain == TileTerrainType.Forest)
+                    {
+                        if (!drivenForest.Contains(dest.Coord)) drivenForest.Add(dest.Coord);
+                        if (dest.Units.Contains(enemy)) Burn(enemy, dest, tarPit);
                     }
                 }
 
-                // 4. Spread: Roll 1d6; on 1 or 6 place a new Fire Tile on a forest tile holding a driven-out enemy
+                // 4. Spread: on a 1 or 6, a new Fire Tile goes on a forest tile holding a driven-out enemy and deals 1 HP to every unit there
                 int spreadRoll = RollD6();
-                if ((spreadRoll == 1 || spreadRoll == 6) && lastDrivenForest.HasValue)
+                if ((spreadRoll == 1 || spreadRoll == 6) && FireTilesLeft(squirrelPlayer) > 0)
                 {
-                    var spreadTile = Board[lastDrivenForest.Value];
-                    if (spreadTile.Overlay == FactionOverlayTileType.None)
+                    var spread = drivenForest.Select(c => Board[c]).FirstOrDefault(t => CanTakeForestOverlay(t) && HasEnemyUnits(t, me));
+                    if (spread != null)
                     {
-                        spreadTile.Overlay = FactionOverlayTileType.Fire;
-                        spreadTile.OverlayOwnerPlayerIndex = squirrelPlayer.PlayerIndex;
-                        Log($"Fire Tile Spread (rolled {spreadRoll}) to {spreadTile.Coord}!");
+                        PlaceFireTile(spread, me);
+                        Log($"The fire spread (rolled {spreadRoll}) to {spread.Coord}!");
+                        foreach (var u in spread.Units.ToList()) Burn(u, spread, false);
                     }
                 }
 
-                // 5. Burn the Deck
+                // 5. Burn the Deck: burn the top resource card; Gold gains 1 Authority
                 if (ResourceDeck.Count > 0)
                 {
                     var burned = DrawRandomResourceCard();
                     BurnedResources.Add(burned);
                     if (burned == ResourceType.Gold)
-                        AwardAuthority(squirrelPlayer.PlayerIndex, 1, "Burned Gold from Resource Deck");
+                        AwardAuthority(me, 1, "Burned Gold from the resource deck");
                 }
             }
 
-            // Flames of War scoring: +1 Auth per 2HP dealt, +1 Auth per 2 enemies moved (max 4)
+            // Flames of War: 1 Authority per 2 HP dealt to enemies and per 2 enemy units moved (max 4 per End phase)
             int flamesAuth = Mathf.Min(4, (totalEnemyDamageDealt / 2) + (totalEnemiesDrivenOut / 2));
             if (flamesAuth > 0)
-                AwardAuthority(squirrelPlayer.PlayerIndex, flamesAuth, "Flames of War");
+                AwardAuthority(me, flamesAuth, "Flames of War");
         }
 
         // =====================================================================
@@ -1287,7 +1301,7 @@ namespace CrittersOfCalamity.Engine
 
         public bool TryUnearthRelic(int excavationIndex)
         {
-            if (CurrentPhase != TurnPhase.ExcavationPhase || UsedUnearthThisTurn) return false;
+            if (CurrentPhase != TurnPhase.ExcavationPhase || UsedUnearthThisTurn || PendingChoice != null) return false;
             if (excavationIndex < 0 || excavationIndex >= ExcavationArea.Count) return false;
 
             var p = Players[CurrentTurnPlayerIndex];
@@ -1305,7 +1319,7 @@ namespace CrittersOfCalamity.Engine
 
         public bool TryAssembleRelicFromHand(int handIndex)
         {
-            if (CurrentPhase != TurnPhase.ExcavationPhase || UsedAssembleThisTurn) return false;
+            if (CurrentPhase != TurnPhase.ExcavationPhase || UsedAssembleThisTurn || PendingChoice != null) return false;
             var p = Players[CurrentTurnPlayerIndex];
             if (handIndex < 0 || handIndex >= p.RelicHand.Count) return false;
 
@@ -1321,118 +1335,163 @@ namespace CrittersOfCalamity.Engine
             return true;
         }
 
-        public bool TryDisassembleRelicFromHand(int handIndex)
+        /// <summary>
+        /// Disassemble (Part 6): discard 1 relic card from your Hand (or your Table, fromTable) for its listed resources.
+        /// Looted Vault lets you pick Wood (woodOrStone 0) or Stone (1).
+        /// </summary>
+        public bool TryDisassembleRelicFromHand(int handIndex, bool fromTable = false, int woodOrStone = 0)
         {
-            if (CurrentPhase != TurnPhase.ExcavationPhase || UsedDisassembleThisTurn) return false;
+            if (CurrentPhase != TurnPhase.ExcavationPhase || UsedDisassembleThisTurn || PendingChoice != null) return false;
             var p = Players[CurrentTurnPlayerIndex];
-            if (handIndex < 0 || handIndex >= p.RelicHand.Count) return false;
+            var pile = fromTable ? p.TableRelics : p.RelicHand;
+            if (handIndex < 0 || handIndex >= pile.Count) return false;
 
-            var card = p.RelicHand[handIndex];
-            p.RelicHand.RemoveAt(handIndex);
+            var card = pile[handIndex];
+            pile.RemoveAt(handIndex);
             RelicDiscardPile.Add(card);
             UsedDisassembleThisTurn = true;
 
-            GrantResourceCostToPile(p, card.DisassembleGain);
-            Log($"{p.DisplayName} Disassembled '{card.Name}' for {card.DisassembleGain}.");
+            if (card.DisassembleChoiceWoodOrStone)
+            {
+                var r = woodOrStone == 1 ? ResourceType.Stone : ResourceType.Wood;
+                GainSpecificResourceFromDeck(p, r);
+                Log($"{p.DisplayName} disassembled '{card.Name}' for 1 {r}.");
+            }
+            else
+            {
+                GrantResourceCostToPile(p, card.DisassembleGain);
+                Log($"{p.DisplayName} disassembled '{card.Name}' for {card.DisassembleGain}.");
+            }
             OnStateChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>Part 8 Comeback Mechanic: no units and no buildings on the board (not the Papacy).</summary>
+        public bool QualifiesForComeback(PlayerState p) =>
+            p.Faction.Id != FactionId.PlatypusPapacy && p.Faction.PrimaryBuilding != BuildingType.None &&
+            !Board.Values.Any(t => t.Units.Any(u => u.OwnerPlayerIndex == p.PlayerIndex) ||
+                                   (t.Building != null && t.Building.OwnerPlayerIndex == p.PlayerIndex));
+
+        /// <summary>Whether the player's recruitment building can be crafted on this tile now (Part 4 and Part 17 "Building").</summary>
+        public bool IsLegalBuildingTile(PlayerState p, HexTileState t, out string reason)
+        {
+            reason = null;
+            var type = p.Faction.PrimaryBuilding;
+            int me = p.PlayerIndex;
+            if (type == BuildingType.None) { reason = "Your faction has no building."; return false; }
+            if (t.Building != null) { reason = "That tile already has a building."; return false; }
+            if (t.Overlay == FactionOverlayTileType.Fire) { reason = "Nothing but Tar Pits can go on a Fire Tile."; return false; }
+            if (BuildingSupplyLeft(p, type) <= 0) { reason = $"All your {type} pieces are on the board."; return false; }
+
+            bool forest = t.EffectiveTerrain == TileTerrainType.Forest;
+            bool stream = t.EffectiveTerrain == TileTerrainType.Stream;
+            if (stream && type != BuildingType.TheCitadel && type != BuildingType.Wallow) { reason = "Buildings can't go on stream tiles."; return false; }
+
+            if (QualifiesForComeback(p))
+            {
+                // Comeback: the building and 2 basic units go on a forest tile with no enemy units
+                if (!forest) { reason = "Comeback: pick a forest tile."; return false; }
+                if (HasEnemyUnits(t, me)) { reason = "Comeback: the tile must have no enemy units."; return false; }
+                return true;
+            }
+
+            switch (type)
+            {
+                case BuildingType.WarParty:
+                    if (!Has(t, p, "warband")) { reason = "A War Party goes on a tile with a Warband unit."; return false; }
+                    return true;
+                case BuildingType.Burrow:
+                    if (!Has(t, p, "millions")) { reason = "A Burrow goes on a tile with a Millions unit."; return false; }
+                    if (t.Units.Count(u => u.OwnerPlayerIndex != me) >= 3) { reason = "That tile has 3 or more enemy units."; return false; }
+                    return true;
+                case BuildingType.TheCitadel:
+                    if (!forest && !stream) { reason = "The Citadel goes on a forest or stream tile."; return false; }
+                    if (HasEnemyUnits(t, me)) { reason = "The Citadel needs a tile with no enemy units."; return false; }
+                    return true;
+                case BuildingType.Shrine:
+                    if (!forest) { reason = "A Shrine goes on a forest or Fallen Leaves tile."; return false; }
+                    if (!Has(t, p, "tanuki") && !Has(t, p, "band_of_troublemakers")) { reason = "A Shrine needs a Tanuki or the Band on the tile."; return false; }
+                    return true;
+                case BuildingType.Bunker:
+                    if (!Has(t, p, "squirrel")) { reason = "A Bunker goes on a tile with a Squirrel."; return false; }
+                    return true;
+                case BuildingType.Wallow:
+                    if (stream && Has(t, p, "capybara")) return true;
+                    if (forest && Neighbors(t).Any(n => n.EffectiveTerrain == TileTerrainType.Stream && Has(n, p, "capybara"))) return true;
+                    reason = "A Wallow goes on a stream tile with a Capybara, or a forest tile next to one.";
+                    return false;
+                case BuildingType.PricklyThicket:
+                    if (!forest) { reason = "A Prickly Thicket goes on a forest tile."; return false; }
+                    if (!Has(t, p, "thorned_seed") && !Has(t, p, "blooming_briar")) { reason = "A Prickly Thicket needs a Thorned Seed or the Briar on the tile."; return false; }
+                    return true;
+            }
+            return true;
+        }
+
+        public List<HexCoord> LegalBuildingTiles(PlayerState p) =>
+            Board.Values.Where(t => IsLegalBuildingTile(p, t, out _)).Select(t => t.Coord).ToList();
+
+        public bool CanCraftBuildingNow(PlayerState p, out string reason)
+        {
+            reason = null;
+            if (CurrentPhase != TurnPhase.ExcavationPhase) { reason = "Only in your Excavation phase."; return false; }
+            if (p.Faction.PrimaryBuilding == BuildingType.None) { reason = "Your faction has no building."; return false; }
+            bool comeback = QualifiesForComeback(p);
+            if (!comeback && UsedFactionCraftThisTurn) { reason = "You already used your Craft action."; return false; }
+            if (p.Faction.Id == FactionId.PlatypusPapacy)
+            {
+                if (Board.Values.Any(t => t.Building != null && t.Building.Type == BuildingType.TheCitadel && t.Building.OwnerPlayerIndex == p.PlayerIndex))
+                { reason = "The Citadel is already on the board."; return false; }
+                if (!CanAfford(p, new ResourceCost(wood: 2, stone: 2))) { reason = "Rebuilding the Citadel costs 2 Stone and 2 Wood."; return false; }
+                return true;
+            }
+            if (!CanAfford(p, p.Faction.PrimaryBuildingCost)) { reason = $"Costs {p.Faction.PrimaryBuildingCost}."; return false; }
             return true;
         }
 
         public bool TryFactionCraftBuilding(HexCoord targetCoord)
         {
-            if (CurrentPhase != TurnPhase.ExcavationPhase) return false;
+            if (PendingBattle != null || PendingChoice != null) return false;
             if (!Board.TryGetValue(targetCoord, out var tile)) return false;
             var p = Players[CurrentTurnPlayerIndex];
+            if (!CanCraftBuildingNow(p, out var why) || !IsLegalBuildingTile(p, tile, out why)) { Log(why); return false; }
 
-            if (p.Faction.PrimaryBuilding == BuildingType.None) return false;
-
-            // Comeback Mechanic (Part 8 Line 168): At start of Excavation phase, if no units and no buildings on board, free craft recruitment building + 2 basic units!
-            bool hasAnyUnitsOrBuildings = Board.Values.Any(t =>
-                t.Units.Any(u => u.OwnerPlayerIndex == p.PlayerIndex) ||
-                (t.Building != null && t.Building.OwnerPlayerIndex == p.PlayerIndex));
-            bool isComebackFreeCraft = !hasAnyUnitsOrBuildings && p.Faction.Id != FactionId.PlatypusPapacy;
-
-            if (!isComebackFreeCraft && UsedFactionCraftThisTurn) return false;
-            if (tile.Building != null) return false;
-
-            // Part 4 Line 95: Buildings cannot be placed on stream tiles. Exception: the Citadel (and Wallow per Faction 7 Line 817).
-            if (tile.EffectiveTerrain == TileTerrainType.Stream &&
-                p.Faction.PrimaryBuilding != BuildingType.TheCitadel &&
-                p.Faction.PrimaryBuilding != BuildingType.Wallow)
-                return false;
-
-            if (!CanAfford(p, p.Faction.PrimaryBuildingCost)) return false;
-
-            SpendResources(p, p.Faction.PrimaryBuildingCost);
+            bool comeback = QualifiesForComeback(p);
+            var cost = p.Faction.Id == FactionId.PlatypusPapacy ? new ResourceCost(wood: 2, stone: 2) : p.Faction.PrimaryBuildingCost;
+            SpendResources(p, cost);
             PlaceBuilding(targetCoord, p.Faction.PrimaryBuilding, p);
 
-            if (isComebackFreeCraft)
+            if (comeback)
             {
                 var basic = p.Faction.Units.FirstOrDefault(u => !u.IsSpecialUnit);
                 if (basic != null) SpawnUnit(targetCoord, basic.Id, p, 2);
-                Log($"{p.DisplayName} used the Comeback Mechanic (free craft) at {targetCoord} -> Placed {p.Faction.PrimaryBuilding} and 2 basic units!");
+                Log($"{p.DisplayName} made a comeback at {targetCoord}: a {p.Faction.PrimaryBuilding} and 2 basic units (free craft).");
             }
             else
             {
                 UsedFactionCraftThisTurn = true;
-                // Platypus Papacy Rebuilding The Citadel also places 1 Pilgrim and 1 Crusader (Line 539)
                 if (p.Faction.Id == FactionId.PlatypusPapacy)
                 {
+                    // Rebuilding: also place 1 Pilgrim and 1 Crusader
                     SpawnUnit(targetCoord, "pilgrim", p, 1);
                     SpawnUnit(targetCoord, "crusader", p, 1);
                 }
-                Log($"{p.DisplayName} crafted {p.Faction.PrimaryBuilding} at {targetCoord}.");
+                Log($"{p.DisplayName} crafted a {p.Faction.PrimaryBuilding} at {targetCoord}.");
             }
 
             OnStateChanged?.Invoke();
             return true;
         }
 
+        /// <summary>Crafts equipment through the matching ability (Curly Tail forges in Excavation; Necro-mouser equips in Main).</summary>
         public bool TryCraftAndEquipFactionEquipment(string equipmentId)
         {
             var p = Players[CurrentTurnPlayerIndex];
-            var eq = p.Faction.Equipment.FirstOrDefault(e => e.Id == equipmentId);
-            if (eq == null || !CanAfford(p, eq.Cost)) return false;
-
-            var targetUnit = Board.Values.SelectMany(t => t.Units)
-                .FirstOrDefault(u => u.OwnerPlayerIndex == p.PlayerIndex && u.Definition.Id == eq.TargetUnitId &&
-                                     u.EquippedItems.Count(x => x.Id == eq.Id) < eq.MaxPerUnit);
-            if (targetUnit == null)
-            {
-                Log($"No eligible '{eq.TargetUnitId}' on the board to equip '{eq.Name}'.");
-                return false;
-            }
-
-            bool spentGold = eq.Cost.Gold > 0;
-            SpendResources(p, eq.Cost);
-            targetUnit.EquippedItems.Add(eq);
-            targetUnit.MaxHP += eq.BonusHP;
-            targetUnit.CurrentHP += eq.BonusHP;
-
-            // Part 17 Faction 1 Line 430: Only gain a Golden item's When Crafted Authority the first time you craft it in a game
-            if (eq.AuthorityOnCraft > 0 && !p.CraftedGoldenItemIds.Contains(eq.Id))
-            {
-                p.CraftedGoldenItemIds.Add(eq.Id);
-                AwardAuthority(p.PlayerIndex, eq.AuthorityOnCraft, $"Forged {eq.Name}");
-            }
-
-            // Necro-mouser Plague trait: spending Gold on equipment places 1 Miasma Tile adjacent to an existing Miasma Tile
-            if (p.Faction.Id == FactionId.Necromouser && spentGold)
-            {
-                var existingMiasma = Board.Values.FirstOrDefault(t =>
-                    (t.Overlay == FactionOverlayTileType.Miasma_Revealed || t.Overlay == FactionOverlayTileType.Miasma_Hidden) &&
-                    t.Coord.GetNeighbors().Any(n => Board.ContainsKey(n) && Board[n].Overlay == FactionOverlayTileType.None));
-                if (existingMiasma != null)
-                {
-                    var nCoord = existingMiasma.Coord.GetNeighbors().First(n => Board.ContainsKey(n) && Board[n].Overlay == FactionOverlayTileType.None);
-                    PlaceOverlayTile(nCoord, FactionOverlayTileType.Miasma_Revealed, p.PlayerIndex);
-                    Log($"{p.DisplayName} triggered Plague -> Spread Miasma to {nCoord}.");
-                }
-            }
-
-            Log($"{p.DisplayName} crafted & equipped '{eq.Name}' onto {targetUnit.Definition.Name}!");
-            OnStateChanged?.Invoke();
-            return true;
+            string forge = "forge:" + equipmentId, equip = "equip:" + equipmentId;
+            if (GetFactionAbilities(p).Any(a => a.Id == forge))
+                return UseFactionAbility(forge, default(HexCoord), default(HexCoord), 0);
+            var targets = AbilityTargets(p, equip, null);
+            return targets.Count > 0 && UseFactionAbility(equip, targets[0], default(HexCoord), 0);
         }
 
         private void ResolveCraftedRelic(PlayerState p, RelicCardDef card, string verb)
@@ -1461,67 +1520,21 @@ namespace CrittersOfCalamity.Engine
                     }
                     break;
                 case "statue_of_the_goddess":
-                    var myTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.OwnerPlayerIndex == p.PlayerIndex));
-                    if (myTile != null)
-                    {
-                        myTile.HasStatueOfGoddessBuff = true;
-                        Log($"Statue of the Goddess blessed units at {myTile.Coord} (+1 Attack in their next battle).");
-                    }
+                case "marble_aqueduct":
+                case "underground_passage":
+                case "hallow_ground":
+                    OfferCraftedRelicChoice(p, card); // the player chooses (Part 16)
                     break;
                 case "bejeweled_chalice":
                     GainSpecificResourceFromDeck(p, ResourceType.Gold);
                     var r = DrawRelicCard();
                     if (r != null) p.RelicHand.Add(r);
                     break;
-                case "marble_aqueduct":
-                    if (BurnedResources.Count >= 2)
-                    {
-                        p.ResourcePile.Add(BurnedResources[BurnedResources.Count - 1]);
-                        BurnedResources.RemoveAt(BurnedResources.Count - 1);
-                        p.ResourcePile.Add(BurnedResources[BurnedResources.Count - 1]);
-                        BurnedResources.RemoveAt(BurnedResources.Count - 1);
-                    }
-                    else
-                    {
-                        if (p.RelicHand.Count > 0)
-                        {
-                            RelicDiscardPile.Add(p.RelicHand[0]);
-                            p.RelicHand.RemoveAt(0);
-                        }
-                        p.ResourcePile.Add(DrawRandomResourceCard());
-                        p.ResourcePile.Add(DrawRandomResourceCard());
-                    }
-                    break;
                 case "looted_vault":
                     for (int i = 0; i < 2; i++)
                     {
                         var drawn = DrawRelicCard();
                         if (drawn != null) p.RelicHand.Add(drawn);
-                    }
-                    break;
-                case "underground_passage":
-                    var target = Players.Where(op => op.PlayerIndex != p.PlayerIndex && op.ResourcePile.Count > 0)
-                                        .OrderByDescending(op => op.ResourcePile.Count)
-                                        .FirstOrDefault();
-                    if (target != null)
-                    {
-                        int stealCount = target.ResourcePile.Count >= 5 ? 2 : 1;
-                        for (int i = 0; i < stealCount && target.ResourcePile.Count > 0; i++)
-                        {
-                            int idx = _rng.Next(target.ResourcePile.Count);
-                            p.ResourcePile.Add(target.ResourcePile[idx]);
-                            target.ResourcePile.RemoveAt(idx);
-                        }
-                        Log($"{p.DisplayName} took {stealCount} random resource(s) from {target.DisplayName} via Underground Passage.");
-                    }
-                    break;
-                case "hallow_ground":
-                    var enemyTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex && !u.Definition.IsSpecialUnit));
-                    if (enemyTile != null)
-                    {
-                        var victim = enemyTile.Units.First(u => u.OwnerPlayerIndex != p.PlayerIndex && !u.Definition.IsSpecialUnit);
-                        enemyTile.Units.Remove(victim);
-                        Log($"{p.DisplayName} used Hallowed Ground to remove {victim.Definition.Name} at {enemyTile.Coord}.");
                     }
                     break;
             }
@@ -1539,18 +1552,26 @@ namespace CrittersOfCalamity.Engine
             return tile.Units.Count(u => u.OwnerPlayerIndex == ownerPlayerIndex) < MaxUnitsPerFactionPerTile;
         }
 
-        public bool TryMoveUnits(HexCoord fromCoord, HexCoord toCoord)
+        /// <summary>Destinations a Move action from this tile could reach with these units (for highlighting).</summary>
+        public List<HexCoord> LegalMoveDestinations(HexCoord fromCoord, ICollection<string> onlyUnitIds = null) =>
+            Board.Keys.Where(c => ValidateMove(fromCoord, c, onlyUnitIds, false, out _, out _)).ToList();
+
+        private bool ValidateMove(HexCoord fromCoord, HexCoord toCoord, ICollection<string> onlyUnitIds, bool log,
+                                  out List<UnitInstance> movableUnits, out int actionCost)
         {
-            if (PendingBattle != null) return false;
+            movableUnits = null;
+            actionCost = 1;
+            if (PendingBattle != null || PendingChoice != null) return false;
             if (CurrentPhase != TurnPhase.MainPhase || MainPhaseActionsRemaining <= 0) return false;
             if (!Board.TryGetValue(fromCoord, out var fromTile) || !Board.TryGetValue(toCoord, out var toTile)) return false;
 
             var p = Players[CurrentTurnPlayerIndex];
-            var movableUnits = fromTile.Units.Where(u =>
+            movableUnits = fromTile.Units.Where(u =>
                 u.OwnerPlayerIndex == p.PlayerIndex &&
                 !u.CannotMoveThisTurn &&
                 u.Definition.Id != "platy_pope" && // Platy-Pope is Unyielding (cannot move)
-                !(u.Definition.Id == "blooming_briar" && u.HasMovedThisTurn) // Rooted in Place: 1 tile per turn
+                !(u.Definition.Id == "blooming_briar" && u.HasMovedThisTurn) && // Rooted in Place: 1 tile per turn
+                (onlyUnitIds == null || onlyUnitIds.Count == 0 || onlyUnitIds.Contains(u.InstanceId)) // "any number of your units"
             ).ToList();
 
             if (movableUnits.Count == 0) return false;
@@ -1560,19 +1581,18 @@ namespace CrittersOfCalamity.Engine
             int maxMovable = MaxUnitsPerFactionPerTile - existingFriendly;
             if (maxMovable <= 0)
             {
-                Log($"Stacking Limit (Part 10): Cannot move onto {toCoord} because you already have 6 units there!");
+                if (log) Log($"Stacking Limit (Part 10): Cannot move onto {toCoord} because you already have 6 units there!");
                 return false;
             }
             if (movableUnits.Count > maxMovable)
                 movableUnits = movableUnits.Take(maxMovable).ToList();
 
             // Tar Pit Token check: costs 2 Main Phase actions for enemies to leave
-            int actionCost = 1;
             if (fromTile.Tokens.Any(t => t.Type == TokenType.TarPit) && p.Faction.Id != FactionId.FirestartingSquirrels)
             {
                 if (MainPhaseActionsRemaining < 2)
                 {
-                    Log("Tar Pit Token requires 2 Main Phase actions to move off this tile!");
+                    if (log) Log("Tar Pit Token requires 2 Main Phase actions to move off this tile!");
                     return false;
                 }
                 actionCost = 2;
@@ -1581,9 +1601,10 @@ namespace CrittersOfCalamity.Engine
             // Gluttony Token check (Part 17 Faction 2 Line 491): blocks normal and Supply Line movement while a Millions unit is on tile
             if (fromTile.Tokens.Any(t => t.Type == TokenType.Gluttony) &&
                 fromTile.Units.Any(u => u.Faction == FactionId.HordeOfTheMillions) &&
-                p.Faction.Id != FactionId.HordeOfTheMillions)
+                p.Faction.Id != FactionId.HordeOfTheMillions &&
+                !movableUnits.All(u => u.CleansedThisTurn))
             {
-                Log("Gluttony Token debuff: Cannot use a Move action to leave this tile while a Millions unit is present!");
+                if (log) Log("Gluttony Token debuff: Cannot use a Move action to leave this tile while a Millions unit is present!");
                 return false;
             }
 
@@ -1597,17 +1618,29 @@ namespace CrittersOfCalamity.Engine
             {
                 if (p.CurlyTailThirstForGlory >= 2 && movableUnits.Any(u => u.Definition.Id == "curly_tail"))
                     maxDist = 2;
-                if (AreTilesConnectedBySupplyLineNetwork(fromTile, toTile, p.PlayerIndex))
+                if (AreTilesConnectedBySupplyLineNetwork(fromTile, toTile, p.PlayerIndex) && !fromTile.Coord.Equals(toTile.Coord))
                     maxDist = 99;
             }
             // Platypus Crusader Lv3+: Move action made only with Crusaders may move up to 2 tiles (Line 575)
             if (p.Faction.Id == FactionId.PlatypusPapacy && p.PlatyPopeLevel >= 3 && movableUnits.All(u => u.Definition.Id == "crusader"))
                 maxDist = 2;
-            // Leather Boots on The Brute
-            if (movableUnits.Any(u => u.EquippedItems.Any(e => e.BonusMove > 0)))
-                maxDist = 2;
+            // Leather Boots on The Brute: only when every unit moving has the extra movement
+            if (movableUnits.All(u => u.EquippedItems.Any(e => e.BonusMove > 0)))
+                maxDist = Mathf.Max(maxDist, 2);
+            // Rooted in Place: the Blooming Briar only moves 1 tile
+            if (movableUnits.Any(u => u.Definition.Id == "blooming_briar"))
+                maxDist = 1;
 
             if (dist == 0 || dist > maxDist) return false;
+            return true;
+        }
+
+        public bool TryMoveUnits(HexCoord fromCoord, HexCoord toCoord, ICollection<string> onlyUnitIds = null)
+        {
+            if (!ValidateMove(fromCoord, toCoord, onlyUnitIds, true, out var movableUnits, out int actionCost)) return false;
+            var p = Players[CurrentTurnPlayerIndex];
+            var fromTile = Board[fromCoord];
+            var toTile = Board[toCoord];
 
             foreach (var u in movableUnits)
             {
@@ -1633,10 +1666,13 @@ namespace CrittersOfCalamity.Engine
                 if (isTrap)
                 {
                     toTile.Overlay = FactionOverlayTileType.FallenLeaf_Trap;
-                    foreach (var u in movableUnits)
+                    // "all enemy units on this tile cannot move, and cannot be moved by effects, for the rest of this
+                    // turn and during that enemy's next turn" (the enemy is the player who moved onto it)
+                    foreach (var u in toTile.Units.Where(x => x.OwnerPlayerIndex == p.PlayerIndex))
                     {
                         u.CannotMoveThisTurn = true;
-                        u.TrapLeafTurnsRemaining = 1; // Immobilized for rest of this turn and during next turn
+                        u.IsTrapped = true;
+                        u.TrapLeafTurnsRemaining = 1;
                     }
                     Log($"TRAP LEAF flipped at {toCoord}! Enemy units are immobilized for this turn and their next turn!");
                 }
@@ -1656,35 +1692,14 @@ namespace CrittersOfCalamity.Engine
                 }
             }
 
-            // Platypus Papacy Martyrdom (Part 17 Faction 3 Line 547):
-            // "When a Pilgrim ends a Move action on a tile with enemy units, you may remove that Pilgrim to gain 1 Faith and 1 Authority."
-            if (p.Faction.Id == FactionId.PlatypusPapacy)
-            {
-                bool hasEnemyUnits = toTile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex);
-                if (hasEnemyUnits)
-                {
-                    var pilgrims = toTile.Units.Where(u => u.Definition.Id == "pilgrim").ToList();
-                    foreach (var pil in pilgrims)
-                    {
-                        toTile.Units.Remove(pil);
-                        p.PlatypusFaith = Mathf.Min(5, p.PlatypusFaith + 1);
-                        AwardAuthority(p.PlayerIndex, 1, "Pilgrim Martyrdom (+1 Faith & +1 Authority)");
-                    }
-                }
-            }
+            // Entering a Fire Tile: 1 of the moving player's units takes 1 HP (Faction 6)
+            if (p.Faction.Id != FactionId.FirestartingSquirrels)
+                ApplyFireEntryDamage(toTile, movableUnits, p.PlayerIndex);
 
-            // Fire Tile in-movement damage (1HP to 1 moving enemy unit - Line 780)
-            if (toTile.Overlay == FactionOverlayTileType.Fire && p.Faction.Id != FactionId.FirestartingSquirrels)
-            {
-                var victim = movableUnits.FirstOrDefault(u => u.Definition.Id != "pyromaniac");
-                if (victim != null)
-                {
-                    victim.CurrentHP -= 1;
-                    Log($"{victim.Definition.Name} took 1HP damage entering Fire Tile at {toCoord}!");
-                    if (victim.CurrentHP <= 0)
-                        RemoveUnitFromBoard(toTile, victim, -1);
-                }
-            }
+            // Martyrdom (Faction 3): Pilgrims that end a Move action on a tile with enemy units MAY be removed
+            if (p.Faction.Id == FactionId.PlatypusPapacy && toTile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex) &&
+                movableUnits.Any(u => u.Definition.Id == "pilgrim" && toTile.Units.Contains(u)))
+                OfferMartyrdom(p, toTile);
 
             MainPhaseActionsRemaining -= actionCost;
             Log($"{p.DisplayName} moved {movableUnits.Count} unit(s) from {fromCoord} to {toCoord}. ({MainPhaseActionsRemaining} actions left)");
@@ -1741,7 +1756,7 @@ namespace CrittersOfCalamity.Engine
 
         public bool TryLootTile(HexCoord coord)
         {
-            if (PendingBattle != null) return false;
+            if (PendingBattle != null || PendingChoice != null) return false;
             if (CurrentPhase != TurnPhase.MainPhase || MainPhaseActionsRemaining <= 0) return false;
             if (!Board.TryGetValue(coord, out var tile) || tile.LootedThisTurn) return false;
 
@@ -1825,7 +1840,7 @@ namespace CrittersOfCalamity.Engine
 
         public bool TryRecruit()
         {
-            if (PendingBattle != null) return false;
+            if (PendingBattle != null || PendingChoice != null) return false;
             if (CurrentPhase != TurnPhase.MainPhase || MainPhaseActionsRemaining <= 0) return false;
             var p = Players[CurrentTurnPlayerIndex];
             if (p.Faction.Id == FactionId.Necromouser) return false; // Necro-mouser has no building and cannot recruit
@@ -1887,7 +1902,7 @@ namespace CrittersOfCalamity.Engine
         /// </summary>
         public BattleReport TryBattleOnTile(HexCoord coord, int targetDefenderPlayerIndex = -1, bool consumesMainPhaseAction = true)
         {
-            if (PendingBattle != null) return null;
+            if (PendingBattle != null || PendingChoice != null) return null;
             if (CurrentPhase != TurnPhase.MainPhase) return null;
             if (consumesMainPhaseAction && MainPhaseActionsRemaining <= 0 && ExtraBattleActions <= 0) return null;
             if (!Board.TryGetValue(coord, out var tile)) return null;
@@ -1946,7 +1961,7 @@ namespace CrittersOfCalamity.Engine
             {
                 int canRemove = attackerUnits.Count;
                 int removedCount = 0;
-                int bonusCrusadeAuth = (attacker.Faction.Id == FactionId.PlatypusPapacy && attacker.CrusadeTurnsRemaining > 0) ? 1 : 0;
+                int bonusCrusadeAuth = (attacker.Faction.Id == FactionId.PlatypusPapacy && attacker.CrusadeActive) ? 1 : 0;
 
                 if (tile.Building != null && tile.Building.OwnerPlayerIndex == defender.PlayerIndex && canRemove > 0)
                 {
@@ -2388,11 +2403,11 @@ namespace CrittersOfCalamity.Engine
                 int crusadersRemoved = victimLosses.Count(u => u.OwnerPlayerIndex == victim.PlayerIndex && u.Definition.Id == "crusader");
                 if (crusadersRemoved >= 2)
                     AwardAuthority(remover.PlayerIndex, 1, "Removed 2+ Platypus Crusaders in one battle");
-                if (victim.PlatyPopeLevel >= 4 && victim.CrusadeTurnsRemaining > 0 && crusadersRemoved > 0)
+                if (victim.PlatyPopeLevel >= 4 && victim.CrusadeActive && crusadersRemoved > 0)
                     AwardAuthority(remover.PlayerIndex, crusadersRemoved, $"Removed {crusadersRemoved} Crusader(s) during a Level 4 Crusade");
             }
 
-            if (remover.Faction.Id == FactionId.PlatypusPapacy && remover.PlatyPopeLevel >= 4 && remover.CrusadeTurnsRemaining > 0 &&
+            if (remover.Faction.Id == FactionId.PlatypusPapacy && remover.PlatyPopeLevel >= 4 && remover.CrusadeActive &&
                 removerUnits.Any(u => u.Definition.Id == "crusader"))
             {
                 int enemyUnitsRemoved = victimLosses.Count(u => u.OwnerPlayerIndex != remover.PlayerIndex);
@@ -2494,7 +2509,7 @@ namespace CrittersOfCalamity.Engine
                         Log($"{winner.DisplayName} triggered Curly Tail's Pillager (free Pillage)!");
                     }
                 }
-                if (winner.Faction.Id == FactionId.PlatypusPapacy && winner.CrusadeTurnsRemaining > 0)
+                if (winner.Faction.Id == FactionId.PlatypusPapacy && winner.CrusadeActive)
                 {
                     winner.PlatypusFaith = Mathf.Min(5, winner.PlatypusFaith + 1);
                 }
@@ -2540,7 +2555,7 @@ namespace CrittersOfCalamity.Engine
             }
             else if (owner.Faction.Id == FactionId.PlatypusPapacy && u.Definition.Id == "crusader")
             {
-                if (owner.CrusadeTurnsRemaining > 0) atk += 1;
+                if (owner.CrusadeActive) atk += 1;
                 if (owner.PlatyPopeLevel >= 2) atk += 1;
                 if (owner.PlatyPopeLevel >= 4) atk += 1;
             }
@@ -2633,7 +2648,7 @@ namespace CrittersOfCalamity.Engine
             var owner = Players[u.OwnerPlayerIndex];
             int crusadeBonus = (removerPlayerIndex >= 0 && removerPlayerIndex != owner.PlayerIndex &&
                                 Players[removerPlayerIndex].Faction.Id == FactionId.PlatypusPapacy &&
-                                Players[removerPlayerIndex].CrusadeTurnsRemaining > 0) ? 1 : 0;
+                                Players[removerPlayerIndex].CrusadeActive) ? 1 : 0;
 
             // 1. Necro-mouser Cowardice (Line 678): When isolated and removed, lose 3 Authority, move 2 tiles away, place 3 adjacent Miasma Tiles
             if (u.Definition.Id == "necromouser")
@@ -2723,15 +2738,19 @@ namespace CrittersOfCalamity.Engine
             if (u.Definition.Id == "blooming_briar")
             {
                 tile.Units.Remove(u);
-                var enemyHere = tile.Units.FirstOrDefault(x => x.OwnerPlayerIndex != owner.PlayerIndex);
-                if (enemyHere != null)
+                // Propagation is a Frenzied Bloom ability: only at 0 Thorns
+                if (owner.BriaredFlowerThorns == 0)
                 {
-                    enemyHere.CurrentHP -= 1;
-                    if (enemyHere.CurrentHP <= 0) tile.Units.Remove(enemyHere);
+                    var enemyHere = tile.Units.FirstOrDefault(x => x.OwnerPlayerIndex != owner.PlayerIndex);
+                    if (enemyHere != null)
+                    {
+                        enemyHere.CurrentHP -= 1;
+                        if (enemyHere.CurrentHP <= 0) RemoveUnitFromBoard(tile, enemyHere, owner.PlayerIndex);
+                    }
+                    var adjForest = Neighbors(tile).FirstOrDefault(n => n.EffectiveTerrain == TileTerrainType.Forest && CanAddUnitToTile(n, owner.PlayerIndex));
+                    if (adjForest != null)
+                        SpawnUnit(adjForest.Coord, "thorned_seed", owner, 1);
                 }
-                var adjForest = tile.Coord.GetNeighbors().FirstOrDefault(n => Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Forest);
-                if (Board.ContainsKey(adjForest))
-                    SpawnUnit(adjForest, "thorned_seed", owner, 1);
                 if (removerPlayerIndex >= 0 && removerPlayerIndex != owner.PlayerIndex)
                     AwardAuthority(removerPlayerIndex, 2 + crusadeBonus, "Removed the Blooming Briar (Propagation)");
                 return;
@@ -2741,7 +2760,9 @@ namespace CrittersOfCalamity.Engine
             if (u.Definition.Id == "platy_pope")
             {
                 owner.PlatyPopeOnBoard = false;
-                owner.Authority = Mathf.Max(0, owner.Authority - 1);
+                // "During a Crusade ... when the Platy-Pope is removed by an enemy: you lose 1 Authority"
+                if (owner.CrusadeActive && removerPlayerIndex >= 0 && removerPlayerIndex != owner.PlayerIndex)
+                    owner.Authority = Mathf.Max(0, owner.Authority - 1);
             }
 
             tile.Units.Remove(u);
@@ -2787,549 +2808,6 @@ namespace CrittersOfCalamity.Engine
                     }
                 }
             }
-        }
-
-        // =====================================================================
-        // FACTION ACTION PALETTE (Every Core Faction's Specific Abilities, Tokens, Tiles, Summons)
-        // =====================================================================
-
-        public List<string> GetAvailableFactionActions(PlayerState p)
-        {
-            var actions = new List<string>();
-            switch (p.Faction.Id)
-            {
-                case FactionId.CurlyTail:
-                    actions.Add("Supply Line (Free Action): 1 Wood -> Place Supply Line Token on Selected Hex");
-                    actions.Add("Forge Golden Sword (1 Gold -> +2 Auth, +1 ATK)");
-                    actions.Add("Forge Golden Chest Plate (2 Gold -> +2 Auth, +2 DEF)");
-                    actions.Add("Forge Golden Gauntlet (2 Gold -> +2 Auth, 2HP vs Special)");
-                    actions.Add("Forge Golden War Axe (2 Gold -> +2 Auth, Free Battle)");
-                    actions.Add("Forge Tyrant's Crown (2 Gold -> +2 Auth, +2 Max HP & Heal 2)");
-                    actions.Add("Taunt (Glory Lv3+): Pull Enemy within 2 Tiles & Free Battle");
-                    break;
-                case FactionId.HordeOfTheMillions:
-                    actions.Add("Other People's Gluttony (Free Craft): 1 Gold -> Place Gluttony Token on Millions Hex");
-                    actions.Add("Craft & Fire Catapult Token (2 Stone + 1 Wood -> Launch up to 3 Millions 3 tiles)");
-                    actions.Add("Summon King of the Millions (Once/Game: 1G+1S+1W at Burrow -> Spread the Fun)");
-                    actions.Add("King of the Rabbit Hill (Once/Main Phase: Place 1 Millions on King's tile)");
-                    break;
-                case FactionId.PlatypusPapacy:
-                    actions.Add("Alms (5 Faith + Platy-Pope on Board -> +1 Platy-Pope Level, +1 Authority, Enter Crusade!)");
-                    actions.Add("Indulgences (1 Gold -> +2 Faith)");
-                    actions.Add("Holy Relic Token (1W+1S+1G -> Place at Citadel, +1 Authority now & +1 Faith/End Phase)");
-                    actions.Add("Level 2 Cleanser (1 Gold -> Remove Debuffs from Crusaders on Tile)");
-                    actions.Add("Level 3 Conversion (2 Faith -> Remove Enemy Basic Unit at Crusader & Place Pilgrim)");
-                    actions.Add("Level 5 Faith Conversion (3 Faith -> +1 Authority)");
-                    break;
-                case FactionId.TroubleMakingTanukis:
-                    actions.Add("Running Amok (Once/Main Phase): Place Fallen Leaves Tile on Tanuki Forest Hex");
-                    actions.Add("Summon A Band of Troublemakers (3 Tanukis on same tile + 1 Gold)");
-                    actions.Add("Belly Drums (Draw Phase): Place Fallen Leaves on up to 2 Coin Forest Tiles");
-                    break;
-                case FactionId.Necromouser:
-                    actions.Add("Arise (Once/Turn): Spend 1 Dead from Cauldron -> Summon 1 Skeleton on Miasma Tile");
-                    actions.Add("Spread the Bad News (Once/Main Phase): Remove 1 Skeleton -> Place Miasma Tile");
-                    actions.Add("Necromancy: Summon The Bloat (1 Dead -> +1 Authority)");
-                    actions.Add("Necromancy: Summon The Vanguard (3 Dead -> +3 Authority)");
-                    actions.Add("Necromancy: Summon The Brute (4 Dead -> +4 Authority)");
-                    actions.Add("Necrosis: Explode The Bloat (2HP AoE to all enemy units on tile)");
-                    break;
-                case FactionId.FirestartingSquirrels:
-                    actions.Add("Craft Acorn Firestarter (1 Charcoal + 1 Wood)");
-                    actions.Add("Use Acorn Firestarter -> Place Fire Tile on Squirrel Forest Tile");
-                    actions.Add("Craft Tar Pit Token (2 Charcoal -> Place on/adjacent to Squirrel)");
-                    actions.Add("Unquenchable Spirit (1 Main Action): Loot Adjacent Fire Tile for 1 Charcoal");
-                    actions.Add("Disruption (Burn 2 Resources -> Burn 1 Excavation + 1 Resource from Each Player)");
-                    actions.Add("Summon Pyromaniac (Once/Game: Burn 1W+1S+1G+1C on Fire Tile)");
-                    break;
-                case FactionId.CapybaraCaravan:
-                    actions.Add("Capybara Forage (Once/Main Phase on Stream Tile -> Gain 1 Gold or 1 Stone)");
-                    actions.Add("Exchange Rate (Once/Main Phase: Discard 3 Identical Resources -> Gain 2 Gold)");
-                    actions.Add("Peddling (Free Move: Move Capybara Trader up to 2 Land or 3 Stream Tiles)");
-                    actions.Add("Summon The Riverkeeper (Requires 2+ Wallows: 2 Resources + 1 Gold)");
-                    actions.Add("Riverkeeper Hospitality (Guest draws 1 Relic -> +1 Authority & Recover Discarded Relic)");
-                    break;
-                case FactionId.BriaredFlower:
-                    actions.Add("Thistle Barrage (1 Thorn + 1 Res per unit within 4-6 tiles -> 1HP each & Spawn Seed)");
-                    actions.Add("Thistle Barrage Structure Clear (1 Thorn -> Remove isolated enemy buildings/tokens within 3 tiles)");
-                    actions.Add("Consume Prickly Thicket on Briar's Tile -> +1 Thorn");
-                    actions.Add("Sun Eater (Remove 2 Seeds on/adj Briar + 3 Resources -> +2 Thorns)");
-                    actions.Add("Bursting Into Bloom (Remove up to 3 Seeds -> 1HP Damage on each tile, +1 Auth on removal)");
-                    actions.Add("Furious Lashing (At 0 Thorns -> 1HP Damage to all enemy units within 3 tiles)");
-                    actions.Add("In Half Bloom (2 Resources + 3 Seeds -> Respawn Blooming Briar with 2 Thorns at Prickly Thicket)");
-                    break;
-            }
-            return actions;
-        }
-
-        public bool ExecuteSpecificFactionAction(int actionIndex, HexCoord selectedCoord)
-        {
-            if (PendingBattle != null) return false;
-            var p = Players[CurrentTurnPlayerIndex];
-            if (!Board.TryGetValue(selectedCoord, out var selectedTile))
-                selectedTile = Board.Values.First();
-
-            switch (p.Faction.Id)
-            {
-                case FactionId.CurlyTail:
-                    if (actionIndex == 0 && p.ResourcePile.Contains(ResourceType.Wood) && selectedTile.EffectiveTerrain != TileTerrainType.Stream)
-                    {
-                        RemoveResources(p, ResourceType.Wood, 1);
-                        PlaceToken(selectedTile.Coord, TokenType.SupplyLine, p);
-                        Log($"{p.DisplayName} placed a Supply Line Token at {selectedTile.Coord}.");
-                    }
-                    else if (actionIndex == 1) return TryCraftAndEquipFactionEquipment("golden_sword");
-                    else if (actionIndex == 2) return TryCraftAndEquipFactionEquipment("golden_chestplate");
-                    else if (actionIndex == 3) return TryCraftAndEquipFactionEquipment("golden_gauntlet");
-                    else if (actionIndex == 4) return TryCraftAndEquipFactionEquipment("golden_war_axe");
-                    else if (actionIndex == 5) return TryCraftAndEquipFactionEquipment("tyrants_crown");
-                    else if (actionIndex == 6 && p.CurlyTailThirstForGlory >= 3)
-                    {
-                        var ctTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "curly_tail"));
-                        if (ctTile == null) return false;
-                        var enemyTile = Board.Values.FirstOrDefault(t => HexCoord.Distance(t.Coord, ctTile.Coord) <= 2 && t != ctTile && t.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex));
-                        if (enemyTile == null) return false;
-                        var pulled = enemyTile.Units.First(u => u.OwnerPlayerIndex != p.PlayerIndex);
-                        enemyTile.Units.Remove(pulled);
-                        ctTile.Units.Add(pulled);
-                        Log($"Curly Tail used Taunt to pull {pulled.Definition.Name} onto {ctTile.Coord}!");
-                        TryBattleOnTile(ctTile.Coord, pulled.OwnerPlayerIndex, consumesMainPhaseAction: false);
-                    }
-                    else return false;
-                    break;
-
-                case FactionId.HordeOfTheMillions:
-                    if (actionIndex == 0 && p.ResourcePile.Contains(ResourceType.Gold))
-                    {
-                        var mTile = (selectedTile.Units.Any(u => u.Definition.Id == "millions") ? selectedTile :
-                                     Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "millions")));
-                        if (mTile == null) return false;
-                        RemoveResources(p, ResourceType.Gold, 1);
-                        PlaceToken(mTile.Coord, TokenType.Gluttony, p);
-                        Log($"{p.DisplayName} placed a Gluttony Token at {mTile.Coord}.");
-                    }
-                    else if (actionIndex == 1 && CanAfford(p, new ResourceCost(wood: 1, stone: 2)))
-                    {
-                        SpendResources(p, new ResourceCost(wood: 1, stone: 2));
-                        PlaceToken(selectedTile.Coord, TokenType.Catapult, p);
-                        Log($"{p.DisplayName} crafted & fired a Catapult Token at {selectedTile.Coord}!");
-                    }
-                    else if (actionIndex == 2 && !p.KingOfTheMillionsSummonedOnce && CanAfford(p, new ResourceCost(wood: 1, stone: 1, gold: 1)))
-                    {
-                        var bTile = Board.Values.FirstOrDefault(t => t.Building != null && t.Building.Type == BuildingType.Burrow) ?? selectedTile;
-                        SpendResources(p, new ResourceCost(wood: 1, stone: 1, gold: 1));
-                        p.KingOfTheMillionsSummonedOnce = true;
-                        SpawnUnit(bTile.Coord, "king_of_the_millions", p, 1);
-                        foreach (var op in Players.Where(x => x.PlayerIndex != p.PlayerIndex))
-                            DrawAndResolveForageCard(op);
-                        Log($"{p.DisplayName} summoned King of the Millions at {bTile.Coord} (Spread the Fun)!");
-                    }
-                    else if (actionIndex == 3)
-                    {
-                        var kTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "king_of_the_millions"));
-                        if (kTile == null) return false;
-                        SpawnUnit(kTile.Coord, "millions", p, 1);
-                        Log("King of the Rabbit Hill placed 1 Millions unit on the King's tile!");
-                    }
-                    else return false;
-                    break;
-
-                case FactionId.PlatypusPapacy:
-                    bool popeOnBoard = Board.Values.SelectMany(t => t.Units).Any(u => u.OwnerPlayerIndex == p.PlayerIndex && u.Definition.Id == "platy_pope");
-                    if (actionIndex == 0 && p.PlatypusFaith >= 5 && popeOnBoard)
-                    {
-                        p.PlatypusFaith = 0;
-                        p.PlatyPopeLevel = Mathf.Min(5, p.PlatyPopeLevel + 1);
-                        p.CrusadeTurnsRemaining += 2;
-                        AwardAuthority(p.PlayerIndex, 1, $"Alms (Platy-Pope Level {p.PlatyPopeLevel} & Crusade!)");
-                    }
-                    else if (actionIndex == 1 && p.ResourcePile.Contains(ResourceType.Gold))
-                    {
-                        RemoveResources(p, ResourceType.Gold, 1);
-                        p.PlatypusFaith = Mathf.Min(5, p.PlatypusFaith + 2);
-                        Log($"{p.DisplayName} used Indulgences (1 Gold -> +2 Faith, now {p.PlatypusFaith}/5).");
-                    }
-                    else if (actionIndex == 2 && CanAfford(p, new ResourceCost(wood: 1, stone: 1, gold: 1)) &&
-                             Board.Values.SelectMany(t => t.Units).Any(u => u.Definition.Id == "crusader"))
-                    {
-                        var citTile = Board.Values.FirstOrDefault(t => t.Building != null && t.Building.Type == BuildingType.TheCitadel) ?? selectedTile;
-                        SpendResources(p, new ResourceCost(wood: 1, stone: 1, gold: 1));
-                        PlaceToken(citTile.Coord, TokenType.HolyRelic, p);
-                        // Core Rulebook Line 550: immediately gain 1 Authority when placing Holy Relic Token!
-                        AwardAuthority(p.PlayerIndex, 1, "Enshrined Holy Relic Token at The Citadel");
-                    }
-                    else if (actionIndex == 3 && p.PlatyPopeLevel >= 2 && p.ResourcePile.Contains(ResourceType.Gold))
-                    {
-                        RemoveResources(p, ResourceType.Gold, 1);
-                        foreach (var u in selectedTile.Units.Where(u => u.OwnerPlayerIndex == p.PlayerIndex && u.Definition.Id == "crusader"))
-                        {
-                            u.CannotMoveThisTurn = false;
-                            u.TrapLeafTurnsRemaining = 0;
-                        }
-                        Log($"{p.DisplayName} cleansed all debuffs from Crusaders at {selectedTile.Coord}.");
-                    }
-                    else if (actionIndex == 4 && p.PlatyPopeLevel >= 3 && p.PlatypusFaith >= 2)
-                    {
-                        var cTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "crusader") && t.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex && !u.Definition.IsSpecialUnit));
-                        if (cTile == null) return false;
-                        p.PlatypusFaith -= 2;
-                        var enemy = cTile.Units.First(u => u.OwnerPlayerIndex != p.PlayerIndex && !u.Definition.IsSpecialUnit);
-                        cTile.Units.Remove(enemy);
-                        SpawnUnit(cTile.Coord, "pilgrim", p, 1);
-                        Log($"{p.DisplayName} spent 2 Faith to convert {enemy.Definition.Name} at {cTile.Coord} into a Pilgrim!");
-                    }
-                    else if (actionIndex == 5 && p.PlatyPopeLevel >= 5 && p.PlatypusFaith >= 3)
-                    {
-                        p.PlatypusFaith -= 3;
-                        AwardAuthority(p.PlayerIndex, 1, "Platy-Pope Level 5 Faith Conversion");
-                    }
-                    else return false;
-                    break;
-
-                case FactionId.TroubleMakingTanukis:
-                    if (actionIndex == 0)
-                    {
-                        var tTile = (selectedTile.Units.Any(u => u.Faction == FactionId.TroubleMakingTanukis) && selectedTile.EffectiveTerrain == TileTerrainType.Forest && selectedTile.Overlay == FactionOverlayTileType.None)
-                            ? selectedTile
-                            : Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Faction == FactionId.TroubleMakingTanukis) && t.EffectiveTerrain == TileTerrainType.Forest && t.Overlay == FactionOverlayTileType.None);
-                        if (tTile == null) return false;
-                        PlaceOverlayTile(tTile.Coord, FactionOverlayTileType.FallenLeaf_Unflipped, p.PlayerIndex);
-                        Log($"{p.DisplayName} used Running Amok -> Placed Fallen Leaves Tile at {tTile.Coord}.");
-                    }
-                    else if (actionIndex == 1 && p.ResourcePile.Contains(ResourceType.Gold) &&
-                             !Board.Values.SelectMany(t => t.Units).Any(u => u.Definition.Id == "band_of_troublemakers"))
-                    {
-                        var bTile = Board.Values.FirstOrDefault(t => t.Units.Count(u => u.Definition.Id == "tanuki") >= 3);
-                        if (bTile == null) return false;
-                        RemoveResources(p, ResourceType.Gold, 1);
-                        for (int i = 0; i < 3; i++)
-                            bTile.Units.Remove(bTile.Units.First(u => u.Definition.Id == "tanuki"));
-                        SpawnUnit(bTile.Coord, "band_of_troublemakers", p, 1);
-                        Log($"{p.DisplayName} formed A Band of Troublemakers at {bTile.Coord}!");
-                    }
-                    else if (actionIndex == 2 && Board.Values.SelectMany(t => t.Units).Any(u => u.Definition.Id == "band_of_troublemakers"))
-                    {
-                        int placed = 0;
-                        foreach (var cTile in Board.Values.Where(t => t.Tokens.Any(tk => tk.Type == TokenType.Coin) && t.EffectiveTerrain == TileTerrainType.Forest && t.Overlay == FactionOverlayTileType.None && !t.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex)))
-                        {
-                            if (placed >= 2) break;
-                            PlaceOverlayTile(cTile.Coord, FactionOverlayTileType.FallenLeaf_Unflipped, p.PlayerIndex);
-                            placed++;
-                        }
-                        Log($"{p.DisplayName} used Belly Drums -> Placed {placed} Fallen Leaves Tiles on Coin forest tiles!");
-                    }
-                    else return false;
-                    break;
-
-                case FactionId.Necromouser:
-                    if (actionIndex == 0 && p.NecromouserCauldronDeadCount >= 1)
-                    {
-                        var mTile = Board.Values.FirstOrDefault(t => (t.Overlay == FactionOverlayTileType.Miasma_Revealed || t.Overlay == FactionOverlayTileType.Miasma_Hidden) && CanAddUnitToTile(t, p.PlayerIndex)) ?? selectedTile;
-                        p.NecromouserCauldronDeadCount--;
-                        SpawnUnit(mTile.Coord, "skeleton", p, 1);
-                        Log($"{p.DisplayName} used Arise -> Summoned 1 Skeleton at {mTile.Coord}.");
-                    }
-                    else if (actionIndex == 1)
-                    {
-                        var skTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "skeleton"));
-                        if (skTile == null) return false;
-                        skTile.Units.Remove(skTile.Units.First(u => u.Definition.Id == "skeleton"));
-                        PlaceOverlayTile(skTile.Coord, FactionOverlayTileType.Miasma_Revealed, p.PlayerIndex);
-                        Log($"{p.DisplayName} used Spread the Bad News -> Placed Miasma Tile at {skTile.Coord}.");
-                    }
-                    else if (actionIndex >= 2 && actionIndex <= 4 && p.NecromouserSpecialSummonsUsed < 4)
-                    {
-                        int cost = actionIndex == 2 ? 1 : (actionIndex == 3 ? 3 : 4);
-                        string uId = actionIndex == 2 ? "the_bloat" : (actionIndex == 3 ? "the_vanguard" : "the_brute");
-                        if (p.NecromouserCauldronDeadCount < cost) return false;
-                        var nTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "necromouser")) ?? selectedTile;
-                        p.NecromouserCauldronDeadCount -= cost;
-                        p.NecromouserSpecialSummonsUsed++;
-                        SpawnUnit(nTile.Coord, uId, p, 1);
-                        AwardAuthority(p.PlayerIndex, cost, $"Summoned {uId}");
-                    }
-                    else if (actionIndex == 5)
-                    {
-                        var bTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "the_bloat"));
-                        if (bTile == null) return false;
-                        var bloat = bTile.Units.First(u => u.Definition.Id == "the_bloat");
-                        bool hasLocket = bloat.EquippedItems.Any(e => e.Id == "locket_of_memory");
-                        bool hasRing = bloat.EquippedItems.Any(e => e.Id == "ring_of_favor");
-                        bTile.Units.Remove(bloat);
-
-                        var affectedTiles = new List<HexTileState> { bTile };
-                        if (hasLocket)
-                        {
-                            foreach (var n in bTile.Coord.GetNeighbors())
-                                if (Board.ContainsKey(n)) affectedTiles.Add(Board[n]);
-                        }
-                        foreach (var at in affectedTiles)
-                        {
-                            foreach (var enemy in at.Units.Where(u => u.OwnerPlayerIndex != p.PlayerIndex).ToList())
-                            {
-                                enemy.CurrentHP -= 2;
-                                if (enemy.CurrentHP <= 0) RemoveUnitFromBoard(at, enemy, p.PlayerIndex);
-                            }
-                        }
-                        if (hasRing)
-                        {
-                            PlaceOverlayTile(bTile.Coord, FactionOverlayTileType.Miasma_Revealed, p.PlayerIndex);
-                            AwardAuthority(p.PlayerIndex, 2, "Ring of Favor Bloat Explosion");
-                        }
-                        Log($"The Bloat exploded via Necrosis at {bTile.Coord} for 2HP AoE damage!");
-                    }
-                    else return false;
-                    break;
-
-                case FactionId.FirestartingSquirrels:
-                    if (actionIndex == 0 && CanAfford(p, new ResourceCost(wood: 1, charcoal: 1)))
-                    {
-                        SpendResources(p, new ResourceCost(wood: 1, charcoal: 1));
-                        p.SquirrelsCraftedFirestarters++;
-                        Log($"{p.DisplayName} crafted an Acorn Firestarter ({p.SquirrelsCraftedFirestarters}).");
-                    }
-                    else if (actionIndex == 1 && p.SquirrelsCraftedFirestarters > 0)
-                    {
-                        var sqTile = (selectedTile.Units.Any(u => u.Definition.Id == "squirrel") && selectedTile.EffectiveTerrain == TileTerrainType.Forest && selectedTile.Overlay == FactionOverlayTileType.None)
-                            ? selectedTile
-                            : Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "squirrel") && t.EffectiveTerrain == TileTerrainType.Forest && t.Overlay == FactionOverlayTileType.None);
-                        if (sqTile == null) return false;
-                        p.SquirrelsCraftedFirestarters--;
-                        sqTile.Overlay = FactionOverlayTileType.Fire;
-                        sqTile.OverlayOwnerPlayerIndex = p.PlayerIndex;
-                        Log($"{p.DisplayName} discarded an Acorn Firestarter -> Placed Fire Tile at {sqTile.Coord}!");
-                    }
-                    else if (actionIndex == 2 && CanAfford(p, new ResourceCost(charcoal: 2)))
-                    {
-                        SpendResources(p, new ResourceCost(charcoal: 2));
-                        PlaceToken(selectedTile.Coord, TokenType.TarPit, p);
-                        Log($"{p.DisplayName} placed a Tar Pit Token at {selectedTile.Coord}.");
-                    }
-                    else if (actionIndex == 3 && MainPhaseActionsRemaining > 0)
-                    {
-                        MainPhaseActionsRemaining--;
-                        p.ResourcePile.Add(ResourceType.Charcoal);
-                        Log($"{p.DisplayName} used Unquenchable Spirit -> Looted adjacent Fire Tile for 1 Charcoal.");
-                    }
-                    else if (actionIndex == 4 && p.ResourcePile.Count >= 2)
-                    {
-                        // Disruption: burn 2 resources to burn 1 Excavation card and 1 resource from each opponent (+1 Authority if Gold burned)
-                        bool burnedGold = false;
-                        for (int i = 0; i < 2; i++)
-                        {
-                            var b = p.ResourcePile[0];
-                            p.ResourcePile.RemoveAt(0);
-                            BurnedResources.Add(b);
-                            if (b == ResourceType.Gold) burnedGold = true;
-                        }
-                        if (ExcavationArea.Count > 0)
-                        {
-                            var exc = ExcavationArea[0];
-                            ExcavationArea.RemoveAt(0);
-                            if (exc.DisassembleGain.Gold > 0) burnedGold = true;
-                        }
-                        foreach (var op in Players.Where(x => x.PlayerIndex != p.PlayerIndex && x.ResourcePile.Count > 0))
-                        {
-                            var b = op.ResourcePile[0];
-                            op.ResourcePile.RemoveAt(0);
-                            BurnedResources.Add(b);
-                            if (b == ResourceType.Gold) burnedGold = true;
-                        }
-                        if (burnedGold)
-                            AwardAuthority(p.PlayerIndex, 1, "Disruption (Burned Gold)");
-                        Log($"{p.DisplayName} triggered Disruption!");
-                    }
-                    else if (actionIndex == 5 && !p.PyromaniacSummonedOnce && CanAfford(p, new ResourceCost(wood: 1, stone: 1, gold: 1, charcoal: 1)))
-                    {
-                        var fTile = Board.Values.FirstOrDefault(t => t.Overlay == FactionOverlayTileType.Fire) ?? selectedTile;
-                        SpendResources(p, new ResourceCost(wood: 1, stone: 1, gold: 1, charcoal: 1));
-                        p.PyromaniacSummonedOnce = true;
-                        SpawnUnit(fTile.Coord, "pyromaniac", p, 1);
-                        Log($"{p.DisplayName} summoned the Pyromaniac at {fTile.Coord}!");
-                    }
-                    else return false;
-                    break;
-
-                case FactionId.CapybaraCaravan:
-                    if (actionIndex == 0)
-                    {
-                        bool onStream = Board.Values.Any(t => t.EffectiveTerrain == TileTerrainType.Stream && t.Units.Any(u => u.Definition.Id == "capybara"));
-                        if (!onStream) return false;
-                        GainSpecificResourceFromDeck(p, ResourceType.Gold);
-                        Log($"{p.DisplayName} used Capybara Forage on Stream Tile -> Gained 1 Gold!");
-                    }
-                    else if (actionIndex == 1)
-                    {
-                        foreach (ResourceType rt in new[] { ResourceType.Wood, ResourceType.Stone })
-                        {
-                            if (p.ResourcePile.Count(r => r == rt) >= 3)
-                            {
-                                RemoveResources(p, rt, 3);
-                                GainSpecificResourceFromDeck(p, ResourceType.Gold);
-                                GainSpecificResourceFromDeck(p, ResourceType.Gold);
-                                Log($"{p.DisplayName} used Exchange Rate (3 {rt} -> 2 Gold)!");
-                                OnStateChanged?.Invoke();
-                                return true;
-                            }
-                        }
-                        return false;
-                    }
-                    else if (actionIndex == 2 && !p.TraderUsedPeddlingThisTurn)
-                    {
-                        var trTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "capybara_trader"));
-                        if (trTile == null || trTile == selectedTile) return false;
-                        int dist = HexCoord.Distance(trTile.Coord, selectedTile.Coord);
-                        int maxD = (trTile.EffectiveTerrain == TileTerrainType.Stream && selectedTile.EffectiveTerrain == TileTerrainType.Stream) ? 3 : 2;
-                        if (dist > maxD || !CanAddUnitToTile(selectedTile, p.PlayerIndex)) return false;
-                        var trader = trTile.Units.First(u => u.Definition.Id == "capybara_trader");
-                        trTile.Units.Remove(trader);
-                        selectedTile.Units.Add(trader);
-                        p.TraderUsedPeddlingThisTurn = true;
-                        Log($"Capybara Trader used Peddling (free move) from {trTile.Coord} to {selectedTile.Coord}.");
-                    }
-                    else if (actionIndex == 3 && CanAfford(p, new ResourceCost(gold: 1, any: 2)))
-                    {
-                        int wallows = Board.Values.Count(t => t.Building != null && t.Building.Type == BuildingType.Wallow);
-                        if (wallows < 2) { Log("Need at least 2 Wallows on the board to summon The Riverkeeper!"); return false; }
-                        var wTile = Board.Values.First(t => t.Building != null && t.Building.Type == BuildingType.Wallow);
-                        SpendResources(p, new ResourceCost(gold: 1, any: 2));
-                        SpawnUnit(wTile.Coord, "riverkeeper", p, 1);
-                        Log($"{p.DisplayName} summoned The Riverkeeper at {wTile.Coord}!");
-                    }
-                    else if (actionIndex == 4)
-                    {
-                        bool hasRiverkeeper = Board.Values.SelectMany(t => t.Units).Any(u => u.Definition.Id == "riverkeeper");
-                        if (!hasRiverkeeper) return false;
-                        AwardAuthority(p.PlayerIndex, 1, "Riverkeeper Hospitality");
-                        if (RelicDiscardPile.Count > 0)
-                        {
-                            p.RelicHand.Add(RelicDiscardPile[RelicDiscardPile.Count - 1]);
-                            RelicDiscardPile.RemoveAt(RelicDiscardPile.Count - 1);
-                        }
-                    }
-                    else return false;
-                    break;
-
-                case FactionId.BriaredFlower:
-                    var briarTile = Board.Values.FirstOrDefault(t => t.Units.Any(u => u.Definition.Id == "blooming_briar"));
-                    if (actionIndex == 0 && p.BriaredFlowerThorns >= 1 && p.ResourcePile.Count >= 1 && briarTile != null && p.ThistleBarrageUsesThisTurn < 2)
-                    {
-                        int bonusRange = Mathf.Min(2, briarTile.Units.Count(u => u.Definition.Id == "thorned_seed"));
-                        var targetTile = (HexCoord.Distance(briarTile.Coord, selectedCoord) <= 4 + bonusRange && selectedTile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex))
-                            ? selectedTile
-                            : Board.Values.FirstOrDefault(t => HexCoord.Distance(briarTile.Coord, t.Coord) <= 4 + bonusRange && t.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex));
-                        if (targetTile == null) { Log($"No enemy units within Thistle Barrage range ({4 + bonusRange} tiles)."); return false; }
-
-                        int hits = 0;
-                        foreach (var enemy in targetTile.Units.Where(u => u.OwnerPlayerIndex != p.PlayerIndex).ToList())
-                        {
-                            if (p.BriaredFlowerThorns <= 0 || p.ResourcePile.Count <= 0) break;
-                            p.BriaredFlowerThorns--;
-                            ReturnResourceToDeck(p.ResourcePile, 0);
-                            enemy.CurrentHP -= 1;
-                            hits++;
-                            if (enemy.CurrentHP <= 0) RemoveUnitFromBoard(targetTile, enemy, p.PlayerIndex);
-                            var adjForest = targetTile.Coord.GetNeighbors().FirstOrDefault(n => Board.ContainsKey(n) && Board[n].EffectiveTerrain == TileTerrainType.Forest);
-                            if (Board.ContainsKey(adjForest)) SpawnUnit(adjForest, "thorned_seed", p, 1);
-                        }
-                        p.ThistleBarrageUsesThisTurn++;
-                        int auth = hits / 2;
-                        if (auth > 0)
-                            AwardAuthority(p.PlayerIndex, auth, $"Thistle Barrage ({hits}HP dealt)");
-                        Log($"Thistle Barrage dealt {hits}HP damage at {targetTile.Coord}!");
-                    }
-                    else if (actionIndex == 1 && p.BriaredFlowerThorns >= 1 && briarTile != null && p.ThistleBarrageUsesThisTurn < 2)
-                    {
-                        // Spend 1 Thorn to remove all isolated enemy buildings and tokens on a tile within 3 tiles (Line 882)
-                        var structTile = Board.Values.FirstOrDefault(t =>
-                            HexCoord.Distance(briarTile.Coord, t.Coord) <= 3 &&
-                            ((t.Building != null && t.Building.OwnerPlayerIndex != p.PlayerIndex && !t.Units.Any(u => u.OwnerPlayerIndex == t.Building.OwnerPlayerIndex)) ||
-                             t.Tokens.Any(tk => tk.OwnerPlayerIndex != p.PlayerIndex && tk.Type != TokenType.Coin && !t.Units.Any(u => u.OwnerPlayerIndex == tk.OwnerPlayerIndex))));
-                        if (structTile == null) return false;
-                        p.BriaredFlowerThorns--;
-                        p.ThistleBarrageUsesThisTurn++;
-                        int removed = 0;
-                        if (structTile.Building != null && structTile.Building.OwnerPlayerIndex != p.PlayerIndex)
-                        {
-                            structTile.Building = null;
-                            removed++;
-                        }
-                        removed += structTile.Tokens.RemoveAll(tk => tk.OwnerPlayerIndex != p.PlayerIndex && tk.Type != TokenType.Coin);
-                        AwardAuthority(p.PlayerIndex, removed, "Thistle Barrage Structure Removal");
-                    }
-                    else if (actionIndex == 2 && briarTile != null && briarTile.Building != null && briarTile.Building.Type == BuildingType.PricklyThicket)
-                    {
-                        briarTile.Building = null;
-                        p.BriaredFlowerThorns = Mathf.Min(6, p.BriaredFlowerThorns + 1);
-                        Log("Blooming Briar consumed Prickly Thicket for +1 Thorn!");
-                    }
-                    else if (actionIndex == 3 && p.ResourcePile.Count >= 3)
-                    {
-                        SpendResources(p, new ResourceCost(any: 3));
-                        p.BriaredFlowerThorns = Mathf.Min(6, p.BriaredFlowerThorns + 2);
-                        Log($"{p.DisplayName} used Sun Eater -> Regrew +2 Thorns (now {p.BriaredFlowerThorns}/6).");
-                    }
-                    else if (actionIndex == 4)
-                    {
-                        int burst = 0;
-                        bool removedAnyEnemy = false;
-                        foreach (var sTile in Board.Values.Where(t => t.Units.Any(u => u.Definition.Id == "thorned_seed")).ToList())
-                        {
-                            if (burst >= 3) break;
-                            var seed = sTile.Units.First(u => u.Definition.Id == "thorned_seed");
-                            sTile.Units.Remove(seed);
-                            burst++;
-                            var victim = sTile.Units.FirstOrDefault(u => u.OwnerPlayerIndex != p.PlayerIndex);
-                            if (victim != null)
-                            {
-                                victim.CurrentHP -= 1;
-                                if (victim.CurrentHP <= 0) { RemoveUnitFromBoard(sTile, victim, p.PlayerIndex); removedAnyEnemy = true; }
-                            }
-                        }
-                        if (burst == 0) return false;
-                        if (removedAnyEnemy) AwardAuthority(p.PlayerIndex, 1, "Bursting Into Bloom Removal");
-                        Log($"{p.DisplayName} activated Bursting Into Bloom ({burst} Thorned Seed(s) removed)!");
-                    }
-                    else if (actionIndex == 5 && p.BriaredFlowerThorns == 0 && briarTile != null)
-                    {
-                        int dmgDealt = 0;
-                        foreach (var tile in Board.Values.Where(t => HexCoord.Distance(t.Coord, briarTile.Coord) <= 3))
-                        {
-                            foreach (var enemy in tile.Units.Where(u => u.OwnerPlayerIndex != p.PlayerIndex).ToList())
-                            {
-                                enemy.CurrentHP -= 1;
-                                dmgDealt++;
-                                if (enemy.CurrentHP <= 0) RemoveUnitFromBoard(tile, enemy, p.PlayerIndex);
-                            }
-                        }
-                        if (dmgDealt >= 2) AwardAuthority(p.PlayerIndex, dmgDealt / 2, "Furious Lashing");
-                        Log($"Furious Lashing dealt {dmgDealt}HP total damage within 3 tiles!");
-                    }
-                    else if (actionIndex == 6 && briarTile == null && p.ResourcePile.Count >= 2)
-                    {
-                        var ptTile = Board.Values.FirstOrDefault(t => t.Building != null && t.Building.Type == BuildingType.PricklyThicket);
-                        int totalSeeds = Board.Values.Sum(t => t.Units.Count(u => u.Definition.Id == "thorned_seed"));
-                        if (ptTile == null || totalSeeds < 3) return false;
-                        SpendResources(p, new ResourceCost(any: 2));
-                        int removedSeeds = 0;
-                        foreach (var t in Board.Values)
-                        {
-                            while (removedSeeds < 3 && t.Units.Any(u => u.Definition.Id == "thorned_seed"))
-                            {
-                                t.Units.Remove(t.Units.First(u => u.Definition.Id == "thorned_seed"));
-                                removedSeeds++;
-                            }
-                        }
-                        p.BriaredFlowerThorns = 2;
-                        SpawnUnit(ptTile.Coord, "blooming_briar", p, 1);
-                        Log($"{p.DisplayName} used In Half Bloom -> Blooming Briar rose again at {ptTile.Coord} with 2 Thorns!");
-                    }
-                    else return false;
-                    break;
-            }
-
-            OnStateChanged?.Invoke();
-            return true;
         }
 
         // =====================================================================

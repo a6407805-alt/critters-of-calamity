@@ -16,7 +16,19 @@ namespace CrittersOfCalamity.UI
     /// </summary>
     public partial class CrittersTabletopHUD
     {
-        private enum TileAction { None, MoveFrom, MoveTo, Battle, Loot }
+        private enum TileAction { None, MoveFrom, MoveTo, Battle, Loot, Craft, Ability }
+
+        // ability being targeted
+        private FactionAbility _ability;
+        private bool _abilityHasFirst;
+        private HexCoord _abilityFirst, _abilitySecond;
+        private List<string> _abilityChoiceList;   // non-null: waiting for the player to pick an option
+        // Move: which of your units on the origin tile go (empty = all)
+        private readonly HashSet<string> _moveSelection = new HashSet<string>();
+        // Battle: several factions on the tile -> pick which one
+        private List<int> _battleDefenderChoices;
+        private HexCoord _battleTile;
+        private bool _guideHighlightsShown;
 
         private GameObject _guideRoot;
         private GameObject _guideTab;
@@ -217,18 +229,25 @@ namespace CrittersOfCalamity.UI
 
             _guideEndButton.gameObject.SetActive(true);
 
-            if (_tileAction != TileAction.None)
+            if (_engine.IsChoicePending)
             {
-                _guideHint.text = _tileAction == TileAction.MoveFrom ? "<b>Move:</b> click the tile your units are on."
-                    : _tileAction == TileAction.MoveTo ? $"<b>Move:</b> now click the adjacent tile to move to (from {_tileActionOrigin})."
-                    : _tileAction == TileAction.Battle ? "<b>Battle:</b> click the tile where your units and the enemy are."
-                    : "<b>Loot:</b> click a tile with your units and no enemy pieces.";
-                GuideButton("Cancel", Palette.FromHex("#7A2828"), () => { CancelTileAction(); RefreshTurnGuide(); });
+                var ch = _engine.PendingChoice;
+                _guideHint.text = ControlsSeat(ch.PlayerIndex)
+                    ? $"<b>{ch.Title}:</b> make your choice in the popup."
+                    : $"Waiting on {_engine.Players[ch.PlayerIndex].DisplayName}: {ch.Title}.";
+                _guideEndButton.gameObject.SetActive(false);
+                return;
+            }
+
+            if (_tileAction != TileAction.None || _battleDefenderChoices != null)
+            {
+                BuildTileActionPrompt(phase);
                 _guideEndLabel.text = phase == TurnPhase.MainPhase ? "End Turn" : $"End {PhaseName(phase)}";
                 return;
             }
 
-            if (phase == TurnPhase.ExcavationPhase) BuildExcavationOptions(turnPlayer);
+            if (phase == TurnPhase.DrawPhase) BuildDrawOptions(turnPlayer);
+            else if (phase == TurnPhase.ExcavationPhase) BuildExcavationOptions(turnPlayer);
             else if (phase == TurnPhase.MainPhase) BuildMainOptions(turnPlayer);
             else _guideHint.text = $"{PhaseName(phase)} resolves automatically.";
 
@@ -251,21 +270,15 @@ namespace CrittersOfCalamity.UI
                 }
             }
 
-            OptionHeader("craft", $"Craft{Used(_engine.UsedFactionCraftThisTurn)}", "#4A6B48", !_engine.UsedFactionCraftThisTurn);
-            if (_guideExpanded == "craft")
+            bool canCraft = _engine.CanCraftBuildingNow(p, out var craftWhy);
+            bool comeback = _engine.QualifiesForComeback(p);
+            if (p.Faction.PrimaryBuilding != BuildingType.None)
             {
-                var sel = _boardRenderer.SelectedCoord;
-                string where = sel.HasValue ? $"on tile {sel.Value}" : "(click a tile on the board first)";
-                GuideButton($"   Build a {p.Faction.PrimaryBuilding} {where} (cost {p.Faction.PrimaryBuildingCost})",
-                    new Color(0.18f, 0.26f, 0.18f, 1f),
-                    () => { if (_boardRenderer.SelectedCoord.HasValue) _mpManager.Submit(GameCommand.CraftBuilding(_boardRenderer.SelectedCoord.Value)); },
-                    40f, sel.HasValue);
-                foreach (var eq in p.Faction.Equipment)
-                {
-                    string id = eq.Id;
-                    GuideButton($"   Craft <b>{eq.Name}</b> (cost {eq.Cost}): {eq.EffectText}", new Color(0.26f, 0.22f, 0.14f, 1f),
-                        () => _mpManager.Submit(GameCommand.CraftEquipment(id)), 52f, _engine.CanAfford(p, eq.Cost));
-                }
+                string label = comeback
+                    ? $"<b>Comeback (free craft)</b>: place a {p.Faction.PrimaryBuilding} and 2 basic units"
+                    : $"<b>Craft</b> a {p.Faction.PrimaryBuilding} (cost {(p.Faction.Id == FactionId.PlatypusPapacy ? "2 Stone, 2 Wood" : p.Faction.PrimaryBuildingCost.ToString())}){Used(_engine.UsedFactionCraftThisTurn)}";
+                GuideButton(label + (canCraft ? " - then click a green tile" : $"<size=12>\n   {craftWhy}</size>"), Palette.FromHex("#4A6B48"),
+                    () => { _tileAction = TileAction.Craft; RefreshTurnGuide(); }, 46f, canCraft && _engine.LegalBuildingTiles(p).Count > 0);
             }
 
             OptionHeader("assemble", $"Assemble a relic from your hand{Used(_engine.UsedAssembleThisTurn)}", "#6B4E8C", !_engine.UsedAssembleThisTurn);
@@ -284,13 +297,27 @@ namespace CrittersOfCalamity.UI
             OptionHeader("disassemble", $"Disassemble a relic for resources{Used(_engine.UsedDisassembleThisTurn)}", "#7A4E24", !_engine.UsedDisassembleThisTurn);
             if (_guideExpanded == "disassemble")
             {
-                if (p.RelicHand.Count == 0) GuideNote("   Your hand is empty.");
-                for (int i = 0; i < p.RelicHand.Count; i++)
+                if (p.RelicHand.Count == 0 && p.TableRelics.Count == 0) GuideNote("   No relic cards in your Hand or on your Table.");
+                foreach (bool table in new[] { false, true })
                 {
-                    int idx = i;
-                    var card = p.RelicHand[i];
-                    GuideButton($"   Disassemble <b>{card.Name}</b> (gain {card.DisassembleGain})", new Color(0.30f, 0.20f, 0.12f, 1f),
-                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Disassemble, idx)));
+                    var pile = table ? p.TableRelics : p.RelicHand;
+                    for (int i = 0; i < pile.Count; i++)
+                    {
+                        int idx = i;
+                        bool fromTable = table;
+                        var card = pile[i];
+                        string where = table ? " <size=12>(from your Table)</size>" : "";
+                        if (card.DisassembleChoiceWoodOrStone)
+                        {
+                            GuideButton($"   Disassemble <b>{card.Name}</b> for 1 Wood{where}", new Color(0.30f, 0.20f, 0.12f, 1f),
+                                () => _mpManager.Submit(GameCommand.Disassemble(idx, fromTable, 0)));
+                            GuideButton($"   Disassemble <b>{card.Name}</b> for 1 Stone{where}", new Color(0.30f, 0.20f, 0.12f, 1f),
+                                () => _mpManager.Submit(GameCommand.Disassemble(idx, fromTable, 1)));
+                        }
+                        else
+                            GuideButton($"   Disassemble <b>{card.Name}</b> (gain {card.DisassembleGain}){where}", new Color(0.30f, 0.20f, 0.12f, 1f),
+                                () => _mpManager.Submit(GameCommand.Disassemble(idx, fromTable, 0)));
+                    }
                 }
             }
 
@@ -345,20 +372,196 @@ namespace CrittersOfCalamity.UI
             }
         }
 
+        private void BuildDrawOptions(PlayerState p)
+        {
+            _guideHint.text = "You drew your relic card. You have Draw phase abilities you can use now (or end the phase).";
+            BuildFactionAbilityOptions(p);
+        }
+
+        /// <summary>Faction abilities for the current phase (and general ones such as the Catapult), with why any are unavailable.</summary>
         private void BuildFactionAbilityOptions(PlayerState p)
         {
-            var actions = _engine.GetAvailableFactionActions(p);
-            if (actions.Count == 0) return;
-            OptionHeader("faction", $"{p.Faction.Name} abilities", "#72428C", true);
-            if (_guideExpanded != "faction") return;
-            var sel = _boardRenderer.SelectedCoord;
-            GuideNote(sel.HasValue ? $"   Abilities that target a tile use the selected tile {sel.Value}."
-                                   : "   If an ability targets a tile, click that tile on the board first.");
-            for (int i = 0; i < actions.Count; i++)
+            var abilities = _engine.GetFactionAbilities(p).Where(a => a.Phase == _engine.CurrentPhase).ToList();
+            if (abilities.Count == 0) return;
+            bool drawPhase = _engine.CurrentPhase == TurnPhase.DrawPhase;
+            string key = "faction";
+            OptionHeader(key, $"{p.Faction.Name} abilities ({abilities.Count(a => a.Available)} usable now)", "#72428C", true);
+            if (_guideExpanded != key && !drawPhase) return;
+            foreach (var ab in abilities)
             {
-                int idx = i;
-                GuideButton($"   {actions[i]}", new Color(0.24f, 0.16f, 0.30f, 1f), () =>
-                    _mpManager.Submit(GameCommand.FactionAction(idx, _boardRenderer.SelectedCoord ?? new HexCoord(0, 0))), 48f);
+                var a = ab;
+                string tag = a.IsGeneral ? " <size=11>(any faction)</size>" : "";
+                string text = $"   <b>{a.Name}</b>{tag}<size=12>\n   {a.Summary}" + (a.Available ? "" : $"\n   <color=#E0A060>{a.Blocked}</color>") + "</size>";
+                GuideButton(text, a.Available ? new Color(0.30f, 0.18f, 0.38f, 1f) : new Color(0.20f, 0.18f, 0.22f, 1f),
+                    () => BeginAbility(a), 30f + 15f * Mathf.Ceil(text.Length / 95f), a.Available);
+            }
+        }
+
+        private void BeginAbility(FactionAbility a)
+        {
+            ClearTileState();
+            _ability = a;
+            if (a.Target == AbilityTarget.None)
+            {
+                FinishAbilityTargets();
+                return;
+            }
+            _tileAction = TileAction.Ability;
+            RefreshTurnGuide();
+        }
+
+        /// <summary>All tiles are chosen: ask for an option if there is more than one, else submit.</summary>
+        private void FinishAbilityTargets()
+        {
+            var p = _engine.Players[_engine.CurrentTurnPlayerIndex];
+            var choices = _engine.AbilityChoices(p, _ability.Id, _abilityFirst, _abilitySecond);
+            if (choices.Count > 1)
+            {
+                _abilityChoiceList = choices;
+                _tileAction = TileAction.Ability;
+                RefreshTurnGuide();
+                return;
+            }
+            SubmitAbility(0);
+        }
+
+        private void SubmitAbility(int option)
+        {
+            var id = _ability.Id;
+            var c1 = _abilityFirst; var c2 = _abilitySecond;
+            ClearTileState();
+            _mpManager.Submit(GameCommand.Ability(id, c1, c2, option));
+            RefreshTurnGuide();
+        }
+
+        private void ClearTileState()
+        {
+            _tileAction = TileAction.None;
+            _ability = null;
+            _abilityHasFirst = false;
+            _abilityFirst = default(HexCoord);
+            _abilitySecond = default(HexCoord);
+            _abilityChoiceList = null;
+            _moveSelection.Clear();
+            _battleDefenderChoices = null;
+        }
+
+        /// <summary>The guide while it waits for a tile click (or an option) for Move, Battle, Loot, Craft or an ability.</summary>
+        private void BuildTileActionPrompt(TurnPhase phase)
+        {
+            var p = _engine.Players[_engine.CurrentTurnPlayerIndex];
+            if (_battleDefenderChoices != null)
+            {
+                _guideHint.text = $"<b>Battle at {_battleTile}:</b> more than one faction is here. Who do you attack?";
+                foreach (var seat in _battleDefenderChoices)
+                {
+                    int s2 = seat;
+                    GuideButton($"Attack {_engine.Players[seat].DisplayName} ({_engine.Players[seat].Faction.Name})", Palette.FromHex("#9C2F2F"),
+                        () => { var t = _battleTile; ClearTileState(); _mpManager.Submit(GameCommand.BattleAgainst(t, s2)); RefreshTurnGuide(); });
+                }
+            }
+            else switch (_tileAction)
+            {
+                case TileAction.MoveFrom: _guideHint.text = "<b>Move:</b> click the tile your units are on."; break;
+                case TileAction.MoveTo:
+                {
+                    _guideHint.text = $"<b>Move</b> from {_tileActionOrigin}: pick which units go (all are selected to start), then click a green tile.";
+                    var tile = _engine.Board[_tileActionOrigin];
+                    foreach (var u in tile.Units.Where(x => x.OwnerPlayerIndex == p.PlayerIndex))
+                    {
+                        var unit = u;
+                        bool on = _moveSelection.Count == 0 || _moveSelection.Contains(u.InstanceId);
+                        string state = u.CannotMoveThisTurn ? " <size=11>(can't move this turn)</size>" : "";
+                        GuideButton($"{(on ? "[x]" : "[  ]")} {u.Definition.Name} ({u.CurrentHP} HP){state}", on ? new Color(0.20f, 0.32f, 0.44f, 1f) : new Color(0.18f, 0.18f, 0.22f, 1f),
+                            () => ToggleMoveUnit(unit, tile, p), 32f, !u.CannotMoveThisTurn);
+                    }
+                    break;
+                }
+                case TileAction.Battle: _guideHint.text = "<b>Battle:</b> click a green tile where your units and an enemy are."; break;
+                case TileAction.Loot: _guideHint.text = "<b>Loot:</b> click a green tile with your units and no enemy pieces."; break;
+                case TileAction.Craft: _guideHint.text = $"<b>Craft:</b> click a green tile for your {p.Faction.PrimaryBuilding}."; break;
+                case TileAction.Ability:
+                    if (_abilityChoiceList != null)
+                    {
+                        _guideHint.text = $"<b>{_ability.Name}:</b> choose one.";
+                        for (int i = 0; i < _abilityChoiceList.Count; i++)
+                        {
+                            int opt = i;
+                            GuideButton(_abilityChoiceList[i], new Color(0.30f, 0.18f, 0.38f, 1f), () => SubmitAbility(opt));
+                        }
+                    }
+                    else
+                        _guideHint.text = $"<b>{_ability.Name}:</b> {(_abilityHasFirst ? _ability.Prompt2 : _ability.Prompt1)} (Green tiles are legal.)";
+                    break;
+            }
+            GuideButton("Cancel", Palette.FromHex("#7A2828"), () => { ClearTileState(); RefreshTurnGuide(); });
+        }
+
+        private void ToggleMoveUnit(UnitInstance u, HexTileState tile, PlayerState p)
+        {
+            if (_moveSelection.Count == 0)
+                foreach (var x in tile.Units.Where(x => x.OwnerPlayerIndex == p.PlayerIndex && !x.CannotMoveThisTurn)) _moveSelection.Add(x.InstanceId);
+            if (!_moveSelection.Remove(u.InstanceId)) _moveSelection.Add(u.InstanceId);
+            if (_moveSelection.Count == 0) _moveSelection.Add(u.InstanceId); // keep at least one
+            RefreshTurnGuide();
+        }
+
+        /// <summary>The tiles to highlight for the current tile action (green).</summary>
+        private List<HexCoord> GuideLegalTiles()
+        {
+            var p = _engine.Players[_engine.CurrentTurnPlayerIndex];
+            int me = p.PlayerIndex;
+            var board = _engine.Board.Values;
+            switch (_tileAction)
+            {
+                case TileAction.MoveFrom:
+                    return board.Where(t => t.Units.Any(u => u.OwnerPlayerIndex == me && !u.CannotMoveThisTurn)).Select(t => t.Coord).ToList();
+                case TileAction.MoveTo:
+                    return _engine.LegalMoveDestinations(_tileActionOrigin, _moveSelection.ToList());
+                case TileAction.Battle:
+                    return board.Where(t => t.Units.Any(u => u.OwnerPlayerIndex == me) &&
+                        (t.Units.Any(u => u.OwnerPlayerIndex != me) || (t.Building != null && t.Building.OwnerPlayerIndex != me) ||
+                         t.Tokens.Any(k => k.OwnerPlayerIndex != me && k.Type != TokenType.Coin) ||
+                         (t.OverlayOwnerPlayerIndex >= 0 && t.OverlayOwnerPlayerIndex != me && t.Overlay != FactionOverlayTileType.FallenLeaf_Unflipped &&
+                          t.Overlay != FactionOverlayTileType.CapybaraStream && t.Overlay != FactionOverlayTileType.Fire))).Select(t => t.Coord).ToList();
+                case TileAction.Loot:
+                    return board.Where(t => !t.LootedThisTurn && t.Units.Any(u => u.OwnerPlayerIndex == me) && !t.Units.Any(u => u.OwnerPlayerIndex != me) &&
+                        !(t.Building != null && t.Building.OwnerPlayerIndex != me) && !t.Tokens.Any(k => k.OwnerPlayerIndex != me && k.Type != TokenType.Coin))
+                        .Select(t => t.Coord).ToList();
+                case TileAction.Craft:
+                    return _engine.LegalBuildingTiles(p);
+                case TileAction.Ability:
+                    if (_ability == null || _abilityChoiceList != null) return new List<HexCoord>();
+                    return _engine.AbilityTargets(p, _ability.Id, _abilityHasFirst ? (HexCoord?)_abilityFirst : null);
+            }
+            return new List<HexCoord>();
+        }
+
+        /// <summary>Shows green tiles for whatever the guide (or a pending choice) is waiting on.</summary>
+        private void RefreshGuideHighlights()
+        {
+            if (_boardRenderer == null || _engine == null || _engine.Players.Count == 0 || _engine.IsPreGame) return;
+            List<HexCoord> legal = null;
+            var picked = new List<HexCoord>();
+            if (_engine.IsChoicePending)
+            {
+                if (ControlsSeat(_engine.PendingChoice.PlayerIndex) && _engine.PendingChoice.Tiles.Count > 0) legal = _engine.PendingChoice.Tiles;
+            }
+            else if (_tileAction != TileAction.None && ControlsSeat(_engine.CurrentTurnPlayerIndex))
+            {
+                legal = GuideLegalTiles();
+                if (_tileAction == TileAction.MoveTo) picked.Add(_tileActionOrigin);
+                if (_tileAction == TileAction.Ability && _abilityHasFirst) picked.Add(_abilityFirst);
+            }
+            if (legal != null || picked.Count > 0)
+            {
+                _boardRenderer.SetHighlights(legal, new Color(0.30f, 0.85f, 0.35f, 1f), picked, Palette.AuthorityGold);
+                _guideHighlightsShown = true;
+            }
+            else if (_guideHighlightsShown)
+            {
+                _boardRenderer.SetHighlights(null, Color.clear, null, Color.clear);
+                _guideHighlightsShown = false;
             }
         }
 
@@ -374,30 +577,69 @@ namespace CrittersOfCalamity.UI
 
         private static string Used(bool used) => used ? " (used)" : "";
 
-        private void CancelTileAction() => _tileAction = TileAction.None;
+        private void CancelTileAction() => ClearTileState();
 
         /// <summary>Board clicks while the guide is waiting for a tile. Returns true if the click was used.</summary>
         private bool HandleGuideTileClick(HexCoord coord)
         {
+            if (HandleChoiceTileClick(coord)) return true;
+            if (_tileAction == TileAction.None) return false;
+            var p = _engine.Players[_engine.CurrentTurnPlayerIndex];
             switch (_tileAction)
             {
                 case TileAction.MoveFrom:
+                    if (!_engine.Board[coord].Units.Any(u => u.OwnerPlayerIndex == p.PlayerIndex)) return true;
                     _tileActionOrigin = coord;
+                    _moveSelection.Clear();
                     _tileAction = TileAction.MoveTo;
                     RefreshTurnGuide();
                     return true;
                 case TileAction.MoveTo:
-                    _tileAction = TileAction.None;
-                    _mpManager.Submit(GameCommand.Move(_tileActionOrigin, coord));
+                {
+                    if (coord.Equals(_tileActionOrigin)) return true;
+                    var ids = _moveSelection.ToList();
+                    var from = _tileActionOrigin;
+                    ClearTileState();
+                    _mpManager.Submit(GameCommand.MoveUnits(from, coord, ids));
                     return true;
+                }
                 case TileAction.Battle:
-                    _tileAction = TileAction.None;
-                    _mpManager.Submit(GameCommand.Battle(coord));
+                {
+                    var t = _engine.Board[coord];
+                    var defenders = t.Units.Where(u => u.OwnerPlayerIndex != p.PlayerIndex).Select(u => u.OwnerPlayerIndex).Distinct().ToList();
+                    ClearTileState();
+                    if (defenders.Count > 1)
+                    {
+                        _battleDefenderChoices = defenders;
+                        _battleTile = coord;
+                        RefreshTurnGuide();
+                    }
+                    else _mpManager.Submit(GameCommand.Battle(coord));
                     return true;
+                }
                 case TileAction.Loot:
-                    _tileAction = TileAction.None;
+                    ClearTileState();
                     _mpManager.Submit(GameCommand.Loot(coord));
                     return true;
+                case TileAction.Craft:
+                    ClearTileState();
+                    _mpManager.Submit(GameCommand.CraftBuilding(coord));
+                    return true;
+                case TileAction.Ability:
+                {
+                    if (_ability == null || _abilityChoiceList != null) return true;
+                    var legal = _engine.AbilityTargets(p, _ability.Id, _abilityHasFirst ? (HexCoord?)_abilityFirst : null);
+                    if (!legal.Contains(coord)) { ShowLocalNotice($"{_ability.Name}: pick one of the green tiles."); return true; }
+                    if (!_abilityHasFirst)
+                    {
+                        _abilityFirst = coord;
+                        _abilityHasFirst = true;
+                        if (_ability.Target == AbilityTarget.TwoTiles) { RefreshTurnGuide(); return true; }
+                    }
+                    else _abilitySecond = coord;
+                    FinishAbilityTargets();
+                    return true;
+                }
             }
             return false;
         }
@@ -462,10 +704,11 @@ namespace CrittersOfCalamity.UI
                 case GameCommandType.Disassemble: return "disassembled a relic";
                 case GameCommandType.FactionAction:
                 {
-                    var actions = _engine.GetAvailableFactionActions(_engine.Players[cmd.Seat]);
-                    string name = cmd.A >= 0 && cmd.A < actions.Count ? actions[cmd.A].Split('(', ':')[0].Trim() : "a faction ability";
-                    return $"used {name}";
+                    string id = (cmd.S ?? "").Split('#')[0];
+                    var ab = _engine.GetFactionAbilities(_engine.Players[cmd.Seat]).FirstOrDefault(a => a.Id == id);
+                    return $"used {(ab != null ? ab.Name : "a faction ability")}";
                 }
+                case GameCommandType.ResolveChoice: return "made a choice";
                 case GameCommandType.CraftEquipment: return $"crafted {cmd.S.Replace('_', ' ')}";
                 case GameCommandType.BuyTradedGood: return "bought a Traded Good from the Capybara Trader";
                 case GameCommandType.BattleDecision: return cmd.A == 1 ? "used a card in the battle" : "passed on a battle card";

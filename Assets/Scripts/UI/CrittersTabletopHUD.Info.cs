@@ -564,24 +564,30 @@ namespace CrittersOfCalamity.UI
             int seat = _engine.CurrentSetupPlayer;
             if (seat < 0) return;
             var p = _engine.Players[seat];
-            int need = CrittersGameEngine.SetupTilesNeeded(p.Faction.Id);
+            int need = _engine.CurrentSetupTilesNeeded;
+            var kind = _engine.CurrentSetupKind;
+            string what = kind == SetupStepKind.CapybaraStreams ? "Capybara streams (special setup)"
+                        : kind == SetupStepKind.TanukiCoins ? "Tanuki Coin Tokens" : $"{p.Faction.Name} starting pieces";
+            string pickNote = kind == SetupStepKind.Faction
+                ? "Green tiles are legal; click a picked (gold) tile again to un-pick it."
+                : "Green tiles are legal; each click places one right away.";
             string order = string.Join("  >  ", _engine.SetupOrder.Select((s, i) =>
                 i < _engine.SetupCursor ? $"{_engine.Players[s].DisplayName} (done)" : i == _engine.SetupCursor ? $"<b>{_engine.Players[s].DisplayName}</b>" : _engine.Players[s].DisplayName));
 
             if (ControlsSeat(seat))
             {
                 _setupBannerText.text =
-                    $"<size=20><b>{p.DisplayName}, place your {p.Faction.Name} starting pieces</b></size>\n" +
-                    $"{CrittersGameEngine.SetupInstructions(p.Faction.Id)}\n" +
-                    $"Tiles picked: <b>{_engine.SetupPicks.Count} of {need}</b>. Green tiles are legal; click a picked (gold) tile again to un-pick it.\n" +
-                    $"<size=12>Setup order (reverse turn order): {order}</size>";
+                    $"<size=20><b>{p.DisplayName}, place your {what}</b></size>\n" +
+                    $"{_engine.CurrentSetupInstructions}\n" +
+                    $"Placed: <b>{_engine.SetupPicks.Count} of {need}</b>. {pickNote}\n" +
+                    $"<size=12>Setup order: {order}</size>";
                 _boardRenderer.SetHighlights(_engine.LegalSetupTiles(), new Color(0.30f, 0.85f, 0.35f, 1f), _engine.SetupPicks, Palette.AuthorityGold);
             }
             else
             {
                 _setupBannerText.text =
-                    $"<size=20><b>{p.DisplayName} is placing their {p.Faction.Name} starting pieces</b></size>\n" +
-                    $"{CrittersGameEngine.SetupInstructions(p.Faction.Id)}\n<size=12>Setup order (reverse turn order): {order}</size>";
+                    $"<size=20><b>{p.DisplayName} is placing their {what}</b></size>\n" +
+                    $"{_engine.CurrentSetupInstructions}\n<size=12>Setup order (reverse turn order): {order}</size>";
                 _boardRenderer.SetHighlights(null, Color.clear, _engine.SetupPicks, Palette.AuthorityGold);
             }
             _setupHighlightsShown = true;

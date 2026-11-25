@@ -14,6 +14,8 @@ namespace CrittersOfCalamity.Engine
     ///    player's Coin Tokens go down after everyone else, then the first turn begins.
     /// Ties are rerolled: only the tied players roll again, and their new roll breaks the tie.
     /// </summary>
+    public enum SetupStepKind { Faction, CapybaraStreams, TanukiCoins }
+
     public partial class CrittersGameEngine
     {
         /// <summary>Seat index of the player who took the first turn (setup runs in reverse from here).</summary>
@@ -35,6 +37,44 @@ namespace CrittersOfCalamity.Engine
         public List<int> SetupOrder = new List<int>();
         public int SetupCursor;
         public List<HexCoord> SetupPicks = new List<HexCoord>();
+        /// <summary>What each setup step is: a faction's normal setup, the Capybara streams, or the Tanuki coins.</summary>
+        public List<SetupStepKind> SetupKinds = new List<SetupStepKind>();
+
+        public SetupStepKind CurrentSetupKind =>
+            CurrentSetupPlayer >= 0 && SetupCursor < SetupKinds.Count ? SetupKinds[SetupCursor] : SetupStepKind.Faction;
+
+        /// <summary>How many tiles the current setup step needs.</summary>
+        public int CurrentSetupTilesNeeded
+        {
+            get
+            {
+                int seat = CurrentSetupPlayer;
+                if (seat < 0) return 0;
+                switch (CurrentSetupKind)
+                {
+                    case SetupStepKind.CapybaraStreams: return 8;
+                    case SetupStepKind.TanukiCoins: return 12;
+                }
+                return SetupTilesNeeded(Players[seat].Faction.Id);
+            }
+        }
+
+        public string CurrentSetupInstructions
+        {
+            get
+            {
+                int seat = CurrentSetupPlayer;
+                if (seat < 0) return "";
+                switch (CurrentSetupKind)
+                {
+                    case SetupStepKind.CapybaraStreams:
+                        return "Special setup, before anyone else: click 8 forest tiles one at a time to turn them into streams. Each new stream must touch a stream.";
+                    case SetupStepKind.TanukiCoins:
+                        return "Everyone has set up. Click 12 different forest tiles with no enemy units for your Coin Tokens. Coins must be at least 2 tiles apart.";
+                }
+                return SetupInstructions(Players[seat].Faction.Id);
+            }
+        }
 
         public bool IsPreGame => CurrentPhase == TurnPhase.PreGame_DraftRoll ||
                                  CurrentPhase == TurnPhase.PreGame_FactionPick ||
@@ -137,11 +177,17 @@ namespace CrittersOfCalamity.Engine
 
         void BeginSetupPlacement()
         {
-            RunCapybaraSpecialSetup();
             CurrentPhase = TurnPhase.PreGame_ReverseFactionSetup;
             SetupOrder.Clear();
+            SetupKinds.Clear();
+            // The Capybara Caravan places its 8 streams before anyone sets up (Faction 7 Special Setup)
+            foreach (var capy in Players.Where(pl => pl.Faction.Id == FactionId.CapybaraCaravan))
+            { SetupOrder.Add(capy.PlayerIndex); SetupKinds.Add(SetupStepKind.CapybaraStreams); }
             for (int k = Players.Count - 1; k >= 0; k--)
-                SetupOrder.Add((FirstPlayerIndex + k) % Players.Count); // last player in turn order sets up first
+            { SetupOrder.Add((FirstPlayerIndex + k) % Players.Count); SetupKinds.Add(SetupStepKind.Faction); } // last player in turn order first
+            // The Tanuki player places 12 Coin Tokens after everyone else (Faction 4 Setup step 2)
+            foreach (var tan in Players.Where(pl => pl.Faction.Id == FactionId.TroubleMakingTanukis))
+            { SetupOrder.Add(tan.PlayerIndex); SetupKinds.Add(SetupStepKind.TanukiCoins); }
             SetupCursor = 0;
             SetupPicks.Clear();
             Log($"Setup in reverse turn order: {string.Join(", ", SetupOrder.Select(i => Players[i].DisplayName))}.");
@@ -248,15 +294,39 @@ namespace CrittersOfCalamity.Engine
             int seat = CurrentSetupPlayer;
             if (seat < 0) return new List<HexCoord>();
             var p = Players[seat];
-            return Board.Keys.Where(c => IsLegalSetupTile(p, c, SetupPicks, out _)).ToList();
+            return Board.Keys.Where(c => IsLegalSetupStepTile(p, c, out _)).ToList();
+        }
+
+        /// <summary>Legality for whichever setup step is current (streams, coins, or the faction's own setup).</summary>
+        bool IsLegalSetupStepTile(PlayerState p, HexCoord c, out string reason)
+        {
+            reason = null;
+            if (!Board.TryGetValue(c, out var tile)) { reason = "That isn't a tile."; return false; }
+            switch (CurrentSetupKind)
+            {
+                case SetupStepKind.CapybaraStreams:
+                    if (tile.BaseTerrain != TileTerrainType.Forest || tile.Overlay != FactionOverlayTileType.None) { reason = "Streams can only go on forest tiles."; return false; }
+                    if (!c.GetNeighbors().Any(n => Board.TryGetValue(n, out var nt) && nt.EffectiveTerrain == TileTerrainType.Stream))
+                    { reason = "Each new stream must touch a stream tile."; return false; }
+                    return true;
+                case SetupStepKind.TanukiCoins:
+                    if (tile.EffectiveTerrain != TileTerrainType.Forest) { reason = "Coins go on forest tiles."; return false; }
+                    if (tile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex)) { reason = "That tile has enemy units."; return false; }
+                    if (tile.Building != null && tile.Building.Type == BuildingType.Shrine) { reason = "Not on a Shrine."; return false; }
+                    if (tile.Tokens.Any(t => t.Type == TokenType.Coin) || tile.Tokens.Count >= 2) { reason = "No room for a coin there."; return false; }
+                    if (Board.Values.Any(t => t.Tokens.Any(k => k.Type == TokenType.Coin) && HexCoord.Distance(t.Coord, c) < 2))
+                    { reason = "Coins must be at least 2 tiles apart."; return false; }
+                    return true;
+            }
+            return IsLegalSetupTile(p, c, SetupPicks, out reason);
         }
 
         public bool CanPlaceSetupTile(int seat, HexCoord c, out string reason)
         {
             reason = null;
             if (seat != CurrentSetupPlayer) { reason = "It isn't your turn to set up."; return false; }
-            if (SetupPicks.Contains(c)) return true; // clicking a picked tile again un-picks it
-            return IsLegalSetupTile(Players[seat], c, SetupPicks, out reason);
+            if (CurrentSetupKind == SetupStepKind.Faction && SetupPicks.Contains(c)) return true; // clicking a picked tile again un-picks it
+            return IsLegalSetupStepTile(Players[seat], c, out reason);
         }
 
         /// <summary>Pick (or un-pick) a setup tile. When enough tiles are picked, the pieces go down and setup moves on.</summary>
@@ -264,6 +334,28 @@ namespace CrittersOfCalamity.Engine
         {
             if (!CanPlaceSetupTile(seat, c, out _)) return false;
             var p = Players[seat];
+
+            if (CurrentSetupKind != SetupStepKind.Faction)
+            {
+                // Streams and coins go down one click at a time
+                if (CurrentSetupKind == SetupStepKind.CapybaraStreams)
+                {
+                    Board[c].Overlay = FactionOverlayTileType.CapybaraStream;
+                    Board[c].OverlayOwnerPlayerIndex = seat;
+                }
+                else PlaceToken(c, TokenType.Coin, p);
+                SetupPicks.Add(c);
+                if (SetupPicks.Count >= CurrentSetupTilesNeeded)
+                {
+                    Log(CurrentSetupKind == SetupStepKind.CapybaraStreams
+                        ? $"{p.DisplayName} placed 8 Stream Tiles." : $"{p.DisplayName} placed 12 Coin Tokens.");
+                    SetupPicks.Clear();
+                    SetupCursor++;
+                }
+                SkipSetupPlayersWithNoLegalTile();
+                OnStateChanged?.Invoke();
+                return true;
+            }
 
             if (SetupPicks.Contains(c))
             {
@@ -297,12 +389,16 @@ namespace CrittersOfCalamity.Engine
             {
                 var p = Players[SetupOrder[SetupCursor]];
                 if (LegalSetupTiles().Count > 0) return;
-                Log($"{p.DisplayName} had no legal setup tile, so their pieces were placed automatically.");
-                ApplyFactionSetup(p, AutoSetupPicks(p, AutoSetupAnchors[SetupOrder[SetupCursor] % AutoSetupAnchors.Length]));
+                if (CurrentSetupKind == SetupStepKind.Faction)
+                {
+                    Log($"{p.DisplayName} had no legal setup tile, so their pieces were placed automatically.");
+                    ApplyFactionSetup(p, AutoSetupPicks(p, AutoSetupAnchors[SetupOrder[SetupCursor] % AutoSetupAnchors.Length]));
+                }
+                else Log($"{p.DisplayName} has no legal tile left for {(CurrentSetupKind == SetupStepKind.TanukiCoins ? "Coin Tokens" : "streams")} ({SetupPicks.Count} placed).");
+                SetupPicks.Clear();
                 SetupCursor++;
             }
 
-            PlaceTanukiCoins();
             BeginFirstTurn();
         }
 

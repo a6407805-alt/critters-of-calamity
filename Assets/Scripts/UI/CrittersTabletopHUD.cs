@@ -44,9 +44,6 @@ namespace CrittersOfCalamity.UI
         private GameObject _lobbyCodexModal;
         private Text _codexDetailText;
 
-        private GameObject _factionActionsModal;
-        private Transform _factionActionsListRoot;
-        private Text _factionActionsHeaderText;
 
         private GameObject _stallModal;
         private Transform _stallButtonsRoot;
@@ -204,7 +201,6 @@ namespace CrittersOfCalamity.UI
             RecordActivity(cmd, ok);
             if (cmd.Type == GameCommandType.RollDice && ok) PlayDiceRollAnimation(cmd.Seat);
             RefreshHUD();
-            if (_factionActionsModal != null && _factionActionsModal.activeSelf) RefreshFactionActionsModal();
             if (_stallModal != null && _stallModal.activeSelf) RefreshStallModal();
         }
 
@@ -362,12 +358,12 @@ namespace CrittersOfCalamity.UI
 
             // 5. MODALS
             BuildLobbyCodexModal(canvasGo.transform);
-            BuildFactionActionsModal(canvasGo.transform);
             BuildStallModal(canvasGo.transform);
             BuildBattlePopupModal(canvasGo.transform);
             BuildBattleDecisionModal(canvasGo.transform);
             BuildTurnGuide(canvasGo.transform);
             BuildInfoScreens(canvasGo.transform);
+            BuildChoicePopup(canvasGo.transform);
             BuildPreGamePanel(canvasGo.transform);
             BuildMainMenu(canvasGo.transform);
         }
@@ -376,7 +372,6 @@ namespace CrittersOfCalamity.UI
         {
             bool nextState = !targetModal.activeSelf;
             if (_lobbyCodexModal != null) _lobbyCodexModal.SetActive(false);
-            if (_factionActionsModal != null) _factionActionsModal.SetActive(false);
             if (_stallModal != null) _stallModal.SetActive(false);
             if (_battlePopupModal != null) _battlePopupModal.SetActive(false);
             targetModal.SetActive(nextState);
@@ -431,78 +426,6 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.42f, 0.03f), new Vector2(0.98f, 0.82f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
 
             _lobbyCodexModal.SetActive(false);
-        }
-
-        private void BuildFactionActionsModal(Transform canvasParent)
-        {
-            var modalRt = CreatePanel(canvasParent, "FactionActionsModal",
-                new Vector2(0.24f, 0.22f), new Vector2(0.76f, 0.82f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, Vector2.zero, new Color(0.10f, 0.12f, 0.17f, 0.98f));
-            _factionActionsModal = modalRt.gameObject;
-
-            _factionActionsHeaderText = CreateText(modalRt, "Header", "FACTION ABILITIES, TOKENS, TILES, EQUIPMENT & SUMMONS",
-                15, TextAnchor.MiddleLeft, new Vector2(0.03f, 0.88f), new Vector2(0.84f, 0.98f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
-
-            CreateButton(modalRt, "BtnClose", "Close [X]",
-                new Vector2(0.86f, 0.89f), new Vector2(0.97f, 0.97f), Palette.FromHex("#7A2828"), () =>
-                {
-                    _factionActionsModal.SetActive(false);
-                });
-
-            var listGo = new GameObject("ActionsList");
-            listGo.transform.SetParent(modalRt, false);
-            var listRt = listGo.AddComponent<RectTransform>();
-            listRt.anchorMin = new Vector2(0.04f, 0.05f);
-            listRt.anchorMax = new Vector2(0.96f, 0.85f);
-            listRt.offsetMin = Vector2.zero;
-            listRt.offsetMax = Vector2.zero;
-            var vLayout = listGo.AddComponent<VerticalLayoutGroup>();
-            vLayout.spacing = 8f;
-            vLayout.childControlHeight = true;
-            vLayout.childControlWidth = true;
-            vLayout.childForceExpandHeight = true;
-            vLayout.childForceExpandWidth = true;
-            _factionActionsListRoot = listGo.transform;
-
-            _factionActionsModal.SetActive(false);
-        }
-
-        private void RefreshFactionActionsModal()
-        {
-            if (_engine == null || _factionActionsListRoot == null) return;
-            foreach (Transform c in _factionActionsListRoot) Destroy(c.gameObject);
-
-            var p = _engine.Players[_engine.CurrentTurnPlayerIndex];
-            var targetCoord = _boardRenderer.SelectedCoord ?? new HexCoord(0, 0);
-            _factionActionsHeaderText.text = $"<b>{p.DisplayName} ({p.Faction.Name})</b> — Faction Actions (Target Hex: {targetCoord})";
-
-            var actions = _engine.GetAvailableFactionActions(p);
-            for (int i = 0; i < actions.Count; i++)
-            {
-                int capturedIdx = i;
-                CreateLayoutButton(_factionActionsListRoot, $"FacAct_{i}",
-                    $"<b>[{i + 1}] {actions[i]}</b>",
-                    p.Faction.PrimaryColor * 0.75f, () =>
-                    {
-                        var coord = _boardRenderer.SelectedCoord ?? new HexCoord(0, 0);
-                        _mpManager.Submit(GameCommand.FactionAction(capturedIdx, coord));
-                        RefreshFactionActionsModal();
-                        RefreshHUD();
-                    });
-            }
-
-            foreach (var eq in p.Faction.Equipment)
-            {
-                var capturedEq = eq;
-                CreateLayoutButton(_factionActionsListRoot, $"EqCraft_{eq.Id}",
-                    $"<b>[Craft Equipment] {eq.Name}</b> (Cost: {eq.Cost}) -> {eq.EffectText}",
-                    new Color(0.28f, 0.24f, 0.16f, 0.96f), () =>
-                    {
-                        _mpManager.Submit(GameCommand.CraftEquipment(capturedEq.Id));
-                        RefreshFactionActionsModal();
-                        RefreshHUD();
-                    });
-            }
         }
 
         private void BuildStallModal(Transform canvasParent)
@@ -685,6 +608,8 @@ namespace CrittersOfCalamity.UI
             RefreshTurnGuide();
             RefreshWinPopup();
             RefreshSetupBanner();
+            RefreshChoicePopup();
+            RefreshGuideHighlights();
             if (_infoModal != null && _infoModal.activeSelf && !_infoShowingRulebook) RefreshInfoModal();
 
             if (_engine.IsPreGame)
