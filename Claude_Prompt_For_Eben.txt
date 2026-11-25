@@ -1,0 +1,71 @@
+================================================================================
+CRITTERS OF CALAMITY - EBEN'S CLAUDE ONBOARDING & SETUP PROMPT
+================================================================================
+
+Hey Eben!
+Here are the steps to connect your Claude (Claude Code CLI, Claude Desktop, or Claude)
+directly to the Critters of Calamity Unity project on GitHub:
+
+--------------------------------------------------------------------------------
+STEP 1: ACCEPT THE GITHUB INVITATION
+--------------------------------------------------------------------------------
+1. Check your email or visit:
+   https://github.com/a6407805-alt/critters-of-calamity/invitations
+2. Accept the collaborator invitation to join the repository.
+
+--------------------------------------------------------------------------------
+STEP 2: CLONE THE REPO
+--------------------------------------------------------------------------------
+Open your terminal (PowerShell, bash, or command prompt) and run:
+
+git clone https://github.com/a6407805-alt/critters-of-calamity.git
+cd critters-of-calamity
+
+--------------------------------------------------------------------------------
+STEP 3: PROMPT TO PASTE INTO CLAUDE
+--------------------------------------------------------------------------------
+Copy and paste the block below into your Claude session:
+
+-----------------------[ START CLAUDE PROMPT ]-----------------------
+You are assisting me in co-developing "Critters of Calamity", a 3D digital tabletop board game built in Unity (Unity 6 / 6000.6.8f1 URP), hosted on GitHub at:
+https://github.com/a6407805-alt/critters-of-calamity.git
+
+Please execute the following setup and initialization:
+
+1. WORKSPACE SETUP & SYNC:
+   - Ensure the working directory is the cloned repository: `critters-of-calamity`.
+   - Ensure the working branch is `main` and pull the latest changes: `git pull --rebase origin main`.
+   - Read `CLAUDE.md` in the project root for agent guidelines.
+
+2. DOCUMENTATION & RULES OF TRUTH:
+   - Review `Docs/Critters_of_Calamity_Core_Rulebook_Eight_Factions.txt`.
+   - The game follows the Eight Factions edition:
+     * 8 Core Factions: Horde of the Millions, Platypus Papacy, Curly Tail, The Briared Flower, Trouble-Making Tanukis, The Capybara Caravan, Firestarting Squirrels, Glacier Kingdom.
+     * Tabletop Map: 108 hex tiles (90 Forest, 14 Streams, 4 Central Ruins).
+     * Rule Constraints: Stacking limit of 6 units per tile, reverse setup order, 4 turn phases (Dawn, Morning, Afternoon, Evening), 5-phase 2d6 combat with Ambush/Retaliation, and 0–30 Authority win condition.
+     * Card Decks: 40 Relics, 50 Resources, 8-card Forage deck, 8-card Traded Goods deck.
+
+3. ARCHITECTURE OVERVIEW:
+   - Data & Models: `Assets/Scripts/Model/` (`RulebookTypes.cs`, `RulebookDatabase.cs`).
+   - Core Rules Engine: `Assets/Scripts/Engine/` (`CrittersGameEngine.cs`).
+   - 3D Visuals & Hex Grid: `Assets/Scripts/Visuals/` (`Tabletop3DBoardRenderer.cs`, `HexTileClickRelay.cs`, `IdleCritterAnimator.cs`).
+   - UI / HUD: `Assets/Scripts/UI/` (`CrittersTabletopHUD.cs`).
+   - Multiplayer: `Assets/Scripts/Multiplayer/` (`CrittersMultiplayerSessionManager.cs`).
+   - Desktop Launcher: `Launch_Critters_of_Calamity.bat` and `Launcher/CrittersLauncher.ps1`.
+
+4. DEVELOPMENT PROTOCOL:
+   - Always run `git pull --rebase origin main` before making changes.
+   - Any C# scripts added or edited must preserve existing Unity namespaces, avoid obsolete API calls (use `Object.FindObjectsByType<T>()`), and maintain clean `.meta` file pairing.
+   - Keep all faction mechanics, card texts, and combat math 100% accurate to `Docs/Critters_of_Calamity_Core_Rulebook_Eight_Factions.txt`.
+   - When finished with a task, commit with a concise message and push to `origin main`.
+
+Please inspect the project tree, confirm you have read the rulebook and codebase, and let me know what you'd like to work on or improve first.
+------------------------[ END CLAUDE PROMPT ]------------------------
+
+================================================================================
+Useful Git Commands for Reference:
+- Pull latest changes:   git pull --rebase origin main
+- Check status:          git status
+- Commit changes:        git add . && git commit -m "Description of change"
+- Push changes:          git push origin main
+================================================================================
