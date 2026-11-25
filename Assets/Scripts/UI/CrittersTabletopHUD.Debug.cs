@@ -24,6 +24,7 @@ namespace CrittersOfCalamity.UI
               FactionId.CurlyTail, FactionId.PlatypusPapacy, FactionId.Necromouser, FactionId.BriaredFlower };
         private System.Random _debugRng = new System.Random(7);
         private int _debugFocusIndex;
+        private int _debugSetups;
         private bool _debugBusy;
 
         private void DebugHotkeys()
@@ -34,6 +35,7 @@ namespace CrittersOfCalamity.UI
             else if (kb.f10Key.wasPressedThisFrame) StartCoroutine(DebugRandomActions(40));
             else if (kb.f11Key.wasPressedThisFrame) DebugFocusBusiestTile();
             else if (kb.f8Key.wasPressedThisFrame && _canvas != null) _canvas.enabled = !_canvas.enabled;
+            else if (kb.f7Key.wasPressedThisFrame) DebugCycleCurlyTailGear();
         }
 
         private IEnumerator DebugAutoStart()
@@ -46,13 +48,16 @@ namespace CrittersOfCalamity.UI
                 _mpManager.StartMatch();
                 yield return null;
             }
+            int offset = _debugSetups++ % DebugFactionOrder.Length;   // each F9 game seats a different set of factions
             int guard = 0;
             while (_engine != null && _engine.IsPreGame && guard++ < 400)
             {
                 if (_engine.CurrentPhase == TurnPhase.PreGame_FactionPick)
                 {
                     int seat = _engine.CurrentFactionPicker;
-                    var pick = DebugFactionOrder.First(f => _engine.CanPickFaction(seat, f));
+                    var pick = Enumerable.Range(0, DebugFactionOrder.Length)
+                        .Select(i => DebugFactionOrder[(i + offset) % DebugFactionOrder.Length])
+                        .First(f => _engine.CanPickFaction(seat, f));
                     _mpManager.Submit(GameCommand.PickFaction(pick), seat);
                 }
                 else if (_engine.CurrentPhase == TurnPhase.PreGame_ReverseFactionSetup)
@@ -66,6 +71,23 @@ namespace CrittersOfCalamity.UI
                 yield return new WaitForSeconds(0.05f);
             }
             _debugBusy = false;
+        }
+
+        /// <summary>F7 (local test only): put the next Golden Arms or Armor piece on Curly Tail to check the gear visuals; after all five, strip them.</summary>
+        private void DebugCycleCurlyTailGear()
+        {
+            if (_engine == null) return;
+            foreach (var tile in _engine.Board.Values)
+                foreach (var u in tile.Units)
+                {
+                    if (u.Definition.Id != "curly_tail") continue;
+                    var all = _engine.Players[u.OwnerPlayerIndex].Faction.Equipment.Where(e => e.TargetUnitId == "curly_tail").ToList();
+                    var next = all.FirstOrDefault(e => !u.EquippedItems.Exists(x => x.Id == e.Id));
+                    if (next != null) u.EquippedItems.Add(next); else u.EquippedItems.Clear();
+                    _boardRenderer?.RebuildPieces();
+                    _boardRenderer?.FocusCameraOnCoord(tile.Coord, 5f);
+                    return;
+                }
         }
 
         private IEnumerator DebugRandomActions(int count)
