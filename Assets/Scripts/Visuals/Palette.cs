@@ -22,7 +22,7 @@ namespace CrittersOfCalamity.Visuals
         // Unique Faction Overlay Tiles (Rulebook Part 3 Material 6)
         public static readonly Color MiasmaTile      = FromHex("#6B3FA0"); // Necromouser creeping purple miasma
         public static readonly Color FireTile        = FromHex("#E85D2A"); // Firestarting Squirrels blazing ember orange
-        public static readonly Color FallenLeafTile  = FromHex("#D9A23A"); // Trouble-Making Tanukis autumn leaf amber
+        public static readonly Color FallenLeafTile  = FromHex("#B98A3A"); // Trouble-Making Tanukis autumn leaf amber
 
         // Accents & Resources
         public static readonly Color AuthorityGold   = FromHex("#F2B83B"); // Gold resource & Authority crown accent

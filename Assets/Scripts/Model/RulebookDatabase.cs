@@ -8,7 +8,7 @@ namespace CrittersOfCalamity.Model
     /// Complete, verbatim database for Critters of Calamity - Core Rulebook: Eight Faction Edition:
     /// - 40 Relic Deck cards (Part 16)
     /// - 50 Resource Deck cards (20 Stone, 20 Wood, 10 Gold - Part 2)
-    /// - 8-card Forage Deck (3 Plague + 5 Rummage, reshuffled after every draw - Part 9 & Part 17 Faction 2)
+    /// - 8-card Forage Deck (3 Plague + 5 Rummage; used cards go to a discard pile, reshuffled when the deck runs out)
     /// - 8-card Traded Goods Deck (Part 17 Faction 7)
     /// - The 8 Core Factions (Part 17):
     ///   1. Curly Tail's Warband (4/10)
@@ -158,7 +158,7 @@ namespace CrittersOfCalamity.Model
                 new RelicCardDef
                 {
                     Id = "damaged_anankian_chariot", Name = "Damaged Anankian Chariot", CopiesInDeck = 2,
-                    Cost = new ResourceCost(wood: 2, stone: 2),
+                    Cost = new ResourceCost(wood: 1, stone: 2),
                     DisassembleGain = new ResourceCost(stone: 2),
                     KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
                     EffectText = "When Crafted: Recruit 1 basic unit at each of your recruitment buildings. Those units cannot move this turn, but they can loot and battle."
@@ -233,7 +233,7 @@ namespace CrittersOfCalamity.Model
                     Cost = new ResourceCost(wood: 1, stone: 1),
                     DisassembleGain = new ResourceCost(wood: 1),
                     KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
-                    EffectText = "When Crafted: Choose one: (A) discard 1 card from Hand to draw 2 resources; or (B) return any 2 burned resource cards to your Resource Pile."
+                    EffectText = "When Crafted: Choose one: (A) discard 1 card of your choice from Hand to draw 2 resources; or (B) return any 2 burned resource cards to your Resource Pile."
                 },
                 new RelicCardDef
                 {
@@ -273,24 +273,24 @@ namespace CrittersOfCalamity.Model
                     Id = "dilapidated_bridge", Name = "Dilapidated Bridge", CopiesInDeck = 3,
                     Cost = new ResourceCost(wood: 1),
                     DisassembleGain = new ResourceCost(wood: 2),
-                    KeepOnTableWhenCrafted = false, HasCraftedEffect = false,
-                    EffectText = "When Crafted: No effect. Disassemble: Gain 2 Wood."
+                    KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
+                    EffectText = "When Crafted: Gain 2 Wood. Disassemble: Gain 2 Wood."
                 },
                 new RelicCardDef
                 {
                     Id = "abandoned_well", Name = "Abandoned Well", CopiesInDeck = 3,
                     Cost = new ResourceCost(stone: 1),
                     DisassembleGain = new ResourceCost(stone: 2),
-                    KeepOnTableWhenCrafted = false, HasCraftedEffect = false,
-                    EffectText = "When Crafted: No effect. Disassemble: Gain 2 Stone."
+                    KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
+                    EffectText = "When Crafted: Gain 2 Stone. Disassemble: Gain 2 Stone."
                 },
                 new RelicCardDef
                 {
                     Id = "forest_clearing", Name = "Forest Clearing", CopiesInDeck = 4,
                     Cost = new ResourceCost(any: 1),
                     DisassembleGain = new ResourceCost(wood: 1, stone: 1),
-                    KeepOnTableWhenCrafted = false, HasCraftedEffect = false,
-                    EffectText = "When Crafted: No effect. Disassemble: Gain 1 Stone and 1 Wood."
+                    KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
+                    EffectText = "When Crafted: Gain 1 Stone and 1 Wood. Disassemble: Gain 1 Stone and 1 Wood."
                 }
             };
         }
@@ -317,11 +317,11 @@ namespace CrittersOfCalamity.Model
                     Id = FactionId.CurlyTail,
                     Name = "Curly Tail's Warband",
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
-                    DifficultyRatingOutOf10 = 4,
+                    DifficultyRatingOutOf10 = 6,
                     ShortSummary = "Snowballing early game faction led by a ferocious boar. Race to forge golden armor and secure supply lines to quickly cross the map.",
                     HowToScoreAuthority = "Forge Golden Arms and Armor (2 Authority each, the first time each is crafted). Momentum Level 2: 1 Authority in your End phase if you won a battle that turn. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "Curly Tail, a boar warlord, stumbled upon the old political treatises of the Ananke and admired their indomitable warrior spirit. His loyal Warband pillages to forge golden arms from plundered wealth, stretching supply lines across the Continent like a closing fist.",
-                    SetupInstructions = "Place Curly Tail, 4 Warband units, and 1 War Party on a forest or ruin tile with no enemy units that is at least 2 tiles away from every enemy unit. Set all three meters to Level 0.",
+                    SetupInstructions = "Place Curly Tail, 4 Warband units, and 1 War Party on a forest or ruin tile at least 4 tiles away from every other player's pieces. Other players cannot set up within 4 tiles of Curly Tail. Set all three meters to Level 0.",
                     PrimaryColor = Palette.FromHex("#4A4D52"),
                     SecondaryColor = Palette.FromHex("#F5C445"),
                     PrimaryBuilding = BuildingType.WarParty,
@@ -331,7 +331,7 @@ namespace CrittersOfCalamity.Model
                     {
                         "Spoils of War: The first time you win a battle each turn, after the battle gain 1 Wood or 1 Stone (your choice) from the resource deck.",
                         "End of Main Phase Meters: (1) Raise Thirst for Glory by 1 -> (2) Pay current Hunger level effect -> (3) Raise Hunger by 1.",
-                        "Momentum Meter (Attacker battles only): Attack win -> +1 Momentum. Attack loss -> -2 Momentum, -2 Hunger, -1 Thirst for Glory."
+                        "Momentum Meter (Attacker battles only): Attack win -> +1 Momentum. Attack loss -> Momentum and Hunger drop to 0, -2 Thirst for Glory."
                     },
                     EnemyAuthorityScoring = new List<string>
                     {
@@ -347,8 +347,8 @@ namespace CrittersOfCalamity.Model
                     },
                     Units = new List<UnitDef>
                     {
-                        new UnitDef { Id = "warband", Name = "Warband", Faction = FactionId.CurlyTail, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at War Parties", AbilitiesText = "Supply Line (free action, up to 2x/Main phase): Discard 1 Wood -> place a Supply Line Token on a forest tile with Curly Tail or a Warband unit, adjacent to a War Party or Supply Line Token (linked network movement). Forge (free craft, 1x/Excavation): Pay Gold to craft & equip 1 Golden Equipment to Curly Tail." },
-                        new UnitDef { Id = "curly_tail", Name = "Curly Tail, the Tyrannical", Faction = FactionId.CurlyTail, IsSpecialUnit = true, BaseAttack = 3, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Starts on board; Strategic Retreat places him at 1 HP on a War Party with 1 Warband unit (returns 2 equipped items to supply).", AbilitiesText = "Pillager: Free Pillage (draw 1 resource; +1 relic at Momentum Lv1+) after winning a battle he took part in. Taunt (Glory Lv3+): Pull enemy within 2 tiles 1 tile closer; if on Curly Tail's tile, start a free battle." }
+                        new UnitDef { Id = "warband", Name = "Warband", Faction = FactionId.CurlyTail, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at War Parties", AbilitiesText = "Supply Line (free action, up to 2x/Main phase): Discard 1 Wood -> place a Supply Line Token on a forest tile with Curly Tail or a Warband unit, adjacent to a War Party or Supply Line Token (linked network movement). Forge (free craft, 1x/Excavation): Pay Gold to craft & equip 1 Golden Equipment to Curly Tail." },
+                        new UnitDef { Id = "curly_tail", Name = "Curly Tail, the Tyrannical", Faction = FactionId.CurlyTail, IsSpecialUnit = true, BaseAttack = 3, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Starts on board; Strategic Retreat places him at 1 HP on a War Party with 1 Warband unit (returns 2 equipped items to supply).", AbilitiesText = "Pillager: Free Pillage (draw 1 resource; +1 relic at Momentum Lv1+) after winning a battle he took part in. Taunt (Glory Lv3+): Pull enemy within 2 tiles 1 tile closer; if on Curly Tail's tile, start a free battle." }
                     },
                     Equipment = new List<EquipmentDef>
                     {
@@ -375,7 +375,7 @@ namespace CrittersOfCalamity.Model
                     SecondaryColor = Palette.FromHex("#F5E6D3"),
                     PrimaryBuilding = BuildingType.Burrow,
                     PrimaryBuildingCost = new ResourceCost(wood: 1),
-                    BuildingRules = "Burrow: Craft (1 Wood) on a tile with a Millions unit, no enemy buildings, and < 3 enemy units. Start of End Phase: +1 Authority per 2 Burrows. End Phase Upkeep: Discard 1 Wood per 2 Burrows (or remove 2 Burrows per unpaid Wood).",
+                    BuildingRules = "Burrow: Craft (1 Wood) on a tile with a Millions unit, no enemy buildings, and < 3 enemy units. Start of End Phase: +1 Authority per 2 Burrows. End Phase Upkeep: Discard 1 Wood or 1 Stone per 2 Burrows (or remove 2 Burrows per unpaid Wood).",
                     SpeciesTraits = new List<string>
                     {
                         "Out of Hibernation: During your End phase, at each Burrow tile with fewer than 3 Millions units, place 1 Millions unit.",
@@ -410,10 +410,10 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 2,
                     ShortSummary = "Mid to late game faction that martyrs Pilgrims to fuel a Crusade that only grows stronger with time.",
-                    HowToScoreAuthority = "Martyrdom: 1 Authority per Pilgrim sacrificed. Holy Relic Tokens: 1 Authority when crafted. Alms: 1 Authority each time the Platy-Pope levels up. Level 5: turn 3 Faith into 1 Authority. Remove enemy buildings, tokens and special units (1 extra during a Crusade).",
+                    HowToScoreAuthority = "Martyrdom: 1 Authority per Pilgrim sacrificed. Holy Relic Tokens: 1 Authority when crafted. Alms: 1 Authority each time the Platy-Pope levels up. Level 5: turn 5 Faith into 1 Authority. Remove enemy buildings, tokens and special units (1 extra during a Crusade).",
                     LoreDescription = "The Papacy holds the platypus to be the divinely inspired creation of a divine being. Turning away from the heresy of the Ananke, the Platypus Pilgrims carry their gospel into hostile lands and die for it gladly.",
                     SetupInstructions = "Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units. Set the Faith Meter and the Platy-Pope Level Meter to 0.",
-                    PrimaryColor = Palette.FromHex("#2E8B9A"),
+                    PrimaryColor = Palette.FromHex("#C49A6C"),
                     SecondaryColor = Palette.FromHex("#F5E6A8"),
                     PrimaryBuilding = BuildingType.TheCitadel,
                     PrimaryBuildingCost = new ResourceCost(wood: 2, stone: 2),
@@ -456,20 +456,21 @@ namespace CrittersOfCalamity.Model
                     HowToScoreAuthority = "Deliver Coin Tokens to your Shrines (2 Authority each). Remove enemy buildings, tokens and special units.",
                     LoreDescription = "Inspired by the religious works of the Ananke, the Tanukis scamper across the Continent gathering the Ananke's scattered coins and dropping them off at shrines while leaving traps for travelers.",
                     SetupInstructions = "1. Place 3 Tanuki units and 1 Shrine on a forest tile with no enemy units. 2. After ALL other players finish setup, place 12 Coin Tokens on 12 different forest tiles with no enemy units (each at least 2 tiles away from every other Coin Token).",
-                    PrimaryColor = Palette.FromHex("#CC9A2E"),
+                    PrimaryColor = Palette.FromHex("#A8792C"),
                     SecondaryColor = Palette.FromHex("#F2C94C"),
                     PrimaryBuilding = BuildingType.Shrine,
                     PrimaryBuildingCost = new ResourceCost(wood: 2),
                     BuildingRules = "Shrine: Craft (2 Wood) on a forest or Fallen Leaves tile with a Tanuki or Band. Scoring Coins: Whenever a Coin Token is moved or placed onto a tile with a Shrine, return the Coin Token to supply and gain 2 Authority!",
                     SpeciesTraits = new List<string>
                     {
-                        "The Coin Hunt (compulsory): A Coin Token on the same tile as your Tanukis/Band is held and always moves with them (unless destination already has a Coin Token).",
+                        "The Coin Hunt (compulsory): A Coin Token on the same tile as your Tanukis/Band is held and always moves with them; they can carry up to 2 Coins (a tile still holds at most 2 tokens).",
+                        "Leaf Runner: your Move actions can go 1 extra tile when they end on a Fallen Leaves tile.",
                         "Quick Feet: When >= 1 HP damage is dealt to your Tanukis on a tile with >= 2 Tanukis, after 0 HP units are removed, move remaining units to adjacent tiles with no enemy units and place 1 Fallen Leaves tile on one forest tile a unit moved to.",
                         "Rustling in the Trees: Once during your Draw phase, place 1 Fallen Leaves tile on a forest tile with or adjacent to a Shrine (with no enemy units)."
                     },
                     EnemyAuthorityScoring = new List<string>
                     {
-                        "Removing a flipped Fallen Leaves tile (isolated): 1 Authority (returns to forest tile, leaf shuffled back into stack).",
+                        "Removing a flipped Fallen Leaves tile (isolated): the remover gains 1 Wood, no Authority (returns to forest tile, leaf shuffled back into stack).",
                         "Removing a Shrine: 1 Authority.",
                         "Removing A Band of Troublemakers: 2 Authority."
                     },
@@ -503,7 +504,7 @@ namespace CrittersOfCalamity.Model
                     BuildingRules = "The Necromouser has no building and cannot use the recruitment main phase action or the comeback mechanic.",
                     SpeciesTraits = new List<string>
                     {
-                        "Hoarder: Keep up to 8 resource cards in your resource pile during your end phase instead of 5.",
+                        "Hoarder: Keep up to 8 resource cards in your resource pile during your end phase instead of 6.",
                         "Plague: When you spend Gold on equipment, place 1 Miasma Tile directly adjacent to an existing Miasma Tile.",
                         "Undead Shackles: Once during your end phase, gain 1 Authority per 2 Dead in the Cauldron (cap 2 Authority per turn).",
                         "Cauldron: When a unit is removed on a Miasma Tile or an adjacent tile, place 1 removed unit from each faction onto the Cauldron as 'Dead'.",
@@ -561,7 +562,7 @@ namespace CrittersOfCalamity.Model
                         "Flames of War: End of Fire Tile resolutions -> +1 Authority per 2HP damage dealt to enemies, +1 Authority per 2 enemies moved by Fire (max 4/turn).",
                         "Forest Fire: During End phase -> +1 Authority for every Fire Tile adjacent to another faction's pieces (cap 2).",
                         "Ignite: During End phase -> Burn 1 card from Hand to relocate 1 Fire Tile to a forest tile adjacent to an enemy unit.",
-                        "Disruption: Once per Main phase -> Burn 2 cards in your Resource Pile to burn 1 Excavation card and 1 card from each player's Resource Pile (+1 Authority if Gold or Gold-disassemble relic burned)."
+                        "Disruption: Once per Main phase -> Burn 2 cards of your choice in your Resource Pile to burn 1 Excavation card and 1 card from each player's Resource Pile (+1 Authority if Gold or Gold-disassemble relic burned)."
                     },
                     EnemyAuthorityScoring = new List<string>
                     {
@@ -592,7 +593,7 @@ namespace CrittersOfCalamity.Model
                     HowToScoreAuthority = "Customary Greeting: 1 Authority per player with a Guest unit. Traded Goods: 1 Authority each time someone buys from your Trader. Hospitality: 1 Authority when a Guest draws a relic. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "At the bottom of the stream are remnants of the Ananke, and the capybaras dredge that memory up one relic at a time and sell those relics using their merchants.",
                     SetupInstructions = "Special Setup (before any other player sets up): Place all 6 Stream Tiles one at a time onto forest tiles, each adjacent to another Stream Tile. Regular Setup: Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile.",
-                    PrimaryColor = Palette.FromHex("#9C6B3B"),
+                    PrimaryColor = Palette.FromHex("#68B5D6"),
                     SecondaryColor = Palette.FromHex("#5BC0BE"),
                     PrimaryBuilding = BuildingType.Wallow,
                     PrimaryBuildingCost = new ResourceCost(wood: 1, stone: 1),
@@ -616,9 +617,9 @@ namespace CrittersOfCalamity.Model
                     },
                     Units = new List<UnitDef>
                     {
-                        new UnitDef { Id = "capybara", Name = "Capybara", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 20, SummoningCondition = "Recruit at Wallows", AbilitiesText = "Forage: Once per Main phase on a stream tile, draw 1 relic deck card. Semiaquatic: For 1 Move action, move across 2 stream tiles." },
+                        new UnitDef { Id = "capybara", Name = "Capybara", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 2, SupplyCount = 20, SummoningCondition = "Recruit at Wallows", AbilitiesText = "Forage: Once per Main phase on a stream tile, draw 1 relic deck card. Semiaquatic: For 1 Move action, move across 2 stream tiles." },
                         new UnitDef { Id = "capybara_trader", Name = "Capybara Trader", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Starts on board; if off board during Excavation phase, discard 2 relic cards from Hand to place at a Wallow.", AbilitiesText = "Traveling Caravan: Players with a unit on the Trader's tile can buy from the 3-card Traded Goods Stall (+1 Auth to buyer & Capybara, buyer places 1 basic unit as Guest at a Wallow). Peddling: 1 free Move action each turn (up to 2 land or 3 stream tiles)." },
-                        new UnitDef { Id = "riverkeeper", Name = "The Riverkeeper", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 4, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "During Main phase with 2+ Wallows on board: Discard 1 Stone + 2 Gold -> Summon at a Wallow.", AbilitiesText = "Hospitality: Once per Main phase, a Guest on its tile draws 1 relic -> Capybara gains 1 Authority. Rejuvenate: During your Main phase, discard 2 Gold to heal the Riverkeeper 1 HP (repeatable)." }
+                        new UnitDef { Id = "riverkeeper", Name = "The Riverkeeper", Faction = FactionId.CapybaraCaravan, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 4, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "During Main phase with 2+ Wallows on board: Discard 1 Stone + 2 Gold -> Summon at a Wallow.", AbilitiesText = "Don't Wallow: all other Capybara Caravan units within 2 tiles of the Riverkeeper gain +1 Attack. Hospitality: Once per Main phase, a Guest on its tile draws 1 relic -> Capybara gains 1 Authority. Rejuvenate: During your Main phase, discard 2 Gold to heal the Riverkeeper 1 HP (repeatable)." }
                     },
                     SubDeckCards = BuildCapybaraTradedGoodsDeck8()
                 },
@@ -643,7 +644,7 @@ namespace CrittersOfCalamity.Model
                     {
                         "In Half Bloom: During Main phase, remove 2 resources from Resource Pile and 3 Thorned Seeds from the board to place 1 Blooming Briar with 2 Thorns at a Prickly Thicket.",
                         "Branching Out: Thistle Barrage gains +1 tile range while the Blooming Briar is on one of your Prickly Thickets (3 tiles -> 4 tiles).",
-                        "Rooted In Place: During your turn, the Blooming Briar can only move 1 tile for the entire turn.",
+                        "Rooted In Place: During your turn, the Blooming Briar can only move 1 tile for the entire turn. It cannot move or be moved onto stream tiles.",
                         "Pollination: During your End phase, gain 1 Authority if you have Thorned Seeds on 4+ different tiles (gain 2 Authority if on 7+ different tiles)."
                     },
                     EnemyAuthorityScoring = new List<string>
@@ -684,7 +685,7 @@ namespace CrittersOfCalamity.Model
                     {
                         "Purgatory: Purged Goats go onto the Purgatory card, an off-board spot only you use.",
                         "Secrets of the Ancients: In your Draw phase, after you draw, mill the top Grimoire card and apply it. If you can't pay its cost, the whole card fizzles.",
-                        "Kleptomancy: Keep up to 10 Gold and 5 other resources at the end of your turn.",
+                        "Kleptomancy: Keep up to 10 Gold and 6 other resources at the end of your turn.",
                         "Suspicion: Enemies can only move onto a Summoning Circle tile with at least as many units as there are Goats there.",
                         "Sparagmos: Once per Main phase, Purge 1 Goat from a Summoning Circle tile."
                     },

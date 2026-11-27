@@ -266,9 +266,8 @@ namespace CrittersOfCalamity.UI
                 {
                     int slot = i;
                     var card = _engine.ExcavationArea[i];
-                    var ucost = _engine.RelicCostFor(p, card);
-                    var ub = GuideButton($"   Unearth <b>{card.Name}</b> (cost {ucost})", new Color(0.18f, 0.24f, 0.32f, 1f),
-                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slot)), 40f, _engine.CanAfford(p, ucost));
+                    var ub = GuideButton($"   Unearth <b>{card.Name}</b> (discard 1 resource; it goes to your Hand)", new Color(0.18f, 0.24f, 0.32f, 1f),
+                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slot)), 40f, p.ResourcePile.Count > 0);
                     AttachCardHover(ub.gameObject, card);
                 }
             }

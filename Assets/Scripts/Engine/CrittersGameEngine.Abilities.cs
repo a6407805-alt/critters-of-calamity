@@ -199,6 +199,13 @@ namespace CrittersOfCalamity.Engine
         private static bool CanTakeForestOverlay(HexTileState t) =>
             t.Overlay == FactionOverlayTileType.None && t.BaseTerrain == TileTerrainType.Forest;
 
+        /// <summary>A Fire Tile goes on a free forest tile, or on a stream or ruin tile that holds a Tar Pit Token.</summary>
+        private static bool CanTakeFireTile(HexTileState t) =>
+            CanTakeForestOverlay(t) ||
+            (t.Overlay == FactionOverlayTileType.None && t.Building == null &&
+             (t.BaseTerrain == TileTerrainType.Stream || t.BaseTerrain == TileTerrainType.Ruin || t.EffectiveTerrain == TileTerrainType.Stream) &&
+             t.Tokens.Any(k => k.Type == TokenType.TarPit));
+
         /// <summary>How many of a faction's unique tiles of a kind are on the board.</summary>
         private int OverlaysOnBoard(int ownerSeat, Func<HexTileState, bool> kind) =>
             Board.Values.Count(t => t.OverlayOwnerPlayerIndex == ownerSeat && kind(t));
@@ -228,7 +235,7 @@ namespace CrittersOfCalamity.Engine
             if (t.Overlay == FactionOverlayTileType.Fire && type != TokenType.TarPit) return false;
             if (t.EffectiveTerrain == TileTerrainType.Stream)
             {
-                if (type == TokenType.Coin) return true;
+                if (type == TokenType.Coin || type == TokenType.TarPit) return true;   // Tar Pits can go on streams
                 if (type == TokenType.HolyRelic && t.Building != null && t.Building.Type == BuildingType.TheCitadel) return true;
                 return false;
             }
@@ -269,6 +276,9 @@ namespace CrittersOfCalamity.Engine
         /// <summary>Moves units by an effect (not a Move action), keeping guest status and Tanuki coins right.</summary>
         private void RelocateUnits(HexTileState from, HexTileState to, List<UnitInstance> units)
         {
+            // The Blooming Briar can't be moved onto a stream tile: it stays where it is
+            if (to.EffectiveTerrain == TileTerrainType.Stream && units.Any(u => u.Definition.Id == "blooming_briar"))
+                units = units.Where(u => u.Definition.Id != "blooming_briar").ToList();
             foreach (var u in units)
             {
                 from.Units.Remove(u);
@@ -467,12 +477,51 @@ namespace CrittersOfCalamity.Engine
         }
 
         // ---------------- Horde of the Millions ----------------
+        /// <summary>Disruption, after the player picked its 2 resource cards: burn the chosen Excavation card and 1 random card from each other player.</summary>
+        private void FinishDisruption(PlayerState pl, int o, bool burnedGold)
+        {
+            int me = pl.PlayerIndex;
+            bool gold = burnedGold;
+            if (ExcavationArea.Count > 0)
+            {
+                var card = ExcavationArea[Mathf.Clamp(o, 0, ExcavationArea.Count - 1)];
+                ExcavationArea.Remove(card);
+                BurnedRelics.Add(card);
+                if (card.DisassembleGain.Gold > 0) gold = true;
+                Log($"Disruption burned {card.Name} from the Excavation Area.");
+            }
+            foreach (var op in Players.Where(x => x.PlayerIndex != me && x.ResourcePile.Count > 0))
+            {
+                int idx = _rng.Next(op.ResourcePile.Count);
+                var r = op.ResourcePile[idx];
+                op.ResourcePile.RemoveAt(idx);
+                BurnedResources.Add(r);
+                if (r == ResourceType.Gold) gold = true;
+                Log($"Disruption burned 1 {r} from {op.DisplayName}.");
+            }
+            if (gold) AwardAuthority(me, 1, "Disruption burned Gold");
+        }
+
+        private static readonly ResourceType[] ResourceChoiceOrder = { ResourceType.Wood, ResourceType.Stone, ResourceType.Gold, ResourceType.Charcoal };
+
+        /// <summary>One option per resource kind (Wood, Stone, Gold, Charcoal), enabled where the player has one.</summary>
+        private void AddResourceOptions(PendingChoiceState c, PlayerState p)
+        {
+            foreach (var r in ResourceChoiceOrder)
+            {
+                int n = p.ResourcePile.Count(x => x == r);
+                AddOption(c, $"{r} (you have {n})", n > 0);
+            }
+        }
+
+        private static ResourceType ResourceForOption(int option) => ResourceChoiceOrder[Mathf.Clamp(option, 0, ResourceChoiceOrder.Length - 1)];
+
         private void AddHorde(List<AbilitySpec> L, PlayerState p, int me)
         {
             L.Add(new AbilitySpec
             {
-                Id = "gluttony", Name = "Other People's Gluttony", Phase = TurnPhase.ExcavationPhase, Target = AbilityTarget.Tile,
-                Summary = "Free craft: discard 1 Gold to place a Gluttony Token on a tile with a Millions unit. Enemy units there can't use a Move action to leave while a Millions unit is on it.",
+                Id = "gluttony", Name = "Other People's Gluttony", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
+                Summary = "Free craft during your Main phase: discard 1 Gold to place a Gluttony Token on a tile with a Millions unit. Enemy units there can't use a Move action to leave while a Millions unit is on it.",
                 Prompt1 = "Click a tile with your Millions units.",
                 Check = pl => Count(pl, ResourceType.Gold) < 1 ? "Needs 1 Gold." :
                               TokenSupplyLeft(pl, TokenType.Gluttony) <= 0 ? "No Gluttony Tokens left in your supply." : null,
@@ -637,14 +686,14 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "faith_authority", Name = "Faith to Authority (Level 5)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
-                Summary = "Platy-Pope level 5, once per turn: remove 3 Faith to gain 1 Authority.",
+                Summary = "Platy-Pope level 5, once per turn: remove 5 Faith to gain 1 Authority.",
                 Check = pl => pl.PlatyPopeLevel < 5 ? "Needs Platy-Pope level 5." : Uses("faith_authority") > 0 ? "Already used this turn." :
-                              pl.PlatypusFaith < 3 ? "Needs 3 Faith." : null,
+                              pl.PlatypusFaith < 5 ? "Needs 5 Faith." : null,
                 Run = (pl, a, b, o) =>
                 {
-                    pl.PlatypusFaith -= 3;
+                    pl.PlatypusFaith -= 5;
                     MarkUsed("faith_authority");
-                    AwardAuthority(me, 1, "Level 5: 3 Faith");
+                    AwardAuthority(me, 1, "Level 5: 5 Faith");
                     return true;
                 }
             });
@@ -899,7 +948,7 @@ namespace CrittersOfCalamity.Engine
                 Check = pl => Uses("firestarter") > 0 ? "Already used this Main phase." :
                               pl.SquirrelsCraftedFirestarters < 1 ? "No crafted Acorn Firestarter." :
                               FireTilesLeft(pl) <= 0 ? "All 6 Fire Tiles are on the board." : null,
-                Legal1 = (pl, t) => CanTakeForestOverlay(t) && Has(t, pl, "squirrel"),
+                Legal1 = (pl, t) => CanTakeFireTile(t) && Has(t, pl, "squirrel"),
                 Run = (pl, a, b, o) =>
                 {
                     pl.SquirrelsCraftedFirestarters--;
@@ -940,28 +989,14 @@ namespace CrittersOfCalamity.Engine
                 Run = (pl, a, b, o) =>
                 {
                     MarkUsed("disruption");
-                    bool gold = DiscardCheapest(pl, 2, burn: true).Contains(ResourceType.Gold);
-                    if (ExcavationArea.Count > 0)
-                    {
-                        var card = ExcavationArea[Mathf.Clamp(o, 0, ExcavationArea.Count - 1)];
-                        ExcavationArea.Remove(card);
-                        BurnedRelics.Add(card);
-                        if (card.DisassembleGain.Gold > 0) gold = true;
-                        Log($"Disruption burned {card.Name} from the Excavation Area.");
-                    }
-                    foreach (var op in Players.Where(x => x.PlayerIndex != me && x.ResourcePile.Count > 0))
-                    {
-                        int idx = _rng.Next(op.ResourcePile.Count);
-                        var r = op.ResourcePile[idx];
-                        op.ResourcePile.RemoveAt(idx);
-                        BurnedResources.Add(r);
-                        if (r == ResourceType.Gold) gold = true;
-                        Log($"Disruption burned 1 {r} from {op.DisplayName}.");
-                    }
-                    if (gold) AwardAuthority(me, 1, "Disruption burned Gold");
+                    // The player picks the 2 resource cards to burn, one at a time; then the rest resolves.
+                    var c = NewChoice("disruption_burn", me, "Disruption", "Choose the first resource card to burn.");
+                    AddResourceOptions(c, pl);
+                    c.Number = o;
                     return true;
                 }
             });
+
 
             L.Add(new AbilitySpec
             {
@@ -989,8 +1024,8 @@ namespace CrittersOfCalamity.Engine
                 Prompt1 = "Click the Fire Tile to move.", Prompt2 = "Click the adjacent forest tile it moves to.",
                 Check = pl => !OnBoard(pl, "pyromaniac") ? "The Pyromaniac isn't on the board." : Uses("flameweaver") > 0 ? "Already used this Main phase." :
                               pl.RelicHand.Count < 2 ? "Needs 2 cards in your Hand." : null,
-                Legal1 = (pl, t) => fire(t) && t.OverlayOwnerPlayerIndex == me && Neighbors(t).Any(CanTakeForestOverlay),
-                Legal2 = (pl, t1, t2) => HexCoord.Distance(t1.Coord, t2.Coord) == 1 && CanTakeForestOverlay(t2),
+                Legal1 = (pl, t) => fire(t) && t.OverlayOwnerPlayerIndex == me && Neighbors(t).Any(CanTakeFireTile),
+                Legal2 = (pl, t1, t2) => HexCoord.Distance(t1.Coord, t2.Coord) == 1 && CanTakeFireTile(t2),
                 Run = (pl, a, b, o) =>
                 {
                     for (int i = 0; i < 2; i++) { BurnedRelics.Add(pl.RelicHand[0]); pl.RelicHand.RemoveAt(0); }
@@ -1011,7 +1046,7 @@ namespace CrittersOfCalamity.Engine
                 {
                     var t = TileOf(pl, "pyromaniac");
                     if (t == null) return "The Pyromaniac isn't on the board.";
-                    if (!CanTakeForestOverlay(t)) return "The Pyromaniac's tile can't take a Fire Tile.";
+                    if (!CanTakeFireTile(t)) return "The Pyromaniac's tile can't take a Fire Tile.";
                     if (FireTilesLeft(pl) <= 0) return "All 6 Fire Tiles are on the board.";
                     return CanAfford(pl, new ResourceCost(wood: 1, gold: 1)) ? null : "Needs 1 Wood and 1 Gold.";
                 },
@@ -1449,23 +1484,16 @@ namespace CrittersOfCalamity.Engine
                 L.Add(new AbilitySpec
                 {
                     Id = "catapult_fire", Name = "Fire your Catapult", Phase = TurnPhase.MainPhase, Target = AbilityTarget.TwoTiles, General = true,
-                    Summary = "Free, once per turn per Catapult: launch up to 3 Millions units (and/or the King) from the Catapult's tile up to 3 tiles in a straight line. Everyone except the Horde with a piece where they land draws a Forage card. Non-Horde owners gain 1 Authority.",
-                    Prompt1 = "Click your Catapult's tile.", Prompt2 = "Click the landing tile (straight line, up to 3 tiles).",
+                    Summary = "Free, once per turn per Catapult: launch up to 3 Millions units (and/or the King) from the Catapult's tile to any tile within 3 tiles (no straight line needed). Everyone except the Horde with a piece where they land draws a Forage card. Non-Horde owners gain 1 Authority.",
+                    Prompt1 = "Click your Catapult's tile.", Prompt2 = "Click the landing tile (any tile within 3 tiles).",
                     Check = pl => !Board.Values.Any(t => t.Tokens.Any(k => k.Type == TokenType.Catapult && k.OwnerPlayerIndex == me)) ? "You don't own a Catapult on the board." : null,
                     Legal1 = (pl, t) => t.Tokens.Any(k => k.Type == TokenType.Catapult && k.OwnerPlayerIndex == me) &&
                                         Uses($"catapult@{t.Coord.q},{t.Coord.r}") == 0 && hordeLaunchable(t),
                     Legal2 = (pl, t1, t2) =>
                     {
                         if (!CanAddUnitToTile(t2, hs)) return false;
-                        for (int dir = 0; dir < 6; dir++)
-                        {
-                            var c = t1.Coord;
-                            for (int step = 1; step <= 3; step++)
-                            {
-                                c = c.Neighbor(dir);
-                                if (c.Equals(t2.Coord)) return true;
-                            }
-                        }
+                        int d = HexCoord.Distance(t1.Coord, t2.Coord);   // any tile within 3, not only straight lines
+                        if (d >= 1 && d <= 3) return true;
                         return false;
                     },
                     Choices = (pl, a, b) =>

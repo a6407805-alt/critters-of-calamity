@@ -70,7 +70,7 @@ namespace CrittersOfCalamity.Engine
                     case SetupStepKind.CapybaraStreams:
                         return $"Special setup, before anyone else: click {CapybaraStreamTiles} forest tiles one at a time to turn them into streams. Each new stream must touch a stream.";
                     case SetupStepKind.TanukiCoins:
-                        return "Everyone has set up. Click 12 different forest tiles with no enemy units for your Coin Tokens. Coins must be at least 2 tiles apart and at least 2 tiles from your Shrine.";
+                        return "Everyone has set up. Click 12 different forest tiles for your Coin Tokens. Coins must be at least 2 tiles apart and at least 2 tiles from your Shrine.";
                 }
                 return SetupInstructions(Players[seat].Faction.Id);
             }
@@ -211,7 +211,7 @@ namespace CrittersOfCalamity.Engine
         {
             switch (faction)
             {
-                case FactionId.CurlyTail: return "Click a forest or ruin tile with no enemy units, at least 2 tiles away from every enemy unit, for Curly Tail, 4 Warband units and a War Party.";
+                case FactionId.CurlyTail: return "Click a forest or ruin tile at least 4 tiles away from every other player's pieces, for Curly Tail, 4 Warband units and a War Party.";
                 case FactionId.HordeOfTheMillions: return "Click 2 different forest tiles with no enemy units. Each gets a Burrow and 2 Millions units.";
                 case FactionId.PlatypusPapacy: return "Click a forest or stream tile with no enemy units for the Citadel, 3 Pilgrims and the Platy-Pope.";
                 case FactionId.TroubleMakingTanukis: return "Click a forest tile with no enemy units for 3 Tanukis and a Shrine. Your 12 Coin Tokens are placed after everyone else sets up.";
@@ -269,7 +269,12 @@ namespace CrittersOfCalamity.Engine
                 }
                 case FactionId.CurlyTail:
                     if (terrain != TileTerrainType.Forest && terrain != TileTerrainType.Ruin) { reason = "Curly Tail sets up on a forest or ruin tile."; return false; }
-                    if (enemyUnitTiles.Any(e => HexCoord.Distance(e, c) < 2)) { reason = "Must be at least 2 tiles away from every enemy unit."; return false; }
+                    if (Board.Values.Any(t => HexCoord.Distance(t.Coord, c) < 4 &&
+                            (t.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex) ||
+                             (t.Building != null && t.Building.OwnerPlayerIndex != p.PlayerIndex) ||
+                             t.Tokens.Any(k => k.OwnerPlayerIndex != p.PlayerIndex) ||
+                             (t.OverlayOwnerPlayerIndex >= 0 && t.OverlayOwnerPlayerIndex != p.PlayerIndex && t.Overlay != FactionOverlayTileType.CapybaraStream))))
+                    { reason = "Curly Tail must set up at least 4 tiles away from every other player's pieces."; return false; }
                     return true;
 
                 case FactionId.HordeOfTheMillions:
@@ -340,12 +345,10 @@ namespace CrittersOfCalamity.Engine
                     return true;
                 case SetupStepKind.TanukiCoins:
                     if (tile.EffectiveTerrain != TileTerrainType.Forest) { reason = "Coins go on forest tiles."; return false; }
-                    if (NearGoatUnit(p.PlayerIndex, c)) { reason = "Not within 2 tiles of a Goat."; return false; }
-                    if (NearCurlyTail(p.PlayerIndex, c)) { reason = "Not within 4 tiles of Curly Tail."; return false; }
+                    // Coins may go on any forest tile at least 2 tiles from your Shrine and from every other Coin.
                     if (Board.Values.Any(t => t.Building != null && t.Building.Type == BuildingType.Shrine && t.Building.OwnerPlayerIndex == p.PlayerIndex &&
                                               HexCoord.Distance(t.Coord, c) < 2))
                     { reason = "Coins must be at least 2 tiles away from your Shrine."; return false; }
-                    if (tile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex)) { reason = "That tile has enemy units."; return false; }
                     if (tile.Building != null && tile.Building.Type == BuildingType.Shrine) { reason = "Not on a Shrine."; return false; }
                     if (tile.Tokens.Any(t => t.Type == TokenType.Coin) || tile.Tokens.Count >= 2) { reason = "No room for a coin there."; return false; }
                     if (Board.Values.Any(t => t.Tokens.Any(k => k.Type == TokenType.Coin) && HexCoord.Distance(t.Coord, c) < 2))

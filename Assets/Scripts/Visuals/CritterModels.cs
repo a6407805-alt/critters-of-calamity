@@ -65,6 +65,8 @@ namespace CrittersOfCalamity.Visuals
         public static void Build(Transform root, UnitInstance u, PlayerState owner)
         {
             Color a = owner.Faction.PrimaryColor, b = owner.Faction.SecondaryColor;
+            // The Capybara Caravan's theme is stream blue, but the capybaras themselves keep their brown fur
+            if (owner.Faction.Id == FactionId.CapybaraCaravan) a = Palette.FromHex("#9C6B3B");
             bool special = u.Definition.IsSpecialUnit;
 
             // Pedestal: faction color ring so ownership reads at any zoom; specials get a gold rim

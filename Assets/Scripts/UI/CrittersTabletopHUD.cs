@@ -193,7 +193,7 @@ namespace CrittersOfCalamity.UI
                     case GameCommandType.Loot: why = "Can't Loot there (you need units on the tile, no enemy pieces, and it can't have been looted this turn)."; break;
                     case GameCommandType.Recruit: why = "Can't Recruit right now (Main phase, an action left, and a recruitment building with room)."; break;
                     case GameCommandType.CraftBuilding: why = "Can't craft your building there (Excavation phase, unused Craft action, the cost, and a legal tile)."; break;
-                    case GameCommandType.Unearth: why = "Can't Unearth that card (Excavation phase, unused Unearth, and its cost)."; break;
+                    case GameCommandType.Unearth: why = "Can't Unearth that card (Excavation phase, unused Unearth, and 1 resource card to discard)."; break;
                     case GameCommandType.Assemble: why = "Can't Assemble that card (Excavation phase, unused Assemble, and its cost)."; break;
                     case GameCommandType.Disassemble: why = "Can't Disassemble that card (Excavation phase and unused Disassemble)."; break;
                     case GameCommandType.FactionAction: why = "That faction action can't be used right now (check costs, meters and the selected tile)."; break;
@@ -295,26 +295,28 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.005f, 0.36f), new Vector2(0.215f, 0.89f), new Vector2(0f, 0.5f),
                 Vector2.zero, Vector2.zero, Palette.UIPanelDark);
 
-            CreateText(_leftPanelRt, "ExcavationHeader", "EXCAVATION AREA", 13, TextAnchor.MiddleCenter,
-                new Vector2(0f, 0.93f), new Vector2(1f, 0.99f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
+            CreateText(_leftPanelRt, "ExcavationHeader", "EXCAVATION AREA  (Unearth: discard 1 resource)", 14, TextAnchor.MiddleCenter,
+                new Vector2(0f, 0.945f), new Vector2(1f, 0.995f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
             var excRootGo = new GameObject("ExcavationSlots");
             excRootGo.transform.SetParent(_leftPanelRt, false);
             var excRt = excRootGo.AddComponent<RectTransform>();
-            excRt.anchorMin = new Vector2(0.03f, 0.41f);
-            excRt.anchorMax = new Vector2(0.97f, 0.92f);
+            // the card boxes take most of the drawer; the selected-tile text below gets the rest
+            excRt.anchorMin = new Vector2(0.02f, 0.27f);
+            excRt.anchorMax = new Vector2(0.98f, 0.94f);
             excRt.offsetMin = Vector2.zero;
             excRt.offsetMax = Vector2.zero;
             var excLayout = excRootGo.AddComponent<VerticalLayoutGroup>();
-            excLayout.spacing = 4f;
+            excLayout.spacing = 3f;
             excLayout.childControlHeight = true;
             excLayout.childControlWidth = true;
             excLayout.childForceExpandHeight = true;
             excLayout.childForceExpandWidth = true;
             _excavationButtonsRoot = excRootGo.transform;
 
-            _selectedHexText = CreateText(_leftPanelRt, "SelectedHexInspector", "", 12, TextAnchor.UpperLeft,
-                new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.39f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
+            _selectedHexText = CreateText(_leftPanelRt, "SelectedHexInspector", "", 13, TextAnchor.UpperLeft,
+                new Vector2(0.04f, 0.01f), new Vector2(0.96f, 0.26f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
+            _selectedHexText.resizeTextMinSize = 9;
 
             // 2b. My Faction drawer: meters, Table relics, supply, and the full log
             _rightPanelRt = CreatePanel(canvasGo.transform, "FactionDrawer",
@@ -514,7 +516,7 @@ namespace CrittersOfCalamity.UI
             _battlePopupText = CreateText(modalRt, "Body", "", 13, TextAnchor.UpperLeft,
                 new Vector2(0.03f, 0.05f), new Vector2(0.97f, 0.80f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
             CreateButton(modalRt, "BtnDismissBattle", "Close",
-                new Vector2(0.86f, 0.80f), new Vector2(0.985f, 0.97f), Palette.UIPanelMid, () => _battlePopupModal.SetActive(false));
+                new Vector2(0.84f, 0.78f), new Vector2(0.985f, 0.97f), Palette.FromHex("#2F7A3E"), () => _battlePopupModal.SetActive(false));
 
             _battlePopupModal.SetActive(false);
         }
@@ -605,16 +607,7 @@ namespace CrittersOfCalamity.UI
             sb.Append(r.DestroyedUnitNames.Count > 0 ? $"Removed: {string.Join(", ", r.DestroyedUnitNames)}." : "No units removed.");
             _battlePopupText.text = sb.ToString();
             _battlePopupModal.SetActive(true);
-            _battlePopupModal.transform.SetAsLastSibling();
-            if (_battleToastRoutine != null) StopCoroutine(_battleToastRoutine);
-            _battleToastRoutine = StartCoroutine(HideBattleToastLater());
-        }
-
-        private Coroutine _battleToastRoutine;
-        private System.Collections.IEnumerator HideBattleToastLater()
-        {
-            yield return new WaitForSeconds(8f);
-            if (_battlePopupModal != null) _battlePopupModal.SetActive(false);
+            _battlePopupModal.transform.SetAsLastSibling();   // stays up until a player presses Close
         }
 
         private static string Bonus(int b) => b > 0 ? $" (+{b})" : b < 0 ? $" ({b})" : "";
@@ -703,7 +696,7 @@ namespace CrittersOfCalamity.UI
                 string turnMark = isTurn ? "> " : "";
                 // dark faction colors (Curly Tail's grey) are lifted so the name stays readable on the dark badge
                 var fc = p.Faction.PrimaryColor;
-                if (fc.r * 0.3f + fc.g * 0.59f + fc.b * 0.11f < 0.45f) fc = Color.Lerp(fc, Color.white, 0.45f);
+                if (Mathf.Max(fc.r, Mathf.Max(fc.g, fc.b)) < 0.45f) fc = Color.Lerp(fc, Color.white, 0.45f);   // only greys, so reds stay red
                 string facColor = ColorUtility.ToHtmlStringRGB(fc);
                 _playerScoreBadges[i].text = $"{turnMark}<b>{p.DisplayName}</b> <color=#{facColor}>{p.Faction.Name}</color>\n" +
                                              $"<size=16><b>{p.Authority}</b>/30 Authority</size>  <size=12>Res {p.ResourcePile.Count} · Hand {p.RelicHand.Count}</size>";
@@ -719,15 +712,16 @@ namespace CrittersOfCalamity.UI
                 int slotIdx = i;
                 var card = _engine.ExcavationArea[i];
                 var excBtn = CreateLayoutButton(_excavationButtonsRoot, $"ExcSlot_{i}",
-                    $"<b>[Unearth] {card.Name}</b> (Cost: {card.Cost})\n{card.EffectText}",
+                    $"<b>{card.Name}</b>  <color=#F2B83B>Craft: {card.Cost}</color>\n{card.EffectText}",
                     new Color(0.20f, 0.25f, 0.32f, 0.95f), () =>
                     {
                         _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slotIdx));
                         RefreshHUD();
                     });
                 var excLabel = excBtn.GetComponentInChildren<Text>();
-                SetFontSize(excLabel, 15);
-                excLabel.resizeTextMinSize = 11;
+                SetFontSize(excLabel, 18);
+                excLabel.resizeTextMinSize = 13;
+                excLabel.alignment = TextAnchor.UpperLeft;
                 AttachCardHover(excBtn.gameObject, card);   // hovering shows the full card
             }
 

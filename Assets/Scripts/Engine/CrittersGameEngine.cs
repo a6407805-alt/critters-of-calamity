@@ -270,6 +270,7 @@ namespace CrittersOfCalamity.Engine
 
         // Faction Specific Decks (Part 4 Line 111)
         public List<FactionSubDeckCardDef> ForageDeck = new List<FactionSubDeckCardDef>();
+        public List<FactionSubDeckCardDef> ForageDiscard = new List<FactionSubDeckCardDef>();
         public List<FactionSubDeckCardDef> TradedGoodsDeck = new List<FactionSubDeckCardDef>();
         public List<FactionSubDeckCardDef> TradedGoodsStall = new List<FactionSubDeckCardDef>(); // 3 faceup stall cards
         public List<FactionSubDeckCardDef> TradedGoodsDiscard = new List<FactionSubDeckCardDef>();
@@ -311,6 +312,21 @@ namespace CrittersOfCalamity.Engine
         }
 
         private int _logTotal;
+        private int _endPhaseLogMark = -1;
+
+        private void AnnounceEndPhase(PlayerState p)
+        {
+            if (_endPhaseLogMark < 0) return;
+            int added = Mathf.Min(GameLog.Count, _logTotal - _endPhaseLogMark);
+            _endPhaseLogMark = -1;
+            var lines = GameLog.Skip(GameLog.Count - added)
+                .Select(l => System.Text.RegularExpressions.Regex.Replace(l, @"^\[T\d+\] ", ""))
+                .Where(l => !l.EndsWith("entered 4. End Phase."))
+                .Select(l => " • " + l).ToList();
+            if (lines.Count == 0) lines.Add(" • Nothing happened this End phase.");
+            if (lines.Count > 18) lines = lines.Take(17).Concat(new[] { $" • ...and {lines.Count - 17} more (see the log)." }).ToList();
+            Announce($"{p.DisplayName}'s End phase ({p.Faction.Name})", string.Join("\n", lines));
+        }
         public void Log(string message)
         {
             string entry = $"[T{TurnNumber}] {message}";
@@ -911,6 +927,7 @@ namespace CrittersOfCalamity.Engine
         {
             CurrentPhase = TurnPhase.EndPhase;
             Log($"{Players[CurrentTurnPlayerIndex].DisplayName} entered 4. End Phase.");
+            _endPhaseLogMark = _logTotal;
             _endPhaseIgniteAsked = false;
             _bindingsHandled.Clear();
             ContinueEndPhase();
@@ -956,6 +973,10 @@ namespace CrittersOfCalamity.Engine
                         {
                             RemoveResources(p, ResourceType.Wood, 1);
                         }
+                        else if (p.ResourcePile.Contains(ResourceType.Stone))
+                        {
+                            RemoveResources(p, ResourceType.Stone, 1);   // upkeep can be paid with Wood or Stone
+                        }
                         else
                         {
                             for (int rem = 0; rem < 2 && burrowTiles.Count > 0; rem++)
@@ -963,7 +984,7 @@ namespace CrittersOfCalamity.Engine
                                 burrowTiles[0].Building = null;
                                 burrowTiles.RemoveAt(0);
                             }
-                            Log($"{p.DisplayName} could not pay 1 Wood Burrow Upkeep -> Removed 2 Burrows.");
+                            Log($"{p.DisplayName} could not pay 1 Wood or 1 Stone Burrow Upkeep -> Removed 2 Burrows.");
                         }
                     }
                     // Out of Hibernation: at each Burrow tile with < 3 Millions, place 1 Millions (Line 483)
@@ -1010,7 +1031,7 @@ namespace CrittersOfCalamity.Engine
                         Announce($"{p.DisplayName}'s {fires} Fire Tile(s) burn",
                             "Each Fire Tile resolves in order: 1. Squirrels on it clear out for Charcoal. 2. One building or token burns. " +
                             "3. Enemy units are driven to an adjacent tile (forest costs 1 HP). 4. On a 1 or 6 the fire spreads. 5. The top resource card burns (Gold gives 1 Authority).\n\n" +
-                            string.Join("\n", lines));
+                            "What happened at each Fire Tile is listed in the End phase popup that follows.");
                     }
                 }
                     // Forest Fire: +1 Authority for every Fire Tile adjacent to another faction's pieces (cap 2)
@@ -1068,12 +1089,12 @@ namespace CrittersOfCalamity.Engine
             if (CurrentPhase == TurnPhase.GameOver) return;
 
             // Step 3: Discard down to 5 cards in Hand and 5 cards in Resource Pile (Necro-mouser Hoarder keeps 8) (Part 6 Line 154)
-            int maxResources = p.Faction.Id == FactionId.Necromouser ? 8 : 5;
+            int maxResources = p.Faction.Id == FactionId.Necromouser ? 8 : 6;
             if (p.Faction.Id == FactionId.GoatCabal)
             {
                 // Kleptomancy: keep up to 10 Gold and 5 other resources
                 while (p.ResourcePile.Count(r => r == ResourceType.Gold) > 10) ReturnResourceToDeck(p.ResourcePile, p.ResourcePile.LastIndexOf(ResourceType.Gold));
-                while (p.ResourcePile.Count(r => r != ResourceType.Gold) > 5) ReturnResourceToDeck(p.ResourcePile, p.ResourcePile.FindLastIndex(r => r != ResourceType.Gold));
+                while (p.ResourcePile.Count(r => r != ResourceType.Gold) > 6) ReturnResourceToDeck(p.ResourcePile, p.ResourcePile.FindLastIndex(r => r != ResourceType.Gold));
             }
             else
             while (p.ResourcePile.Count > maxResources)
@@ -1092,6 +1113,9 @@ namespace CrittersOfCalamity.Engine
 
             // Subservience restrictions last for the restricted player's next two turns
             if (p.SubservienceTurnsLeft > 0) p.SubservienceTurnsLeft--;
+
+            // Every End phase gets a popup listing what happened, mandatory effects included
+            AnnounceEndPhase(p);
 
             // Advance to next player clockwise
             int nextPlayer = (CurrentTurnPlayerIndex + 1) % Players.Count;
@@ -1161,7 +1185,8 @@ namespace CrittersOfCalamity.Engine
                         if (ft.EffectiveTerrain == TileTerrainType.Forest) Burn(enemy, ft, false);
                         continue;
                     }
-                    var dest = Neighbors(ft).Where(n => CanAddUnitToTile(n, enemy.OwnerPlayerIndex))
+                    var dest = Neighbors(ft).Where(n => CanAddUnitToTile(n, enemy.OwnerPlayerIndex) &&
+                                                        !(enemy.Definition.Id == "blooming_briar" && n.EffectiveTerrain == TileTerrainType.Stream))
                         .OrderBy(n => n.Overlay == FactionOverlayTileType.Fire ? 1 : 0)
                         .ThenBy(n => n.EffectiveTerrain == TileTerrainType.Forest ? 1 : 0)
                         .FirstOrDefault();
@@ -1182,7 +1207,7 @@ namespace CrittersOfCalamity.Engine
                 int spreadRoll = RollD6();
                 if ((spreadRoll == 1 || spreadRoll == 6) && FireTilesLeft(squirrelPlayer) > 0)
                 {
-                    var spread = drivenForest.Select(c => Board[c]).FirstOrDefault(t => CanTakeForestOverlay(t) && HasEnemyUnits(t, me));
+                    var spread = drivenForest.Select(c => Board[c]).FirstOrDefault(t => CanTakeFireTile(t) && HasEnemyUnits(t, me));
                     if (spread != null)
                     {
                         PlaceFireTile(spread, me);
@@ -1215,14 +1240,21 @@ namespace CrittersOfCalamity.Engine
         {
             // Part 9 Line 173 & Part 17 Faction 2 Line 493:
             // "After a Forage card is used, it goes back into the Forage deck and the deck is shuffled."
+            // The Forage deck works like the relic and resource decks: used cards go to a discard pile, and the
+            // discard pile is shuffled back in only when the deck runs out.
             if (ForageDeck.Count == 0)
-                ForageDeck = RulebookDatabase.BuildMillionsForageDeck8();
-
-            Shuffle(ForageDeck);
+            {
+                ForageDeck = ForageDiscard.Count > 0 ? new List<FactionSubDeckCardDef>(ForageDiscard) : RulebookDatabase.BuildMillionsForageDeck8();
+                ForageDiscard.Clear();
+                Shuffle(ForageDeck);
+                Log("The Forage deck ran out and was reshuffled.");
+            }
             var card = ForageDeck[0];
+            ForageDeck.RemoveAt(0);
+            ForageDiscard.Add(card);
 
             var millionsPlayer = Players.FirstOrDefault(pl => pl.Faction.Id == FactionId.HordeOfTheMillions);
-            Log($"{drawingPlayer.DisplayName} drew Forage Card '{card.Title}' (shuffled back into Forage Deck): {card.EffectText}");
+            Log($"{drawingPlayer.DisplayName} drew Forage Card '{card.Title}' ({ForageDeck.Count} left before a reshuffle): {card.EffectText}");
             Announce($"{drawingPlayer.DisplayName} drew a Forage card", $"<b>{card.Title}</b>\n{card.EffectText}");
 
             switch (card.Id)
@@ -1404,18 +1436,27 @@ namespace CrittersOfCalamity.Engine
             if (excavationIndex < 0 || excavationIndex >= ExcavationArea.Count) return false;
 
             var p = Players[CurrentTurnPlayerIndex];
-            var card = ExcavationArea[excavationIndex];
-            var cost = RelicCostFor(p, card);
-            if (!CanAfford(p, cost)) return false;
+            if (p.ResourcePile.Count == 0) { Log("Unearthing costs 1 resource card of your choice."); return false; }
 
-            SpendResources(p, cost);
-            UseHorseHairBrushIfDiscounted(p, card);
-            ExcavationArea.RemoveAt(excavationIndex);
+            // Unearth: discard 1 resource card of your choice to add the card to your Hand, uncrafted.
             UsedUnearthThisTurn = true;
-
-            ResolveCraftedRelic(p, card, "Unearthed");
+            var c = NewChoice("unearth_pay", p.PlayerIndex, $"Unearth {ExcavationArea[excavationIndex].Name}",
+                "Discard 1 resource card of your choice to add this card to your Hand (uncrafted).");
+            AddResourceOptions(c, p);
+            c.Number = excavationIndex;
             OnStateChanged?.Invoke();
             return true;
+        }
+
+        /// <summary>Finishes an Unearth once the player picked the resource card to discard.</summary>
+        private void FinishUnearth(PlayerState p, int excavationIndex, ResourceType pay)
+        {
+            RemoveResources(p, pay, 1);
+            if (excavationIndex < 0 || excavationIndex >= ExcavationArea.Count) return;
+            var card = ExcavationArea[excavationIndex];
+            ExcavationArea.RemoveAt(excavationIndex);
+            p.RelicHand.Add(card);
+            Log($"{p.DisplayName} discarded 1 {pay} to unearth '{card.Name}' into their Hand.");
         }
 
         public bool TryAssembleRelicFromHand(int handIndex)
@@ -1639,6 +1680,15 @@ namespace CrittersOfCalamity.Engine
                     var r = DrawRelicCard();
                     if (r != null) p.RelicHand.Add(r);
                     break;
+                case "dilapidated_bridge":
+                case "abandoned_well":
+                case "forest_clearing":
+                    // These cards' When Crafted effect is their Disassemble effect
+                    for (int i = 0; i < card.DisassembleGain.Wood; i++) GainSpecificResourceFromDeck(p, ResourceType.Wood);
+                    for (int i = 0; i < card.DisassembleGain.Stone; i++) GainSpecificResourceFromDeck(p, ResourceType.Stone);
+                    for (int i = 0; i < card.DisassembleGain.Gold; i++) GainSpecificResourceFromDeck(p, ResourceType.Gold);
+                    Log($"{card.Name}: {p.DisplayName} gained {card.DisassembleGain}.");
+                    break;
                 case "looted_vault":
                     for (int i = 0; i < 2; i++)
                     {
@@ -1750,9 +1800,18 @@ namespace CrittersOfCalamity.Engine
             // Clay Edict: +1 tile movement when every moving unit has it
             if (movableUnits.All(u => u.ClayEdictTurns > 0))
                 maxDist += 1;
+            // Tanukis move 1 extra tile when they move onto a Fallen Leaves tile
+            if (p.Faction.Id == FactionId.TroubleMakingTanukis && IsFallenLeaves(toTile))
+                maxDist += 1;
             // Rooted in Place: the Blooming Briar only moves 1 tile
             if (movableUnits.Any(u => u.Definition.Id == "blooming_briar"))
                 maxDist = 1;
+            // The Blooming Briar never goes onto stream tiles
+            if (movableUnits.Any(u => u.Definition.Id == "blooming_briar") && toTile.EffectiveTerrain == TileTerrainType.Stream)
+            {
+                if (log) Log("The Blooming Briar can't move onto stream tiles.");
+                return false;
+            }
 
             if (dist == 0 || dist > maxDist) return false;
             // The Horned Beast's Subservience, restriction 1: movements cost 1 more action
@@ -1875,20 +1934,18 @@ namespace CrittersOfCalamity.Engine
             return false;
         }
 
+        /// <summary>Tanukis carry up to 2 Coin Tokens with them; a tile still holds at most 2 tokens.</summary>
         private void MoveAndScoreTanukiCoin(HexTileState fromTile, HexTileState toTile, int tanukiPlayerIndex)
         {
-            var coin = fromTile.Tokens.FirstOrDefault(t => t.Type == TokenType.Coin);
-            if (coin != null && !toTile.Tokens.Any(t => t.Type == TokenType.Coin) && toTile.Tokens.Count < 2)
+            for (int carried = 0; carried < 2; carried++)
             {
+                var coin = fromTile.Tokens.FirstOrDefault(t => t.Type == TokenType.Coin);
+                if (coin == null) return;
+                bool shrine = toTile.Building != null && toTile.Building.Type == BuildingType.Shrine && toTile.Building.OwnerPlayerIndex == tanukiPlayerIndex;
+                if (!shrine && toTile.Tokens.Count >= 2) return;
                 fromTile.Tokens.Remove(coin);
-                if (toTile.Building != null && toTile.Building.Type == BuildingType.Shrine && toTile.Building.OwnerPlayerIndex == tanukiPlayerIndex)
-                {
-                    AwardAuthority(tanukiPlayerIndex, 2, "Coin Token Delivered to Shrine");
-                }
-                else
-                {
-                    toTile.Tokens.Add(coin);
-                }
+                if (shrine) AwardAuthority(tanukiPlayerIndex, 2, "Coin Token Delivered to Shrine");
+                else toTile.Tokens.Add(coin);
             }
         }
 
@@ -2155,7 +2212,12 @@ namespace CrittersOfCalamity.Engine
                     tile.Overlay = FactionOverlayTileType.None;
                     canRemove--;
                     removedCount++;
-                    AwardAuthority(attacker.PlayerIndex, 1, $"Removed Isolated {oldOverlay}");
+                    if (oldOverlay == FactionOverlayTileType.FallenLeaf_Trap || oldOverlay == FactionOverlayTileType.FallenLeaf_Prank)
+                    {
+                        GainSpecificResourceFromDeck(attacker, ResourceType.Wood);   // Fallen Leaves give 1 Wood instead of Authority
+                        Log($"{attacker.DisplayName} removed a Fallen Leaves tile -> Gained 1 Wood.");
+                    }
+                    else AwardAuthority(attacker.PlayerIndex, 1, $"Removed Isolated {oldOverlay}");
                     if (defender.Faction.Id == FactionId.Necromouser)
                         defender.NecromouserCauldronDeadCount++;
                     if (defender.Faction.Id == FactionId.TroubleMakingTanukis &&
@@ -2727,10 +2789,10 @@ namespace CrittersOfCalamity.Engine
                     }
                     else
                     {
-                        attacker.CurlyTailMomentum = Mathf.Max(0, attacker.CurlyTailMomentum - 2);
-                        attacker.CurlyTailHunger = Mathf.Max(0, attacker.CurlyTailHunger - 2);
-                        attacker.CurlyTailThirstForGlory = Mathf.Max(0, attacker.CurlyTailThirstForGlory - 1);
-                        Log($"{attacker.DisplayName} attacked and lost -> Momentum -2, Hunger -2, Thirst for Glory -1.");
+                        attacker.CurlyTailMomentum = 0;
+                        attacker.CurlyTailHunger = 0;
+                        attacker.CurlyTailThirstForGlory = Mathf.Max(0, attacker.CurlyTailThirstForGlory - 2);
+                        Log($"{attacker.DisplayName} attacked and lost -> Momentum and Hunger drop to 0, Thirst for Glory -2.");
                     }
                 }
 
@@ -2740,8 +2802,11 @@ namespace CrittersOfCalamity.Engine
                     if (!winner.CurlyTailWonBattleThisTurn)
                     {
                         winner.CurlyTailWonBattleThisTurn = true;
-                        GainSpecificResourceFromDeck(winner, _rng.Next(2) == 0 ? ResourceType.Stone : ResourceType.Wood);
-                        Log($"{winner.DisplayName} triggered Spoils of War (first win this turn) -> Gained 1 resource.");
+                        var spoils = NewChoice("spoils", winner.PlayerIndex, "Spoils of War",
+                            "Your first battle win this turn: gain 1 Wood or 1 Stone from the resource deck.");
+                        AddOption(spoils, "Gain 1 Wood");
+                        AddOption(spoils, "Gain 1 Stone");
+                        Log($"{winner.DisplayName} triggered Spoils of War (first win this turn).");
                     }
                     if (winnerUnits.Any(u => u.Definition.Id == "curly_tail"))
                     {
@@ -2758,6 +2823,13 @@ namespace CrittersOfCalamity.Engine
                 {
                     winner.PlatypusFaith = Mathf.Min(5, winner.PlatypusFaith + 1);
                 }
+            }
+
+            // Forage: attacking the Horde makes the attacker draw a Forage card when the battle resolves
+            if (defender.Faction.Id == FactionId.HordeOfTheMillions && attacker.PlayerIndex != defender.PlayerIndex)
+            {
+                Log($"{attacker.DisplayName} attacked the Horde: Forage!");
+                DrawAndResolveForageCard(attacker);
             }
 
             if (pb.ConsumesMainPhaseAction) SpendBattleAction();
@@ -2809,8 +2881,18 @@ namespace CrittersOfCalamity.Engine
             {
                 atk += 3; // Withered Blossom (+3 Attack at 0 Thorns)
             }
+            else if (owner.Faction.Id == FactionId.CapybaraCaravan && u.Definition.Id != "riverkeeper" &&
+                     Board.Values.Any(t => HexCoord.Distance(t.Coord, tile.Coord) <= 2 &&
+                                           t.Units.Any(x => x.OwnerPlayerIndex == owner.PlayerIndex && x.Definition.Id == "riverkeeper")))
+            {
+                atk += 1; // Don't Wallow: Capybara units within 2 tiles of the Riverkeeper
+            }
             return atk;
         }
+
+        private static bool IsFallenLeaves(HexTileState t) =>
+            t.Overlay == FactionOverlayTileType.FallenLeaf_Unflipped || t.Overlay == FactionOverlayTileType.FallenLeaf_Trap ||
+            t.Overlay == FactionOverlayTileType.FallenLeaf_Prank;
 
         private int GetUnitBattleDefense(PlayerState owner, HexTileState tile, UnitInstance u)
         {
@@ -3291,7 +3373,7 @@ namespace CrittersOfCalamity.Engine
         {
             if (!Board.TryGetValue(coord, out var tile) || type == TokenType.None) return;
             if (tile.Tokens.Count >= 2) return; // Max 2 tokens per tile (Part 4 Line 97)
-            if (type == TokenType.Coin && tile.Tokens.Any(t => t.Type == TokenType.Coin)) return; // Two Coin Tokens can never be on the same tile (Line 607)
+            // Two Coin Tokens may share a tile now (a Tanuki can carry 2); the 2-token limit above still applies
 
             tile.Tokens.Add(new TokenInstance
             {

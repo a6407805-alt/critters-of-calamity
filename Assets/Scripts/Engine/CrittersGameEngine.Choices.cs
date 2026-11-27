@@ -137,18 +137,17 @@ namespace CrittersOfCalamity.Engine
                 case "aqueduct":
                     if (option == 0)
                     {
-                        RelicDiscardPile.Add(p.RelicHand[0]);
-                        p.RelicHand.RemoveAt(0);
-                        p.ResourcePile.Add(DrawRandomResourceCard());
-                        p.ResourcePile.Add(DrawRandomResourceCard());
-                        Log($"Marble Aqueduct: {p.DisplayName} discarded a card to draw 2 resource cards.");
+                        // pick which Hand card to discard
+                        var pick = NewChoice("aqueduct_card", p.PlayerIndex, "Marble Aqueduct", "Choose the card from your Hand to discard (then draw 2 resource cards).");
+                        pick.Cards = new List<RelicCardDef>(p.RelicHand);
+                        foreach (var hc in p.RelicHand) AddOption(pick, $"Discard {hc.Name}");
                     }
                     else
                     {
-                        int back = 0;
-                        foreach (var want in new[] { ResourceType.Gold, ResourceType.Stone, ResourceType.Wood, ResourceType.Charcoal })
-                            while (back < 2 && BurnedResources.Contains(want)) { BurnedResources.Remove(want); p.ResourcePile.Add(want); back++; }
-                        Log($"Marble Aqueduct: {p.DisplayName} took {back} burned resource card(s) back.");
+                        // pick which 2 burned resource cards come back
+                        var pick = NewChoice("aqueduct_burned", p.PlayerIndex, "Marble Aqueduct", "Choose the first burned resource card to take back.");
+                        AddBurnedResourceOptions(pick);
+                        pick.Number = 0;
                     }
                     break;
 
@@ -231,6 +230,66 @@ namespace CrittersOfCalamity.Engine
                     break;
                 }
 
+                case "unearth_pay":
+                    if (!skip) FinishUnearth(p, c.Number, ResourceForOption(option));
+                    break;
+
+                case "spoils":
+                    GainSpecificResourceFromDeck(p, option == 1 ? ResourceType.Stone : ResourceType.Wood);
+                    Log($"Spoils of War: {p.DisplayName} gained 1 {(option == 1 ? "Stone" : "Wood")}.");
+                    break;
+
+                case "disruption_burn":
+                case "disruption_burn2":
+                {
+                    var r = ResourceForOption(option);
+                    int idx = p.ResourcePile.IndexOf(r);
+                    if (idx < 0) idx = 0;
+                    if (p.ResourcePile.Count > 0)
+                    {
+                        r = p.ResourcePile[idx];
+                        p.ResourcePile.RemoveAt(idx);
+                        BurnedResources.Add(r);
+                        Log($"Disruption: {p.DisplayName} burned 1 {r}.");
+                    }
+                    if (c.Kind == "disruption_burn")
+                    {
+                        var next = NewChoice("disruption_burn2", p.PlayerIndex, "Disruption", "Choose the second resource card to burn.");
+                        AddResourceOptions(next, p);
+                        next.Number = c.Number * 2 + (r == ResourceType.Gold ? 1 : 0);
+                    }
+                    else FinishDisruption(p, c.Number / 2, (c.Number & 1) == 1 || r == ResourceType.Gold);
+                    break;
+                }
+
+                case "aqueduct_card":
+                {
+                    int i = Mathf.Clamp(option, 0, p.RelicHand.Count - 1);
+                    if (p.RelicHand.Count > 0)
+                    {
+                        var gone = p.RelicHand[i];
+                        p.RelicHand.RemoveAt(i);
+                        RelicDiscardPile.Add(gone);
+                        p.ResourcePile.Add(DrawRandomResourceCard());
+                        p.ResourcePile.Add(DrawRandomResourceCard());
+                        Log($"Marble Aqueduct: {p.DisplayName} discarded {gone.Name} to draw 2 resource cards.");
+                    }
+                    break;
+                }
+
+                case "aqueduct_burned":
+                {
+                    var want = ResourceForOption(option);
+                    if (BurnedResources.Remove(want)) { p.ResourcePile.Add(want); Log($"Marble Aqueduct: {p.DisplayName} took back 1 burned {want}."); }
+                    if (c.Number == 0 && BurnedResources.Count > 0)
+                    {
+                        var next = NewChoice("aqueduct_burned", p.PlayerIndex, "Marble Aqueduct", "Choose the second burned resource card to take back.");
+                        AddBurnedResourceOptions(next);
+                        next.Number = 1;
+                    }
+                    break;
+                }
+
                 case "trader_visit":
                     if (!skip && option >= 0 && option < TradedGoodsStall.Count && CanAfford(p, TradedGoodsStall[option].Cost))
                         BuyTradedGood(p, option);
@@ -279,6 +338,16 @@ namespace CrittersOfCalamity.Engine
         // ------------------------------------------------------------------
 
         /// <summary>Part 16 "When Crafted" effects that need a choice. Returns true when a choice was opened.</summary>
+        /// <summary>One option per resource kind in the burned area, enabled where there is one.</summary>
+        private void AddBurnedResourceOptions(PendingChoiceState c)
+        {
+            foreach (var r in ResourceChoiceOrder)
+            {
+                int n = BurnedResources.Count(x => x == r);
+                AddOption(c, $"{r} ({n} burned)", n > 0);
+            }
+        }
+
         private bool OfferCraftedRelicChoice(PlayerState p, RelicCardDef card)
         {
             switch (card.Id)
@@ -364,7 +433,7 @@ namespace CrittersOfCalamity.Engine
         {
             // Ignite no longer needs a Squirrel nearby: any forest tile next to an enemy unit.
             return Board.Values.Where(t =>
-                    (CanTakeForestOverlay(t) || t.Coord.Equals(removing)) && t.BaseTerrain == TileTerrainType.Forest &&
+                    (CanTakeFireTile(t) || t.Coord.Equals(removing)) &&
                     Neighbors(t).Any(n => HasEnemyUnits(n, p.PlayerIndex)))
                 .Select(t => t.Coord).ToList();
         }
