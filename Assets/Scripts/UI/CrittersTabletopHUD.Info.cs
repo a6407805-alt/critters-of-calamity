@@ -154,11 +154,13 @@ namespace CrittersOfCalamity.UI
         private void ToggleInfoModal()
         {
             bool show = !_infoModal.activeSelf;
+            Debug.Log($"[HUD] Rulebook & Factions window {(show ? "opened" : "closed")}.");
             _infoModal.SetActive(show);
             if (show)
             {
                 _infoModal.transform.SetAsLastSibling();
-                RefreshInfoModal();
+                try { RefreshInfoModal(); }
+                catch (System.Exception e) { Debug.LogException(e); }
             }
         }
 

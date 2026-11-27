@@ -533,7 +533,7 @@ namespace CrittersOfCalamity.Engine
         }
 
         /// <summary>
-        /// Part 17 Faction 7: the Capybara Caravan places its 10 Stream Tiles before any other player sets up.
+        /// Part 17 Faction 7: the Capybara Caravan places its 6 Stream Tiles before any other player sets up.
         /// Each Stream Tile goes on a forest tile next to another stream tile.
         /// </summary>
         public const int CapybaraStreamTiles = 6;    // Faction 7 Special Setup

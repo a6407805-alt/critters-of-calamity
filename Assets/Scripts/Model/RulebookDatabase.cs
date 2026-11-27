@@ -70,7 +70,7 @@ namespace CrittersOfCalamity.Model
                 case FactionId.TroubleMakingTanukis: list.Add(new KeyValuePair<string, int>("Fallen Leaves", 13)); break;
                 case FactionId.Necromouser: list.Add(new KeyValuePair<string, int>("Miasma", 6)); break;
                 case FactionId.FirestartingSquirrels: list.Add(new KeyValuePair<string, int>("Fire", 6)); break;
-                case FactionId.CapybaraCaravan: list.Add(new KeyValuePair<string, int>("Stream", 10)); break;
+                case FactionId.CapybaraCaravan: list.Add(new KeyValuePair<string, int>("Stream", 6)); break;
             }
             return list;
         }
@@ -434,7 +434,7 @@ namespace CrittersOfCalamity.Model
                     },
                     MaterialsManifest = new List<string>
                     {
-                        "1 Platypus Papacy Faction Board", "5 Pilgrim Unit Pieces & Card", "13 Crusader Unit Pieces & Card",
+                        "1 Platypus Papacy Faction Board", "6 Pilgrim Unit Pieces & Card", "13 Crusader Unit Pieces & Card",
                         "1 Platy-Pope Special Unit Piece & Card", "2 Holy Relic Tokens", "1 Citadel Building", "1 Faith Meter & Platy-Pope Level Meter Board"
                     },
                     Units = new List<UnitDef>
@@ -591,7 +591,7 @@ namespace CrittersOfCalamity.Model
                     ShortSummary = "Peaceful economic faction that expands the stream network and profits from enemy movements through hospitality and trade.",
                     HowToScoreAuthority = "Customary Greeting: 1 Authority per player with a Guest unit. Traded Goods: 1 Authority each time someone buys from your Trader. Hospitality: 1 Authority when a Guest draws a relic. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "At the bottom of the stream are remnants of the Ananke, and the capybaras dredge that memory up one relic at a time and sell those relics using their merchants.",
-                    SetupInstructions = "Special Setup (before any other player sets up): Place all 10 Stream Tiles one at a time onto forest tiles, each adjacent to another Stream Tile. Regular Setup: Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile.",
+                    SetupInstructions = "Special Setup (before any other player sets up): Place all 6 Stream Tiles one at a time onto forest tiles, each adjacent to another Stream Tile. Regular Setup: Place 3 Capybara units, the Capybara Trader, and 1 Wallow on a stream tile.",
                     PrimaryColor = Palette.FromHex("#9C6B3B"),
                     SecondaryColor = Palette.FromHex("#5BC0BE"),
                     PrimaryBuilding = BuildingType.Wallow,
@@ -612,7 +612,7 @@ namespace CrittersOfCalamity.Model
                     {
                         "1 Capybara Caravan Faction Board", "5 Wallows", "Traded Goods Deck (8 cards)",
                         "1 Riverkeeper Special Unit Piece & Card", "1 Capybara Trader Special Unit Piece & Card",
-                        "20 Capybara Unit Pieces & Card", "10 Stream Tiles"
+                        "20 Capybara Unit Pieces & Card", "6 Stream Tiles"
                     },
                     Units = new List<UnitDef>
                     {

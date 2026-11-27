@@ -701,7 +701,10 @@ namespace CrittersOfCalamity.UI
                 var p = _engine.Players[i];
                 bool isTurn = (i == _engine.CurrentTurnPlayerIndex);
                 string turnMark = isTurn ? "> " : "";
-                string facColor = ColorUtility.ToHtmlStringRGB(p.Faction.PrimaryColor);
+                // dark faction colors (Curly Tail's grey) are lifted so the name stays readable on the dark badge
+                var fc = p.Faction.PrimaryColor;
+                if (fc.r * 0.3f + fc.g * 0.59f + fc.b * 0.11f < 0.45f) fc = Color.Lerp(fc, Color.white, 0.45f);
+                string facColor = ColorUtility.ToHtmlStringRGB(fc);
                 _playerScoreBadges[i].text = $"{turnMark}<b>{p.DisplayName}</b> <color=#{facColor}>{p.Faction.Name}</color>\n" +
                                              $"<size=16><b>{p.Authority}</b>/30 Authority</size>  <size=12>Res {p.ResourcePile.Count} · Hand {p.RelicHand.Count}</size>";
                 _playerScoreBadges[i].color = isTurn ? Palette.AuthorityGold : Color.white;
@@ -823,6 +826,7 @@ namespace CrittersOfCalamity.UI
             var t = CreateText(cardBox.transform, "Text", $"{tag}<b>{card.Name}</b>  <size=14>({card.Cost})</size>\n<size=14>{card.EffectText}</size>",
                 14, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, new Vector2(6f, 3f), new Vector2(-6f, -3f), Palette.ParchmentMap);
             t.verticalOverflow = VerticalWrapMode.Truncate;
+            t.resizeTextMinSize = 9;   // long effects shrink to fit the small card; hover shows the full card
             t.raycastTarget = false;
 
             // Hovering a card pops up the full card above the hand
