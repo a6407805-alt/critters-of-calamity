@@ -27,7 +27,7 @@ namespace CrittersOfCalamity.UI
             _choicePopup = root.gameObject;
             _choiceTitle = CreateText(root, "Title", "", 20, TextAnchor.MiddleLeft, new Vector2(0.04f, 0.86f), new Vector2(0.96f, 0.98f),
                 Vector2.zero, Vector2.zero, Palette.AuthorityGold);
-            _choicePrompt = CreateText(root, "Prompt", "", 14, TextAnchor.UpperLeft, new Vector2(0.04f, 0.64f), new Vector2(0.96f, 0.86f),
+            _choicePrompt = CreateText(root, "Prompt", "", 15, TextAnchor.UpperLeft, new Vector2(0.04f, 0.64f), new Vector2(0.96f, 0.86f),
                 Vector2.zero, Vector2.zero, Palette.ParchmentMap);
             _choiceList = BuildScrollList(root, new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.63f));
             _choicePopup.SetActive(false);
@@ -64,14 +64,16 @@ namespace CrittersOfCalamity.UI
                     () => _mpManager.Submit(GameCommand.Choice(opt, default(HexCoord))));
                 btn.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
                 btn.interactable = c.OptionEnabled[i];
-                btn.GetComponentInChildren<Text>().fontSize = 14;
+                SetFontSize(btn.GetComponentInChildren<Text>(), 14);
+                // Choices about relic cards (Prophetic Vision, Ignite, ...): hover a card's button to see the whole card
+                if (c.Cards != null && i < c.Cards.Count) AttachCardHover(btn.gameObject, c.Cards[i]);
             }
             if (c.CanSkip)
             {
                 var skip = CreateLayoutButton(_choiceList, "Skip", c.SkipLabel, Palette.FromHex("#4A4F5A"),
                     () => _mpManager.Submit(GameCommand.Choice(CrittersGameEngine.ChooseSkip, default(HexCoord))));
                 skip.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
-                skip.GetComponentInChildren<Text>().fontSize = 14;
+                SetFontSize(skip.GetComponentInChildren<Text>(), 14);
             }
         }
 

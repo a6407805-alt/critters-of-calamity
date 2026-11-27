@@ -105,7 +105,12 @@ namespace CrittersOfCalamity.UI
         private GameCommand DebugPickCommand()
         {
             var r = _debugRng;
-            if (_engine.IsBattlePending) return GameCommand.BattleDecision(r.Next(2) == 0);
+            if (_engine.IsBattlePending)
+            {
+                var bd = _engine.PendingBattle.CurrentDecision;
+                if (bd != null && bd.Options.Count > 0) return GameCommand.BattleOption(r.Next(bd.Options.Count));
+                return GameCommand.BattleDecision(r.Next(2) == 0);
+            }
             if (_engine.IsChoicePending)
             {
                 var c = _engine.PendingChoice;

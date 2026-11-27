@@ -174,7 +174,8 @@ namespace CrittersOfCalamity.Engine
         WarHorn,           // Defender, start of Attack and Defense Points (after the dice)
         OvergrownWall,     // Defender, start of Attack and Defense Points (after the dice)
         PoliticalTreatise, // Defender, start of Attack and Defense Points (after the dice)
-        BrassShield,       // Winner only, Damage Calculation
+        BrassShield,       // Either side, Damage Calculation
+        AssignDamage,      // The owner picks which of their units take the HP damage
         QuickFeet,         // Trouble Making Tanukis trait, after 0 HP units are removed
         CopperFigurine     // Traded Good: after the dice are rolled, re-roll 1 die
     }
@@ -185,6 +186,9 @@ namespace CrittersOfCalamity.Engine
         public int PlayerIndex;
         public string Title;
         public string Prompt;
+        /// <summary>For pick-one decisions (AssignDamage): labels and the unit each option stands for.</summary>
+        public List<string> Options = new List<string>();
+        public List<string> UnitIds = new List<string>();
     }
 
     public enum PendingBattleStage
@@ -197,6 +201,9 @@ namespace CrittersOfCalamity.Engine
         OvergrownWallWindow,
         TreatiseWindow,
         DamageCalculation,
+        BrassAttackerWindow,
+        BrassDefenderWindow,
+        AssignDamage,
         ApplyDamage,
         QuickFeetWindow,
         Finish
@@ -225,6 +232,11 @@ namespace CrittersOfCalamity.Engine
         public bool AttackerWon;
         public int FinalWinnerDamage;
         public int MandatoryLoserDamage;
+        public int DamageToAttacker;
+        public int DamageToDefender;
+        /// <summary>Units each side's owner chose to take damage first (Attacker side, Defender side).</summary>
+        public List<UnitInstance> AttackerDamageOrder = new List<UnitInstance>();
+        public List<UnitInstance> DefenderDamageOrder = new List<UnitInstance>();
         public int QuickFeetEligiblePlayerIndex = -1;
     }
 
@@ -238,7 +250,7 @@ namespace CrittersOfCalamity.Engine
     /// - 50-card Resource Deck (20 Stone, 20 Wood, 10 Gold) with exact search/fallback rules (Part 2 Lines 55-58)
     /// - 8-card Forage Deck (reshuffled after every draw - Part 9) & 8-card Traded Goods Deck + 3-card Stall
     /// - 4-Phase Turn Structure (Draw, Excavation, Main [3 actions], End)
-    /// - 5-Phase 2d6 Battle Calculator with Damage Cap & Mandatory Loser Damage
+    /// - 5-Phase 3-sided die Battle Calculator with Damage Cap & Mandatory Loser Damage
     /// </summary>
     public partial class CrittersGameEngine
     {
@@ -275,7 +287,7 @@ namespace CrittersOfCalamity.Engine
 
         // Main Phase actions (up to 3 per turn)
         public int MainPhaseActionsRemaining = 3;
-        /// <summary>Extra Battle actions from Abandoned Road this turn (they don't count toward the three Main Phase actions).</summary>
+        /// <summary>Extra Battle actions from Rally this turn (they don't count toward the three Main Phase actions).</summary>
         public int ExtraBattleActions = 0;
 
         public int WinnerPlayerIndex = -1;
@@ -298,22 +310,20 @@ namespace CrittersOfCalamity.Engine
             _rng = seed == 0 ? new System.Random() : new System.Random(seed);
         }
 
+        private int _logTotal;
         public void Log(string message)
         {
             string entry = $"[T{TurnNumber}] {message}";
             GameLog.Add(entry);
+            _logTotal++;
             if (GameLog.Count > 150)
                 GameLog.RemoveAt(0);
             Debug.Log($"[CrittersEngine] {entry}");
         }
 
         public int RollD6() => _rng.Next(1, 7);
-        public int Roll2D6(out int d1, out int d2)
-        {
-            d1 = RollD6();
-            d2 = RollD6();
-            return d1 + d2;
-        }
+        /// <summary>The battle and roll-off die: one 3-sided die (1 to 3).</summary>
+        public int RollD3() => _rng.Next(1, 4);
 
         /// <summary>
         /// Starts a match with factions already chosen and Player 1 going first (used by tests and quick starts).
@@ -526,7 +536,7 @@ namespace CrittersOfCalamity.Engine
         /// Part 17 Faction 7: the Capybara Caravan places its 10 Stream Tiles before any other player sets up.
         /// Each Stream Tile goes on a forest tile next to another stream tile.
         /// </summary>
-        public const int CapybaraStreamTiles = 10;   // Faction 7 Special Setup
+        public const int CapybaraStreamTiles = 6;    // Faction 7 Special Setup
 
         private void RunCapybaraSpecialSetup()
         {
@@ -989,7 +999,20 @@ namespace CrittersOfCalamity.Engine
                     break;
 
                 case FactionId.FirestartingSquirrels:
+                {
+                    int fires = Board.Values.Count(t => t.Overlay == FactionOverlayTileType.Fire && t.OverlayOwnerPlayerIndex == p.PlayerIndex);
+                    int logBefore = GameLog.Count, totalBefore = _logTotal;
                     ResolveSquirrelsFireTilesEndPhase(p);
+                    if (fires > 0)
+                    {
+                        int added = Mathf.Min(GameLog.Count, _logTotal - totalBefore);
+                        var lines = GameLog.Skip(GameLog.Count - added).Select(l => " • " + System.Text.RegularExpressions.Regex.Replace(l, @"^\[T\d+\] ", ""));
+                        Announce($"{p.DisplayName}'s {fires} Fire Tile(s) burn",
+                            "Each Fire Tile resolves in order: 1. Squirrels on it clear out for Charcoal. 2. One building or token burns. " +
+                            "3. Enemy units are driven to an adjacent tile (forest costs 1 HP). 4. On a 1 or 6 the fire spreads. 5. The top resource card burns (Gold gives 1 Authority).\n\n" +
+                            string.Join("\n", lines));
+                    }
+                }
                     // Forest Fire: +1 Authority for every Fire Tile adjacent to another faction's pieces (cap 2)
                     int fireScore = 0;
                     foreach (var ft in Board.Values.Where(t => t.Overlay == FactionOverlayTileType.Fire))
@@ -1126,17 +1149,6 @@ namespace CrittersOfCalamity.Engine
                     var tk = ft.Tokens.FirstOrDefault(k => k.Type != TokenType.TarPit && k.Type != TokenType.Coin && k.OwnerPlayerIndex != me);
                     if (tk != null) ft.Tokens.Remove(tk);
                 }
-                Roll2D6(out int d1, out int d2);
-                if (d1 == d2)
-                {
-                    Log($"Fire rolled doubles ({d1}-{d2}): every building and token on every Fire Tile burns.");
-                    foreach (var allFt in Board.Values.Where(t => t.Overlay == FactionOverlayTileType.Fire))
-                    {
-                        if (allFt.Building != null && !(allFt.Building.Type == BuildingType.Bunker && allFt.Building.OwnerPlayerIndex == me))
-                            allFt.Building = null;
-                        allFt.Tokens.RemoveAll(k => k.Type != TokenType.TarPit && k.Type != TokenType.Coin);
-                    }
-                }
 
                 // 3. Drive out enemies: each goes to an adjacent tile (the controller would pick; the game picks the
                 //    least harmful: no Fire, then stream/ruin over forest). Forest costs 1 HP (cap applies).
@@ -1211,6 +1223,7 @@ namespace CrittersOfCalamity.Engine
 
             var millionsPlayer = Players.FirstOrDefault(pl => pl.Faction.Id == FactionId.HordeOfTheMillions);
             Log($"{drawingPlayer.DisplayName} drew Forage Card '{card.Title}' (shuffled back into Forage Deck): {card.EffectText}");
+            Announce($"{drawingPlayer.DisplayName} drew a Forage card", $"<b>{card.Title}</b>\n{card.EffectText}");
 
             switch (card.Id)
             {
@@ -1299,6 +1312,14 @@ namespace CrittersOfCalamity.Engine
         {
             var buyer = Players[CurrentTurnPlayerIndex];
             if (!CanBuyTradedGood(buyer, stallIndex, out var why)) { Log(why); return false; }
+            BuyTradedGood(buyer, stallIndex);
+            OnStateChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>Pays for and takes stall slot stallIndex (both sides gain 1 Authority), then offers the guest placement.</summary>
+        private void BuyTradedGood(PlayerState buyer, int stallIndex)
+        {
             var capyPlayer = Players.First(pl => pl.Faction.Id == FactionId.CapybaraCaravan);
             var card = TradedGoodsStall[stallIndex];
 
@@ -1315,9 +1336,30 @@ namespace CrittersOfCalamity.Engine
 
             // The buyer places 1 basic unit from their supply on a Wallow as a guest (they pick the Wallow)
             OfferGuestPlacement(buyer, capyPlayer);
-            OnStateChanged?.Invoke();
-            return true;
         }
+
+        /// <summary>
+        /// The Capybara Trader arrives on a tile with enemy units: each of those players may buy one Traded Good
+        /// before the Capybara player acts again.
+        /// </summary>
+        private void OfferTraderVisit(PlayerState capy, HexTileState tile)
+        {
+            if (TradedGoodsStall.Count == 0) return;
+            foreach (var seat in tile.Units.Where(u => u.OwnerPlayerIndex != capy.PlayerIndex).Select(u => u.OwnerPlayerIndex).Distinct().OrderBy(x => x).ToList())
+            {
+                var buyer = Players[seat];
+                var c = NewChoice("trader_visit", seat, "The Capybara Trader is here",
+                    $"{capy.DisplayName}'s Capybara Trader arrived on your tile. Buy one Traded Good before {capy.DisplayName} acts again? (You and the Capybaras each gain 1 Authority.)");
+                foreach (var g in TradedGoodsStall)
+                    AddOption(c, $"Buy {g.Title} ({g.Cost}): {g.EffectText}", CanAfford(buyer, g.Cost));
+                c.CanSkip = true;
+                c.SkipLabel = "Don't buy anything";
+            }
+        }
+
+        /// <summary>Things everyone at the table should see in a popup (Grimoire mills, Forage cards, Fire, ...).</summary>
+        public event Action<string, string> OnAnnouncement;
+        public void Announce(string title, string body) => OnAnnouncement?.Invoke(title, body);
 
         public bool CanAfford(PlayerState p, ResourceCost cost)
         {
@@ -1792,6 +1834,11 @@ namespace CrittersOfCalamity.Engine
                 movableUnits.Any(u => u.Definition.Id == "pilgrim" && toTile.Units.Contains(u)))
                 OfferMartyrdom(p, toTile);
 
+            // The Capybara Trader arriving on a tile with enemy units opens its stall to them
+            if (p.Faction.Id == FactionId.CapybaraCaravan && toTile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex) &&
+                movableUnits.Any(u => u.Definition.Id == "capybara_trader" && toTile.Units.Contains(u)))
+                OfferTraderVisit(p, toTile);
+
             MainPhaseActionsRemaining -= actionCost;
             Log($"{p.DisplayName} moved {movableUnits.Count} unit(s) from {fromCoord} to {toCoord}. ({MainPhaseActionsRemaining} actions left)");
             OnStateChanged?.Invoke();
@@ -1845,7 +1892,8 @@ namespace CrittersOfCalamity.Engine
             }
         }
 
-        public bool TryLootTile(HexCoord coord)
+        /// <summary>Could the turn player Loot this tile right now? (Used for the green tiles too.)</summary>
+        public bool CanLootTile(HexCoord coord)
         {
             if (PendingBattle != null || PendingChoice != null) return false;
             if (CurrentPhase != TurnPhase.MainPhase || MainPhaseActionsRemaining <= 0) return false;
@@ -1857,6 +1905,28 @@ namespace CrittersOfCalamity.Engine
                                   (tile.Building != null && tile.Building.OwnerPlayerIndex != p.PlayerIndex) ||
                                   tile.Tokens.Any(tk => tk.OwnerPlayerIndex != p.PlayerIndex && tk.Type != TokenType.Coin);
             if (!hasMyUnits || hasEnemyPieces) return false;
+            // Fire Tiles: only the Squirrels can loot them, and only for Charcoal.
+            if (tile.Overlay == FactionOverlayTileType.Fire)
+                return p.Faction.Id == FactionId.FirestartingSquirrels && tile.Units.Any(u => u.OwnerPlayerIndex == p.PlayerIndex && u.Definition.Id == "squirrel") &&
+                       p.ResourcePile.Count(r => r == ResourceType.Charcoal) + BurnedResources.Count(r => r == ResourceType.Charcoal) < 6;
+            return true;
+        }
+
+        public bool TryLootTile(HexCoord coord)
+        {
+            if (!CanLootTile(coord)) return false;
+            var tile = Board[coord];
+            var p = Players[CurrentTurnPlayerIndex];
+
+            if (tile.Overlay == FactionOverlayTileType.Fire)
+            {
+                p.ResourcePile.Add(ResourceType.Charcoal);
+                tile.LootedThisTurn = true;
+                MainPhaseActionsRemaining--;
+                Log($"{p.DisplayName} looted the Fire Tile at {coord} -> Gained 1 Charcoal.");
+                OnStateChanged?.Invoke();
+                return true;
+            }
 
             // Check Rusty Shovel Traded Good card (draw 3 resources and end loot)
             var shovel = p.PurchasedTradedGoods.FirstOrDefault(tg => tg.Id == "tg_rusty_shovel");
@@ -2130,13 +2200,34 @@ namespace CrittersOfCalamity.Engine
         /// Answers the current battle decision ("use this card/trait?") for the player named in
         /// PendingBattle.CurrentDecision, then continues the battle.
         /// </summary>
-        public void RespondToBattleDecision(bool use)
+        public void RespondToBattleDecision(bool use) => RespondToBattleDecision(use ? 1 : 0);
+
+        /// <summary>answer: 1 use, 0 pass, 2+ picks option (answer - 2) of a pick-one decision.</summary>
+        public void RespondToBattleDecision(int answer)
         {
             var pb = PendingBattle;
             if (pb == null || pb.CurrentDecision == null) return;
             var decision = pb.CurrentDecision;
             pb.CurrentDecision = null;
             var player = Players[decision.PlayerIndex];
+            bool use = answer == 1;
+
+            if (decision.Kind == BattleDecisionKind.AssignDamage)
+            {
+                bool atkSide = player == pb.Attacker;
+                var order = atkSide ? pb.AttackerDamageOrder : pb.DefenderDamageOrder;
+                var side = atkSide ? pb.AttackerUnits : pb.DefenderUnits;
+                int pick = answer >= 2 && answer - 2 < decision.UnitIds.Count ? answer - 2 : 0;
+                var unit = side.FirstOrDefault(u => decision.UnitIds.Count > 0 && u.InstanceId == decision.UnitIds[pick]);
+                if (unit != null)
+                {
+                    order.Add(unit);
+                    Log($"{player.DisplayName} assigned 1HP to {unit.Definition.Name}.");
+                }
+                else order.Add(side.First(u => !order.Contains(u)));
+                ContinuePendingBattle();
+                return;
+            }
 
             if (!use)
             {
@@ -2182,9 +2273,11 @@ namespace CrittersOfCalamity.Engine
                     case BattleDecisionKind.BrassShield:
                         if (DiscardTableRelic(player, "brass_shield"))
                         {
-                            int before = pb.MandatoryLoserDamage;
-                            pb.MandatoryLoserDamage = Mathf.Max(0, pb.MandatoryLoserDamage - 2);
-                            Log($"{player.DisplayName} discarded Brass Shield (damage taken {before}HP -> {pb.MandatoryLoserDamage}HP).");
+                            bool atk = player == pb.Attacker;
+                            int before = atk ? pb.DamageToAttacker : pb.DamageToDefender;
+                            int after = Mathf.Max(0, before - 2);
+                            if (atk) pb.DamageToAttacker = after; else pb.DamageToDefender = after;
+                            Log($"{player.DisplayName} discarded Brass Shield (damage taken {before}HP -> {after}HP).");
                         }
                         break;
                     case BattleDecisionKind.QuickFeet:
@@ -2197,17 +2290,9 @@ namespace CrittersOfCalamity.Engine
                         player.PurchasedTradedGoods.Remove(fig);
                         TradedGoodsDiscard.Add(fig);
                         var r = pb.Report;
-                        int roll = RollD6();
-                        if (player == pb.Attacker)
-                        {
-                            if (r.AttackerDice1 <= r.AttackerDice2) r.AttackerDice1 = roll; else r.AttackerDice2 = roll;
-                            pb.AttackerRoll = r.AttackerDice1 + r.AttackerDice2;
-                        }
-                        else
-                        {
-                            if (r.DefenderDice1 <= r.DefenderDice2) r.DefenderDice1 = roll; else r.DefenderDice2 = roll;
-                            pb.DefenderRoll = r.DefenderDice1 + r.DefenderDice2;
-                        }
+                        int roll = RollD3();
+                        if (player == pb.Attacker) pb.AttackerRoll = r.AttackerDice1 = roll;
+                        else pb.DefenderRoll = r.DefenderDice1 = roll;
                         Log($"{player.DisplayName} used the Copper Figurine and re-rolled a {roll}.");
                         RecomputeBattlePoints(pb);
                         break;
@@ -2220,14 +2305,14 @@ namespace CrittersOfCalamity.Engine
 
         private bool HasTableRelic(PlayerState p, string relicId) => p.TableRelics.Any(r => r.Id == relicId);
 
-        /// <summary>A Battle action uses an Abandoned Road extra Battle action first, otherwise one of the three Main Phase actions.</summary>
+        /// <summary>A Battle action uses an Rally extra Battle action first, otherwise one of the three Main Phase actions.</summary>
         private void SpendBattleAction()
         {
             if (ExtraBattleActions > 0) ExtraBattleActions--;
             else MainPhaseActionsRemaining = Mathf.Max(0, MainPhaseActionsRemaining - 1);
         }
 
-        /// <summary>Table relics the turn player may use right now on their own turn (Abandoned Road, Ceremonial Bow and Arrow).</summary>
+        /// <summary>Table relics the turn player may use right now on their own turn (Rally, Ceremonial Bow and Arrow).</summary>
         public bool CanUseTableRelic(PlayerState p, string relicId)
         {
             if (PendingBattle != null || IsPreGame || CurrentPhase == TurnPhase.GameOver) return false;
@@ -2242,7 +2327,7 @@ namespace CrittersOfCalamity.Engine
 
         /// <summary>
         /// Use a relic card from your Table on your own turn.
-        /// Abandoned Road: discard it to take 1 extra Battle action (not one of your three).
+        /// Rally: discard it to take 1 extra Battle action (not one of your three).
         /// Ceremonial Bow and Arrow: discard it to make another player discard a relic card from their Table
         /// (targetPlayer, targetIndex). Cards on a Table are facedown, so the target is picked by position.
         /// </summary>
@@ -2256,7 +2341,7 @@ namespace CrittersOfCalamity.Engine
             {
                 DiscardTableRelic(p, relicId);
                 ExtraBattleActions++;
-                Log($"{p.DisplayName} discarded Abandoned Road for 1 extra Battle action this turn.");
+                Log($"{p.DisplayName} discarded Rally for 1 extra Battle action this turn.");
             }
             else if (relicId == "ceremonial_bow_and_arrow")
             {
@@ -2309,8 +2394,8 @@ namespace CrittersOfCalamity.Engine
             RecomputeBattlePoints(pb);
             int atk = Mathf.Max(0, pb.AttackerRoll + pb.Report.AttackerDiceBonus) + pb.AttackerAttackPoints;
             int def = Mathf.Max(0, pb.DefenderRoll + pb.Report.DefenderDiceBonus) + pb.DefenderDefensePoints;
-            return $"Attacker rolled {pb.Report.AttackerDice1}+{pb.Report.AttackerDice2} (mod {pb.Report.AttackerDiceBonus:+#;-#;0}) + {pb.AttackerAttackPoints} Attack Points = {atk}\n" +
-                   $"Defender rolled {pb.Report.DefenderDice1}+{pb.Report.DefenderDice2} (mod {pb.Report.DefenderDiceBonus:+#;-#;0}) + {pb.DefenderDefensePoints} Defense Points = {def}";
+            return $"Attacker rolled {pb.Report.AttackerDice1} (mod {pb.Report.AttackerDiceBonus:+#;-#;0}) + {pb.AttackerAttackPoints} Attack Points = {atk}\n" +
+                   $"Defender rolled {pb.Report.DefenderDice1} (mod {pb.Report.DefenderDiceBonus:+#;-#;0}) + {pb.DefenderDefensePoints} Defense Points = {def}";
         }
 
         /// <summary>Runs the battle forward until it needs a player decision or finishes.</summary>
@@ -2327,14 +2412,14 @@ namespace CrittersOfCalamity.Engine
                 switch (pb.Stage)
                 {
                     case PendingBattleStage.RollDice:
-                        // Phase 2: Dice Roll (2d6 each)
-                        pb.AttackerRoll = Roll2D6(out report.AttackerDice1, out report.AttackerDice2);
-                        pb.DefenderRoll = Roll2D6(out report.DefenderDice1, out report.DefenderDice2);
+                        // Phase 2: Dice Roll (one 3-sided die each)
+                        pb.AttackerRoll = report.AttackerDice1 = RollD3();
+                        pb.DefenderRoll = report.DefenderDice1 = RollD3();
+                        report.AttackerDice2 = report.DefenderDice2 = 0;
                         if (HasRestriction(attacker, 3))
                         {
-                            report.AttackerDice2 = 0;   // Subservience: attackers roll one die
-                            pb.AttackerRoll = report.AttackerDice1;
-                            Log($"Subservience: {attacker.DisplayName} rolls only one die.");
+                            pb.AttackerRoll = report.AttackerDice1 = 1;   // Subservience: the attacker's roll counts as 1
+                            Log($"Subservience: {attacker.DisplayName}'s roll counts as 1.");
                         }
                         // The Lord of War's Greed: roll a die for each battle it is in
                         foreach (var side in new[] { pb.AttackerUnits, pb.DefenderUnits })
@@ -2355,14 +2440,14 @@ namespace CrittersOfCalamity.Engine
                         pb.Stage = PendingBattleStage.FigurineDefenderWindow;
                         if (attacker.PurchasedTradedGoods.Any(g => g.Id == "tg_copper_figurine"))
                             AskBattleDecision(BattleDecisionKind.CopperFigurine, attacker, "Copper Figurine",
-                                $"You rolled {report.AttackerDice1} and {report.AttackerDice2}. Discard Copper Figurine to re-roll your lower die?");
+                                $"You rolled {report.AttackerDice1}. Discard Copper Figurine to re-roll your die?");
                         break;
 
                     case PendingBattleStage.FigurineDefenderWindow:
                         pb.Stage = PendingBattleStage.HalberdWindow;
                         if (defender.PurchasedTradedGoods.Any(g => g.Id == "tg_copper_figurine"))
                             AskBattleDecision(BattleDecisionKind.CopperFigurine, defender, "Copper Figurine",
-                                $"You rolled {report.DefenderDice1} and {report.DefenderDice2}. Discard Copper Figurine to re-roll your lower die?");
+                                $"You rolled {report.DefenderDice1}. Discard Copper Figurine to re-roll your die?");
                         break;
 
                     // All relic dice effects are offered after the dice, at the start of the Attack and Defense Points
@@ -2409,7 +2494,7 @@ namespace CrittersOfCalamity.Engine
                         tile.HasStatueOfGoddessBuff = false;
                         report.AttackerTotal = Mathf.Max(0, pb.AttackerRoll + report.AttackerDiceBonus) + pb.AttackerAttackPoints;
                         report.DefenderTotal = Mathf.Max(0, pb.DefenderRoll + report.DefenderDiceBonus) + pb.DefenderDefensePoints;
-                        pb.Stage = PendingBattleStage.ApplyDamage;
+                        pb.Stage = PendingBattleStage.BrassAttackerWindow;
 
                         if (report.AttackerTotal == report.DefenderTotal)
                         {
@@ -2419,6 +2504,7 @@ namespace CrittersOfCalamity.Engine
                             report.LoserPlayerIndex = -1;
                             report.WinnerDamageDealt = 1;
                             report.MandatoryLoserDamageDealt = 1;
+                            pb.DamageToAttacker = pb.DamageToDefender = 1;
                             break;
                         }
 
@@ -2439,14 +2525,31 @@ namespace CrittersOfCalamity.Engine
                         // Mandatory Loser Damage: loser always deals 1 HP back to winner unless Horde of the Millions (Oblivious to Danger - Line 210)
                         pb.MandatoryLoserDamage = (loser.Faction.Id == FactionId.HordeOfTheMillions) ? 0 : 1;
 
-                        // Brass Shield: only the WINNER of a battle may use it, to reduce the damage their units take (Part 16).
-                        if (pb.MandatoryLoserDamage > 0 && HasTableRelic(winner, "brass_shield"))
-                        {
-                            AskBattleDecision(BattleDecisionKind.BrassShield, winner, "Brass Shield",
-                                $"You won the battle ({report.AttackerTotal} vs {report.DefenderTotal}).\n" +
-                                $"Your units are about to take {pb.MandatoryLoserDamage}HP of mandatory loser damage.\n" +
+                        pb.DamageToAttacker = pb.AttackerWon ? pb.MandatoryLoserDamage : pb.FinalWinnerDamage;
+                        pb.DamageToDefender = pb.AttackerWon ? pb.FinalWinnerDamage : pb.MandatoryLoserDamage;
+                        break;
+
+                    // Brass Shield: either side may use it in any battle to reduce the damage its units take by 2. Attacker first.
+                    case PendingBattleStage.BrassAttackerWindow:
+                        pb.Stage = PendingBattleStage.BrassDefenderWindow;
+                        if (pb.DamageToAttacker > 0 && HasTableRelic(attacker, "brass_shield"))
+                            AskBattleDecision(BattleDecisionKind.BrassShield, attacker, "Brass Shield",
+                                $"Battle: {report.AttackerTotal} vs {report.DefenderTotal}.\nYour units are about to take {pb.DamageToAttacker}HP.\n" +
                                 "Discard Brass Shield to reduce the damage your units take by 2 (to a minimum of 0)?");
-                        }
+                        break;
+
+                    case PendingBattleStage.BrassDefenderWindow:
+                        pb.Stage = PendingBattleStage.AssignDamage;
+                        if (pb.DamageToDefender > 0 && HasTableRelic(defender, "brass_shield"))
+                            AskBattleDecision(BattleDecisionKind.BrassShield, defender, "Brass Shield",
+                                $"Battle: {report.AttackerTotal} vs {report.DefenderTotal}.\nYour units are about to take {pb.DamageToDefender}HP.\n" +
+                                "Discard Brass Shield to reduce the damage your units take by 2 (to a minimum of 0)?");
+                        break;
+
+                    // Each player chooses which of their units take the HP damage (when not every unit is hit).
+                    case PendingBattleStage.AssignDamage:
+                        if (!AskDamageAssignment(pb, true) && !AskDamageAssignment(pb, false))
+                            pb.Stage = PendingBattleStage.ApplyDamage;
                         break;
 
                     case PendingBattleStage.ApplyDamage:
@@ -2492,33 +2595,25 @@ namespace CrittersOfCalamity.Engine
             List<UnitInstance> attackerLosses;
             List<UnitInstance> defenderLosses;
 
-            if (report.IsTie)
-            {
-                attackerLosses = ApplyBattleDamageToSide(tile, pb.AttackerUnits, 1, defender.PlayerIndex, report);
-                defenderLosses = ApplyBattleDamageToSide(tile, pb.DefenderUnits, 1, attacker.PlayerIndex, report);
-            }
-            else
+            bool allow2Atk = false, allow2Def = false;
+            if (!report.IsTie)
             {
                 var winner = pb.AttackerWon ? attacker : defender;
-                var loser = pb.AttackerWon ? defender : attacker;
                 var winnerUnits = pb.AttackerWon ? pb.AttackerUnits : pb.DefenderUnits;
-                var loserUnits = pb.AttackerWon ? pb.DefenderUnits : pb.AttackerUnits;
-
-                report.WinnerDamageDealt = pb.FinalWinnerDamage;
-                report.MandatoryLoserDamageDealt = pb.MandatoryLoserDamage;
-
-                bool allow2HpToSingleUnit = winnerUnits.Any(u => u.EquippedItems.Any(e => e.Id == "golden_gauntlet")) ||
-                                            (winner.Faction.Id == FactionId.BriaredFlower && winner.BriaredFlowerThorns == 0 && winnerUnits.Any(u => u.Definition.Id == "blooming_briar"));
-
-                // All damage is applied at the same time at the end of Phase 4
-                var loserLosses = ApplyBattleDamageToSide(tile, loserUnits, pb.FinalWinnerDamage, winner.PlayerIndex, report, allow2HpToSingleUnit);
-                var winnerLosses = pb.MandatoryLoserDamage > 0
-                    ? ApplyBattleDamageToSide(tile, winnerUnits, pb.MandatoryLoserDamage, loser.PlayerIndex, report, false)
-                    : new List<UnitInstance>();
-
-                attackerLosses = pb.AttackerWon ? winnerLosses : loserLosses;
-                defenderLosses = pb.AttackerWon ? loserLosses : winnerLosses;
+                bool allow2 = winnerUnits.Any(u => u.EquippedItems.Any(e => e.Id == "golden_gauntlet")) ||
+                              (winner.Faction.Id == FactionId.BriaredFlower && winner.BriaredFlowerThorns == 0 && winnerUnits.Any(u => u.Definition.Id == "blooming_briar"));
+                if (pb.AttackerWon) allow2Def = allow2; else allow2Atk = allow2;
+                report.WinnerDamageDealt = pb.AttackerWon ? pb.DamageToDefender : pb.DamageToAttacker;
+                report.MandatoryLoserDamageDealt = pb.AttackerWon ? pb.DamageToAttacker : pb.DamageToDefender;
             }
+
+            // All damage is applied at the same time at the end of Phase 4
+            attackerLosses = pb.DamageToAttacker > 0
+                ? ApplyBattleDamageToSide(tile, pb.AttackerUnits, pb.DamageToAttacker, defender.PlayerIndex, report, allow2Atk, pb.AttackerDamageOrder)
+                : new List<UnitInstance>();
+            defenderLosses = pb.DamageToDefender > 0
+                ? ApplyBattleDamageToSide(tile, pb.DefenderUnits, pb.DamageToDefender, attacker.PlayerIndex, report, allow2Def, pb.DefenderDamageOrder)
+                : new List<UnitInstance>();
 
             // Platypus Papacy Crusader Authority, whichever side removed them and whatever the battle outcome
             ScoreCrusaderBattleRemovals(attacker, pb.AttackerUnits, defender, defenderLosses);
@@ -2736,10 +2831,41 @@ namespace CrittersOfCalamity.Engine
             return def;
         }
 
-        private List<UnitInstance> ApplyBattleDamageToSide(HexTileState tile, List<UnitInstance> units, int totalDamage, int killerPlayerIndex, BattleReport report, bool allow2HpToSingleUnit = false)
+        /// <summary>
+        /// Asks one side's owner to pick the next unit to take damage, when the damage won't reach every unit.
+        /// Returns true when a decision was raised.
+        /// </summary>
+        private bool AskDamageAssignment(PendingBattleState pb, bool attackerSide)
+        {
+            var player = attackerSide ? pb.Attacker : pb.Defender;
+            var units = (attackerSide ? pb.AttackerUnits : pb.DefenderUnits).Where(u => u.CurrentHP > 0).ToList();
+            var order = attackerSide ? pb.AttackerDamageOrder : pb.DefenderDamageOrder;
+            int dmg = attackerSide ? pb.DamageToAttacker : pb.DamageToDefender;
+            if (dmg <= 0 || units.Count <= 1 || units.Count <= dmg || order.Count >= dmg) return false;
+            var left = units.Where(u => !order.Contains(u)).ToList();
+            var d = new BattleDecision
+            {
+                Kind = BattleDecisionKind.AssignDamage, PlayerIndex = player.PlayerIndex, Title = "Assign damage",
+                Prompt = $"Your units take {dmg}HP in this battle. Choose which unit takes the next 1HP ({order.Count + 1} of {dmg})."
+            };
+            foreach (var u in left)
+            {
+                d.Options.Add($"{u.Definition.Name} ({u.CurrentHP}HP)");
+                d.UnitIds.Add(u.InstanceId);
+            }
+            pb.CurrentDecision = d;
+            Log($"Waiting for {player.DisplayName} to choose which units take damage.");
+            OnBattleDecisionRequired?.Invoke(d);
+            OnStateChanged?.Invoke();
+            return true;
+        }
+
+        private List<UnitInstance> ApplyBattleDamageToSide(HexTileState tile, List<UnitInstance> units, int totalDamage, int killerPlayerIndex, BattleReport report, bool allow2HpToSingleUnit = false, List<UnitInstance> chosenFirst = null)
         {
             var removed = new List<UnitInstance>();
             var ordered = units.OrderBy(u => u.Definition.IsSpecialUnit ? 1 : 0).ToList();
+            if (chosenFirst != null && chosenFirst.Count > 0)
+                ordered = chosenFirst.Where(units.Contains).Concat(ordered.Where(u => !chosenFirst.Contains(u))).ToList();
             int remaining = totalDamage;
 
             foreach (var u in ordered)
@@ -2900,7 +3026,7 @@ namespace CrittersOfCalamity.Engine
             tile.Units.Remove(u);
             if (owner.Faction.Id == FactionId.GoatCabal && DemonIds.Contains(u.Definition.Id))
             {
-                owner.DemonStates[u.Definition.Id] = DemonRemoved;   // its card goes face down for good
+                owner.DemonStates[u.Definition.Id] = DemonUnsummoned;   // it can be summoned again at its full cost
                 if (u.Definition.Id == "serpentine_sovereign") owner.RoyalDecreeArmed = false;
             }
 
@@ -2943,11 +3069,9 @@ namespace CrittersOfCalamity.Engine
                     if (!necroPlayer.NecromouserAwakened)
                     {
                         necroPlayer.NecromouserAwakened = true;
-                        foreach (var bt in Board.Values.Where(t => t.Overlay == FactionOverlayTileType.Miasma_Hidden))
-                            bt.Overlay = FactionOverlayTileType.Miasma_Revealed;
                         SpawnUnit(tile.Coord, "necromouser", necroPlayer, 1);
                         SpawnUnit(tile.Coord, "skeleton", necroPlayer, 1);
-                        Log($"THE NECROMOUSER AWAKENS at {tile.Coord}! All Miasma Tiles flipped faceup!");
+                        Log($"THE NECROMOUSER AWAKENS at {tile.Coord} with 1 Skeleton!");
                     }
                 }
             }

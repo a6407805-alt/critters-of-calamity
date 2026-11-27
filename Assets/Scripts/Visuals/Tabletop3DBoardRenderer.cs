@@ -103,15 +103,16 @@ namespace CrittersOfCalamity.Visuals
 
             _highlightRoot = new GameObject("TileHighlights").transform;
             _highlightRoot.SetParent(transform, false);
-            var mesh = CreateHexPrismMesh(HexRadius * 0.80f, 0.02f);
+            var mesh = CreateHexPrismMesh(HexRadius * 0.86f, 0.05f);
             void Mark(HexCoord c, Color col)
             {
                 if (!_engine.Board.ContainsKey(c)) return;
                 var go = new GameObject($"Highlight_{c}");
                 go.transform.SetParent(_highlightRoot, false);
-                go.transform.localPosition = c.ToWorldPosition(HexRadius) + new Vector3(0f, TileThickness + 0.08f, 0f);
+                // Raised above faction tiles and props, and glowing, so legal tiles read green everywhere.
+                go.transform.localPosition = c.ToWorldPosition(HexRadius) + new Vector3(0f, TileThickness + 0.14f, 0f);
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
-                go.AddComponent<MeshRenderer>().sharedMaterial = GetMaterial(col, 0.2f);
+                go.AddComponent<MeshRenderer>().sharedMaterial = GetHighlightMaterial(col);
             }
             if (legal != null) foreach (var c in legal) Mark(c, legalColor);
             if (picked != null) foreach (var c in picked) Mark(c, pickedColor);
@@ -247,6 +248,26 @@ namespace CrittersOfCalamity.Visuals
                 _baseUrpMat = new Material(shader);
                 _baseUrpMat.SetFloat("_Smoothness", 0.35f);
             }
+        }
+
+        private readonly Dictionary<Color, Material> _highlightMats = new Dictionary<Color, Material>();
+        private Material GetHighlightMaterial(Color color)
+        {
+            EnsureHexMeshAndBaseMaterial();
+            if (!_highlightMats.TryGetValue(color, out var mat))
+            {
+                mat = new Material(_baseUrpMat);
+                mat.color = color;
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+                if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+                if (mat.HasProperty("_EmissionColor"))
+                {
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetColor("_EmissionColor", color * 0.9f);
+                }
+                _highlightMats[color] = mat;
+            }
+            return mat;
         }
 
         public Material GetMaterial(Color color, float smoothness = 0.35f)
@@ -675,7 +696,7 @@ namespace CrittersOfCalamity.Visuals
             {
                 case FactionOverlayTileType.Miasma_Hidden:        return GetMaterial(Palette.MiasmaHidden, 0.35f);
                 case FactionOverlayTileType.Miasma_Revealed:      return GetMaterial(Palette.MiasmaTile, 0.55f);
-                case FactionOverlayTileType.Fire:                 return GetMaterial(Palette.CharredGround, 0.3f);
+                case FactionOverlayTileType.Fire:                 return GetMaterial(Palette.FireGround, 0.3f);
                 case FactionOverlayTileType.FallenLeaf_Unflipped: return GetMaterial(Palette.FallenLeafTile, 0.3f);
                 case FactionOverlayTileType.FallenLeaf_Trap:      return GetMaterial(Palette.TrapLeafRed, 0.4f);
                 case FactionOverlayTileType.FallenLeaf_Prank:     return GetMaterial(Palette.AuthorityGold, 0.5f);

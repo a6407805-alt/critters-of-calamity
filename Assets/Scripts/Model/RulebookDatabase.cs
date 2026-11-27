@@ -166,8 +166,8 @@ namespace CrittersOfCalamity.Model
                 new RelicCardDef
                 {
                     Id = "war_horn", Name = "War Horn", CopiesInDeck = 2,
-                    Cost = new ResourceCost(wood: 3),
-                    DisassembleGain = new ResourceCost(wood: 2),
+                    Cost = new ResourceCost(wood: 2),
+                    DisassembleGain = new ResourceCost(wood: 1),
                     KeepOnTableWhenCrafted = true, HasCraftedEffect = true,
                     EffectText = "Effect: When you are the Defender, at the start of the Attack and Defense Points phase (after the dice are rolled), discard to place 1 basic unit from supply on the battle tile. It participates in the battle."
                 },
@@ -182,10 +182,10 @@ namespace CrittersOfCalamity.Model
                 new RelicCardDef
                 {
                     Id = "brass_shield", Name = "Brass Shield", CopiesInDeck = 2,
-                    Cost = new ResourceCost(wood: 1, stone: 2),
-                    DisassembleGain = new ResourceCost(wood: 1),
+                    Cost = new ResourceCost(stone: 1, gold: 1),
+                    DisassembleGain = new ResourceCost(stone: 1),
                     KeepOnTableWhenCrafted = true, HasCraftedEffect = true,
-                    EffectText = "Effect: When you win a battle, during Damage Calculation, discard to reduce the damage your units take in this battle by 2 (min 0). The loser of a battle cannot use this card."
+                    EffectText = "Effect: In any battle you are part of (win, lose or tie), during Damage Calculation, discard to reduce the damage your units take in this battle by 2 (min 0)."
                 },
                 new RelicCardDef
                 {
@@ -198,14 +198,14 @@ namespace CrittersOfCalamity.Model
                 new RelicCardDef
                 {
                     Id = "overgrown_wall", Name = "Overgrown Wall", CopiesInDeck = 2,
-                    Cost = new ResourceCost(wood: 1, gold: 1),
-                    DisassembleGain = new ResourceCost(gold: 1),
+                    Cost = new ResourceCost(wood: 1, stone: 1),
+                    DisassembleGain = new ResourceCost(stone: 1),
                     KeepOnTableWhenCrafted = true, HasCraftedEffect = true,
                     EffectText = "Effect: When you are the Defender, at the start of the Attack and Defense Points phase (after the dice are rolled), discard this card. The Attacker subtracts 2 from their dice roll."
                 },
                 new RelicCardDef
                 {
-                    Id = "abandoned_road", Name = "Abandoned Road", CopiesInDeck = 2,
+                    Id = "abandoned_road", Name = "Rally", CopiesInDeck = 2,
                     Cost = new ResourceCost(wood: 1, gold: 1),
                     DisassembleGain = new ResourceCost(gold: 1),
                     KeepOnTableWhenCrafted = true, HasCraftedEffect = true,
@@ -322,7 +322,7 @@ namespace CrittersOfCalamity.Model
                     HowToScoreAuthority = "Forge Golden Arms and Armor (2 Authority each, the first time each is crafted). Momentum Level 2: 1 Authority in your End phase if you won a battle that turn. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "Curly Tail, a boar warlord, stumbled upon the old political treatises of the Ananke and admired their indomitable warrior spirit. His loyal Warband pillages to forge golden arms from plundered wealth, stretching supply lines across the Continent like a closing fist.",
                     SetupInstructions = "Place Curly Tail, 4 Warband units, and 1 War Party on a forest or ruin tile with no enemy units that is at least 2 tiles away from every enemy unit. Set all three meters to Level 0.",
-                    PrimaryColor = Palette.FromHex("#C86428"),
+                    PrimaryColor = Palette.FromHex("#4A4D52"),
                     SecondaryColor = Palette.FromHex("#F5C445"),
                     PrimaryBuilding = BuildingType.WarParty,
                     PrimaryBuildingCost = new ResourceCost(wood: 1, stone: 1),
@@ -347,7 +347,7 @@ namespace CrittersOfCalamity.Model
                     },
                     Units = new List<UnitDef>
                     {
-                        new UnitDef { Id = "warband", Name = "Warband", Faction = FactionId.CurlyTail, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at War Parties", AbilitiesText = "Supply Line (free action, up to 2x/Main phase): Discard 1 Wood -> place Supply Line Token within 2 tiles of War Party/Token/Warband (linked network movement). Forge (free craft, 1x/Excavation): Pay Gold to craft & equip 1 Golden Equipment to Curly Tail." },
+                        new UnitDef { Id = "warband", Name = "Warband", Faction = FactionId.CurlyTail, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at War Parties", AbilitiesText = "Supply Line (free action, up to 2x/Main phase): Discard 1 Wood -> place a Supply Line Token on a forest tile with Curly Tail or a Warband unit, adjacent to a War Party or Supply Line Token (linked network movement). Forge (free craft, 1x/Excavation): Pay Gold to craft & equip 1 Golden Equipment to Curly Tail." },
                         new UnitDef { Id = "curly_tail", Name = "Curly Tail, the Tyrannical", Faction = FactionId.CurlyTail, IsSpecialUnit = true, BaseAttack = 3, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Starts on board; Strategic Retreat places him at 1 HP on a War Party with 1 Warband unit (returns 2 equipped items to supply).", AbilitiesText = "Pillager: Free Pillage (draw 1 resource; +1 relic at Momentum Lv1+) after winning a battle he took part in. Taunt (Glory Lv3+): Pull enemy within 2 tiles 1 tile closer; if on Curly Tail's tile, start a free battle." }
                     },
                     Equipment = new List<EquipmentDef>
@@ -397,7 +397,7 @@ namespace CrittersOfCalamity.Model
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "millions", Name = "Millions", Faction = FactionId.HordeOfTheMillions, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 30, SummoningCondition = "Recruit at Burrows", AbilitiesText = "Forage: Each other player's End phase, if sharing a tile with a Millions, they draw 1 Forage card, apply it, and shuffle it back. Other People's Gluttony (free craft, Excavation): Discard 1 Gold -> place Gluttony Token on a Millions tile." },
-                        new UnitDef { Id = "king_of_the_millions", Name = "King of the Millions", Faction = FactionId.HordeOfTheMillions, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 4, SupplyCount = 1, SummoningCondition = "Once per game: Discard 1 Gold, 1 Stone, and 1 Wood -> Place King on a tile with a Burrow (cannot be summoned again if removed).", AbilitiesText = "Spread the Fun: When summoned, every other player draws 1 Forage card. King of the Rabbit Hill: Once per Main phase, place 1 Millions unit on the King's tile." }
+                        new UnitDef { Id = "king_of_the_millions", Name = "King of the Millions", Faction = FactionId.HordeOfTheMillions, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 4, SupplyCount = 1, SummoningCondition = "Discard 1 Gold, 1 Stone, and 1 Wood -> Place King on a tile with a Burrow (can be summoned again after being removed).", AbilitiesText = "Spread the Fun: When summoned, every other player draws 1 Forage card. Multiply: Once per Main phase, place 1 Millions unit on a forest tile with an enemy unit of your choosing." }
                     },
                     SubDeckCards = BuildMillionsForageDeck8()
                 },
@@ -423,7 +423,8 @@ namespace CrittersOfCalamity.Model
                         "Prophetic Vision: At the start of your Draw phase, before drawing, look at top 3 Relic cards: add 1 to Hand and put 2 on bottom of deck.",
                         "Alms: Once per Main phase while Platy-Pope is on board and Faith == 5 -> Raise Platy-Pope Level by 1, gain 1 Authority, reset Faith to 0.",
                         "Indulgences: During your Main phase, discard 1 Gold to gain 2 Faith.",
-                        "Platy-Pope Return: Start of Excavation phase, if Platy-Pope is off board and Citadel is on board, place Platy-Pope at Citadel at full HP (Level resets to 1, Faith to 0)."
+                        "Platy-Pope Return: Start of Excavation phase, if Platy-Pope is off board and Citadel is on board, place Platy-Pope at Citadel at full HP (Level resets to 1, Faith to 0).",
+                        "Crusade: When the Platy-Pope reaches Level 1, and each time it levels up after that, enter a Crusade for your next 2 turns (overlapping Crusades add together). During a Crusade, Crusaders gain +1 Attack, removing an enemy building, token or special unit gives 1 extra Authority, and winning a battle gives 1 Faith. At Level 4, Crusaders removing enemy units score Authority (and enemies removing Crusaders score too)."
                     },
                     EnemyAuthorityScoring = new List<string>
                     {
@@ -438,7 +439,7 @@ namespace CrittersOfCalamity.Model
                     },
                     Units = new List<UnitDef>
                     {
-                        new UnitDef { Id = "pilgrim", Name = "Pilgrim", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 5, SummoningCondition = "Recruit at The Citadel", AbilitiesText = "Martyrdom: When a Pilgrim ends a Move action on a tile with enemy units, remove that Pilgrim to gain 1 Faith and 1 Authority!" },
+                        new UnitDef { Id = "pilgrim", Name = "Pilgrim", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 6, SummoningCondition = "Recruit at The Citadel", AbilitiesText = "Martyrdom: When a Pilgrim ends a Move action on a tile with enemy units, remove that Pilgrim to gain 1 Faith and 1 Authority!" },
                         new UnitDef { Id = "crusader", Name = "Crusader", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 13, SummoningCondition = "Recruit at The Citadel (Platy-Pope Lv1+)", AbilitiesText = "Holy Relic Token: Once per Main phase while a Crusader is on board, discard 1W+1S+1G to place 1 Holy Relic Token on the Citadel's tile and immediately gain 1 Authority (+1 Faith each End phase)." },
                         new UnitDef { Id = "platy_pope", Name = "The Platy-Pope", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 3, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "Starts on board; returns at Citadel at start of Excavation phase if removed.", AbilitiesText = "Unyielding: Cannot move or be moved. Crusade (2 turns on each level-up): Crusaders +1 Attack, +1 extra Authority on removing enemy building/token/special unit, +1 Faith on battle win. Lv5: Spend 3 Faith -> +1 Authority." }
                     }
@@ -455,7 +456,7 @@ namespace CrittersOfCalamity.Model
                     HowToScoreAuthority = "Deliver Coin Tokens to your Shrines (2 Authority each). Remove enemy buildings, tokens and special units.",
                     LoreDescription = "Inspired by the religious works of the Ananke, the Tanukis scamper across the Continent gathering the Ananke's scattered coins and dropping them off at shrines while leaving traps for travelers.",
                     SetupInstructions = "1. Place 3 Tanuki units and 1 Shrine on a forest tile with no enemy units. 2. After ALL other players finish setup, place 12 Coin Tokens on 12 different forest tiles with no enemy units (each at least 2 tiles away from every other Coin Token).",
-                    PrimaryColor = Palette.FromHex("#B5652A"),
+                    PrimaryColor = Palette.FromHex("#CC9A2E"),
                     SecondaryColor = Palette.FromHex("#F2C94C"),
                     PrimaryBuilding = BuildingType.Shrine,
                     PrimaryBuildingCost = new ResourceCost(wood: 2),
@@ -480,7 +481,7 @@ namespace CrittersOfCalamity.Model
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "tanuki", Name = "Tanuki", Faction = FactionId.TroubleMakingTanukis, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 18, SummoningCondition = "Recruit at Shrines", AbilitiesText = "Running Amok: Once during your Main phase, place 1 Fallen Leaves tile from the shuffled 13-tile stack onto a forest tile with a Tanuki unit. Any player can Loot a Fallen Leaves tile for 1 Wood." },
-                        new UnitDef { Id = "band_of_troublemakers", Name = "A Band of Troublemakers", Faction = FactionId.TroubleMakingTanukis, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 2, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "During Main phase, if 3+ Tanukis are on the same tile, remove 3 Tanukis and discard 1 Gold to place the Band.", AbilitiesText = "Belly Drums (Draw phase): Place a Fallen Leaves tile on up to 2 forest tiles with a Coin Token and no enemy units. No Honor Amongst Troublemakers: On 0 HP, return to supply and place 1 Tanuki on up to 3 adjacent forest/Fallen Leaves tiles (remover gains 2 Authority)." }
+                        new UnitDef { Id = "band_of_troublemakers", Name = "A Band of Troublemakers", Faction = FactionId.TroubleMakingTanukis, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 2, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "During Main phase, if 3+ Tanukis are on the same tile, remove 3 Tanukis and discard 1 Gold to place the Band. You can only have one Band at a time.", AbilitiesText = "Belly Drums (Draw phase): Place a Fallen Leaves tile on up to 2 forest tiles with a Coin Token and no enemy units. No Honor Amongst Troublemakers: On 0 HP, return to supply and place 1 Tanuki on up to 3 adjacent forest/Fallen Leaves tiles (remover gains 2 Authority)." }
                     }
                 },
 
@@ -522,7 +523,7 @@ namespace CrittersOfCalamity.Model
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "skeleton", Name = "Skeleton", Faction = FactionId.Necromouser, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 18, SummoningCondition = "Arise trait or Miasma awakening", AbilitiesText = "Spread the Bad News: Once during your main phase, remove 1 Skeleton Unit from the board (does not go to Cauldron) to place a Miasma Tile on its tile." },
-                        new UnitDef { Id = "necromouser", Name = "The Necromouser", Faction = FactionId.Necromouser, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 1, SummoningCondition = "First time a unit is removed on/adjacent to a Miasma Tile: flip all Miasma tiles and summon Necromouser + 1 Skeleton.", AbilitiesText = "Necromancy: Summon 1 special unit/turn (cap 4/game). Cowardice: Cannot be attacked while friendly units share his tile; when isolated and removed, lose 3 Authority, move 2 tiles away, place 3 adjacent Miasma Tiles." },
+                        new UnitDef { Id = "necromouser", Name = "The Necromouser", Faction = FactionId.Necromouser, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 1, SummoningCondition = "First time a unit is removed on/adjacent to a Miasma Tile: summon the Necromouser + 1 Skeleton on that tile (Miasma Tiles are not flipped).", AbilitiesText = "Necromancy: Summon 1 special unit/turn. Cowardice: Cannot be attacked while friendly units share his tile; when isolated and removed, lose 3 Authority, move 2 tiles away, place 3 adjacent Miasma Tiles." },
                         new UnitDef { Id = "the_bloat", Name = "The Bloat", Faction = FactionId.Necromouser, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 2, BaseMaxHP = 1, SupplyCount = 3, SummoningCondition = "Remove 1 Dead from Cauldron -> Gain 1 Authority, summon on Necromouser's tile.", AbilitiesText = "Necrosis (Draw phase): Explode to deal 2HP damage to all enemy units on tile (bypasses 1HP cap). If removed before exploding, remover gains 1 Authority + 1 resource card." },
                         new UnitDef { Id = "the_vanguard", Name = "The Vanguard", Faction = FactionId.Necromouser, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 3, SummoningCondition = "Remove 3 Dead from Cauldron -> Gain 3 Authority, summon on Necromouser's tile.", AbilitiesText = "Devotion: If Necromouser is defending on an adjacent tile, Vanguard and all friendly units on Vanguard's tile join the defending battle." },
                         new UnitDef { Id = "the_brute", Name = "The Brute", Faction = FactionId.Necromouser, IsSpecialUnit = true, BaseAttack = 2, BaseDefense = 0, BaseMaxHP = 2, SupplyCount = 3, SummoningCondition = "Remove 4 Dead from Cauldron -> Gain 4 Authority, summon on Necromouser's tile.", AbilitiesText = "Can equip up to 2 Anankian Swords (+1 ATK each) and 1 Leather Boots (+1 Move)." }
@@ -549,17 +550,17 @@ namespace CrittersOfCalamity.Model
                     HowToScoreAuthority = "Flames of War: 1 Authority per 2 HP of Fire Tile damage and per 2 enemy units moved by fire (max 4 per End phase). Forest Fire: 1 per Fire Tile next to enemy pieces (max 2). Burning Gold (Disruption, Burn the Deck): 1 each. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "The Squirrels use Acorn Firestarters to create Fire Tiles that damage enemy units, drive enemies out, and burn the Continent's resources.",
                     SetupInstructions = "Place 1 Squirrel Unit each on 3 adjacent forest tiles without any enemy pieces. Then place 1 Bunker on one of those forest tiles. Place 2 Charcoal resource cards in your resource pile and 1 crafted Acorn Firestarter card faceup on your table.",
-                    PrimaryColor = Palette.FromHex("#E35225"),
+                    PrimaryColor = Palette.FromHex("#D62E1C"),
                     SecondaryColor = Palette.FromHex("#3B322C"),
                     PrimaryBuilding = BuildingType.Bunker,
                     PrimaryBuildingCost = new ResourceCost(stone: 2),
                     BuildingRules = "Bunker: Craft (2 Stone) on a tile with a Squirrel unit. Squirrel units on a tile with a Bunker cannot take damage from or be moved by a Fire Tile.",
                     SpeciesTraits = new List<string>
                     {
-                        "Unquenchable Spirit: Once per Main phase, a Squirrel adjacent to a Fire Tile can use a Main Phase action to loot the Fire Tile for 1 Charcoal card.",
+                        "Unquenchable Spirit: Once per Main phase, a Squirrel on a Fire Tile can use a Main Phase action to loot the Fire Tile for 1 Charcoal card. Only the Squirrels can loot Fire Tiles, and only for Charcoal.",
                         "Flames of War: End of Fire Tile resolutions -> +1 Authority per 2HP damage dealt to enemies, +1 Authority per 2 enemies moved by Fire (max 4/turn).",
                         "Forest Fire: During End phase -> +1 Authority for every Fire Tile adjacent to another faction's pieces (cap 2).",
-                        "Ignite: During End phase -> Burn 1 card from Hand to relocate 1 Fire Tile to a forest tile adjacent to an enemy unit within 3 tiles of a Squirrel.",
+                        "Ignite: During End phase -> Burn 1 card from Hand to relocate 1 Fire Tile to a forest tile adjacent to an enemy unit.",
                         "Disruption: Once per Main phase -> Burn 2 cards in your Resource Pile to burn 1 Excavation card and 1 card from each player's Resource Pile (+1 Authority if Gold or Gold-disassemble relic burned)."
                     },
                     EnemyAuthorityScoring = new List<string>
@@ -575,7 +576,7 @@ namespace CrittersOfCalamity.Model
                     },
                     Units = new List<UnitDef>
                     {
-                        new UnitDef { Id = "squirrel", Name = "Squirrel", Faction = FactionId.FirestartingSquirrels, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 15, SummoningCondition = "Recruit at Bunkers", AbilitiesText = "Tar Pit Token (Excavation): Discard 2 Charcoal -> place Tar Pit on/adjacent to Squirrel (+1HP Fire damage bypassing cap; costs enemies 2 actions to leave). Acorn Firestarter (Main phase): Discard 1 Charcoal + 1 Wood to craft; discard 1 crafted Firestarter to place a Fire Tile on a Squirrel's forest tile." },
+                        new UnitDef { Id = "squirrel", Name = "Squirrel", Faction = FactionId.FirestartingSquirrels, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 15, SummoningCondition = "Recruit at Bunkers", AbilitiesText = "Tar Pit Token (Excavation): Discard 2 Charcoal -> place Tar Pit on/adjacent to Squirrel (+1HP Fire damage bypassing cap; costs enemies 2 actions to leave). Acorn Firestarter (Excavation phase, uses your Craft action): Discard 1 Charcoal + 1 Wood to craft; it sits with your crafted cards; discard 1 crafted Firestarter to place a Fire Tile on a Squirrel's forest tile." },
                         new UnitDef { Id = "pyromaniac", Name = "Pyromaniac", Faction = FactionId.FirestartingSquirrels, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 2, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "Once/game (Main phase): Burn 1 Wood, 1 Stone, 1 Gold, 1 Charcoal -> Summon on a Fire Tile.", AbilitiesText = "Affinity: Immune to Fire Tiles. Flameweaver: Burn 2 hand cards -> move 1 Fire Tile to adjacent forest tile. Pyromancy: Burn 1W+1G -> place Fire Tile on Pyromaniac's tile. Oil Spill: Burn 1 Charcoal -> place Tar Pit adjacent to Fire/Tar Pit." }
                     }
                 },
@@ -641,7 +642,7 @@ namespace CrittersOfCalamity.Model
                     SpeciesTraits = new List<string>
                     {
                         "In Half Bloom: During Main phase, remove 2 resources from Resource Pile and 3 Thorned Seeds from the board to place 1 Blooming Briar with 2 Thorns at a Prickly Thicket.",
-                        "Branching Out: Thistle Barrage gains +1 tile range for each Thorned Seed on the Blooming Briar's tile (cap +2 tile range -> up to 6 tiles).",
+                        "Branching Out: Thistle Barrage gains +1 tile range while the Blooming Briar is on one of your Prickly Thickets (3 tiles -> 4 tiles).",
                         "Rooted In Place: During your turn, the Blooming Briar can only move 1 tile for the entire turn.",
                         "Pollination: During your End phase, gain 1 Authority if you have Thorned Seeds on 4+ different tiles (gain 2 Authority if on 7+ different tiles)."
                     },
@@ -658,8 +659,8 @@ namespace CrittersOfCalamity.Model
                     },
                     Units = new List<UnitDef>
                     {
-                        new UnitDef { Id = "thorned_seed", Name = "Thorned Seed", Faction = FactionId.BriaredFlower, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at Prickly Thickets or spawned via Thistle Barrage / Propagation", AbilitiesText = "Bursting Into Bloom: During Main phase, remove up to 3 Thorned Seeds from the board, deal 1HP damage to 1 unit on each tile where a Seed was removed, then gain 1 Authority if you removed an enemy unit." },
-                        new UnitDef { Id = "blooming_briar", Name = "Blooming Briar", Faction = FactionId.BriaredFlower, IsSpecialUnit = true, BaseAttack = 6, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 1, SummoningCondition = "Starts on board with 6 Thorns; respawns via In Half Bloom.", AbilitiesText = "With 1-6 Thorns: Thistle Barrage (up to 2x/Main phase, 4-6 tile range, 1 Thorn + 1 Res per unit -> 1HP each & spawn Seed; +1 Auth per 2HP dealt; or 1 Thorn to remove isolated enemy buildings/tokens within 3 tiles), Thorn Armor (1 Thorn blocks 1HP), Sun Eater (2 Seeds + 3 Res -> +2 Thorns). At 0 Thorns (Frenzied Bloom): Withered Blossom (+3 ATK, 2HP bypass), Furious Lashing (1HP AoE within 3 tiles), Propagation." }
+                        new UnitDef { Id = "thorned_seed", Name = "Thorned Seed", Faction = FactionId.BriaredFlower, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at Prickly Thickets or spawned via Thistle Barrage / Propagation", AbilitiesText = "Bursting Into Bloom: Once during your Main phase, remove 1 Thorned Seed from the board to deal 1HP damage to 1 enemy unit on its tile, then gain 1 Authority if you removed an enemy unit." },
+                        new UnitDef { Id = "blooming_briar", Name = "Blooming Briar", Faction = FactionId.BriaredFlower, IsSpecialUnit = true, BaseAttack = 6, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 1, SummoningCondition = "Starts on board with 6 Thorns; respawns via In Half Bloom.", AbilitiesText = "With 1-6 Thorns: Thistle Barrage (up to 2x/Main phase, 3 tile range, 4 on a Prickly Thicket, 1 Thorn + 1 Res per unit -> 1HP each & spawn Seed; +1 Auth per 2HP dealt; or 1 Thorn to remove isolated enemy buildings/tokens within 3 tiles), Thorn Armor (1 Thorn blocks 1HP), Sun Eater (2 Seeds + 3 Res -> +2 Thorns). At 0 Thorns (Frenzied Bloom): Withered Blossom (+3 ATK, 2HP bypass), Furious Lashing (1HP AoE within 3 tiles), Propagation." }
                     }
                 },
 
@@ -674,7 +675,7 @@ namespace CrittersOfCalamity.Model
                     HowToScoreAuthority = "Starts with 5 Authority. Grimoire cards, The Midian's A Gift, and The Lord of War's Greed. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "When the Ananke vanished, an older force whispered in the shadows. The Cabal traded their souls for its favor, and now they trade everything else.",
                     SetupInstructions = "Place 4 Goat units and a Summoning Circle on a forest or ruin tile 2 tiles away from all enemy pieces. Place 1 Goat on the Purgatory card. Add 1 Gold to your resource pile and start with 5 Authority. Other factions cannot place pieces within 2 tiles of a Goat unit during setup.",
-                    PrimaryColor = Palette.FromHex("#4B3F5C"),
+                    PrimaryColor = Palette.FromHex("#6B5788"),
                     SecondaryColor = Palette.FromHex("#D2462F"),
                     PrimaryBuilding = BuildingType.SummoningCircle,
                     PrimaryBuildingCost = new ResourceCost(wood: 2, stone: 2),
@@ -701,7 +702,7 @@ namespace CrittersOfCalamity.Model
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "goat", Name = "Goat", Faction = FactionId.GoatCabal, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at Summoning Circles", AbilitiesText = "Invocation: Purge 1 Goat and discard 1 Wood, 1 Stone, 1 Gold to place an Initiation Rite Token on a Summoning Circle. Canto Inferno: once per Main phase, remove an Initiation Rite Token and pay a demon's cost to summon it there. Effigy: once per Excavation phase, return 1 Purged to supply to place an Effigy Token on a Summoning Circle." },
-                        new UnitDef { Id = "faust", Name = "Faust", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 2 Purged to supply, 1 Wood and 1 Stone.", AbilitiesText = "In the Pursuit of Knowledge: when summoned, mill 2 Grimoire cards. Bargain: once per turn, Purge 1 Goat to mill 1 Grimoire card. Binding: 2 Purged on Purgatory in your End phase. Unbound: lose 3 Gold." },
+                        new UnitDef { Id = "faust", Name = "Faust", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 2 Purged to supply, 1 Wood and 1 Stone.", AbilitiesText = "In the Pursuit of Knowledge: when summoned, mill 2 Grimoire cards. Bargain: once per turn, Purge 1 Goat on Faust's tile to mill 1 Grimoire card. Binding: 2 Purged on Purgatory in your End phase. Unbound: lose 3 Gold." },
                         new UnitDef { Id = "the_midian", Name = "The Midian", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 2 Purged to supply and 2 Gold.", AbilitiesText = "A Gift: when summoned, gain 1 Authority per Summoning Circle. All Turns to Gold: once per turn, gain 2 Gold; another player draws 1 resource card. Binding: lose 2 Authority in your End phase. Unbound: roll a die (1: lose 2 random resources, 2-4: lose 2 Authority, 5-6: gain 2 Gold)." },
                         new UnitDef { Id = "serpentine_sovereign", Name = "Serpentine Sovereign", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 1, BaseDefense = 2, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 3 Purged to supply.", AbilitiesText = "Royal Decree: when summoned, mark a tile up to 4 tiles away; at the start of your next Draw phase everything on it is removed. Binding: lose 2 Authority during your turn. Unbound: lose 2 Gold or 3 resources (else return 2 Purged to supply)." },
                         new UnitDef { Id = "lord_of_war", Name = "The Lord of War", Faction = FactionId.GoatCabal, IsSpecialUnit = true, BaseAttack = 3, BaseDefense = 1, BaseMaxHP = 2, SupplyCount = 1, SummoningCondition = "Canto Inferno: 3 Purged to supply.", AbilitiesText = "Fear: when summoned, all non-Goat units on its tile move to an adjacent tile. Onslaught: 3 free battles per Main phase. Greed: in each of its battles roll a die (even: +1 Authority, odd: lose 1 Gold). Binding: no enemy pieces on its tile in your End phase. Unbound: 1 HP damage to two of your units." },

@@ -16,7 +16,7 @@ def hexc(h):
 
 # Material names are what the game remaps to faction / Palette colors at runtime
 PAL = {
-    "Body":    "#C86428",  # Curly Tail's Warband primary
+    "Body":    "#4A4D52",  # Curly Tail's Warband primary
     "Belly":   "#D9895A",  # lighter hide (game: primary toward parchment)
     "Blanket": "#F5C445",  # Warband secondary: belt buckle, cloak trim
     "Cloth":   "#5E2E16",  # war cloak (game: primary darkened toward ink)

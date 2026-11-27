@@ -13,7 +13,7 @@ OUT_UNITS = sys.argv[2] if len(sys.argv) > 2 else "/tmp/goat_units.png"
 OUT_PIECES = sys.argv[3] if len(sys.argv) > 3 else "/tmp/goat_pieces.png"
 
 make_materials({
-    "Body":    "#4B3F5C",  # Goat Cabal primary: cult robes
+    "Body":    "#6B5788",  # Goat Cabal primary: cult robes
     "Blanket": "#D2462F",  # secondary: sashes, sigils
     "Cloth":   "#2E2738",  # darker robe lining
     "Fur":     "#D8D0C0",  # goat fur

@@ -105,6 +105,7 @@ namespace CrittersOfCalamity.Engine
             bool paid = ApplyGrimoire(p, card.Id);
             p.LastGrimoireText = card.EffectText + (paid ? "" : " (fizzled)");
             Log($"{p.DisplayName} milled the Grimoire: {card.EffectText}{(paid ? "" : " -> couldn't pay, the card fizzled.")}");
+            Announce($"{p.DisplayName} milled the Grimoire", $"<b>{card.Title}</b>\n{card.EffectText}" + (paid ? "" : "\n<i>They couldn't pay its cost, so it fizzled.</i>"));
         }
 
         /// <summary>Applies one Grimoire card. Returns false (doing nothing) when its cost can't be paid.</summary>
@@ -603,10 +604,11 @@ namespace CrittersOfCalamity.Engine
                 L.Add(new AbilitySpec
                 {
                     Id = "bargain", Name = "Bargain (Faust)", Phase = TurnPhase.ExcavationPhase, Phase2 = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                    Summary = "Once per turn: Purge 1 Goat to mill the top Grimoire card and apply it.",
-                    Prompt1 = "Click a tile with the Goat to purge.",
-                    Check = pl => Uses("bargain") > 0 ? "Already used this turn." : null,
-                    Legal1 = (pl, t) => Has(t, pl, "goat"),
+                    Summary = "Once per turn: Purge 1 Goat on Faust's tile to mill the top Grimoire card and apply it.",
+                    Prompt1 = "Click Faust's tile (it needs a Goat there to purge).",
+                    Check = pl => Uses("bargain") > 0 ? "Already used this turn." :
+                                  Board.Values.Any(t => Has(t, pl, "faust") && Has(t, pl, "goat")) ? null : "Needs a Goat on Faust's tile.",
+                    Legal1 = (pl, t) => Has(t, pl, "faust") && Has(t, pl, "goat"),
                     Run = (pl, a, b, o) =>
                     {
                         PurgeGoatFrom(Board[a], pl);

@@ -6,9 +6,9 @@ namespace CrittersOfCalamity.Engine
 {
     /// <summary>
     /// The start of a game, before the first turn:
-    /// 1. Part 3: every player rolls 2 dice; the highest roll picks a faction first, then the next highest, and so on.
+    /// 1. Part 3: every player rolls the 3-sided die; the highest roll picks a faction first, then the next highest, and so on.
     /// 2. Players pick factions in that order (each faction once).
-    /// 3. Part 5: every player rolls 2 dice again; the highest roll takes the first turn and play continues clockwise.
+    /// 3. Part 5: every player rolls the 3-sided die again; the highest roll takes the first turn and play continues clockwise.
     /// 4. Every deck is shuffled and starting cards are dealt. The Capybara Caravan places its streams, then each
     ///    player, in reverse turn order, clicks the tiles for their starting pieces (Part 17 "Setup"). The Tanuki
     ///    player's Coin Tokens go down after everyone else, then the first turn begins.
@@ -21,7 +21,7 @@ namespace CrittersOfCalamity.Engine
         /// <summary>Seat index of the player who took the first turn (setup runs in reverse from here).</summary>
         public int FirstPlayerIndex;
 
-        /// <summary>For each seat, every 2d6 total rolled in the current roll-off (rerolls are appended).</summary>
+        /// <summary>For each seat, every 3-sided die result rolled in the current roll-off (rerolls are appended).</summary>
         public List<List<int>> PreGameRollHistory = new List<List<int>>();
         /// <summary>For each seat, the two dice of their latest roll (0 = not rolled yet).</summary>
         public List<int> PreGameLastDie1 = new List<int>();
@@ -70,7 +70,7 @@ namespace CrittersOfCalamity.Engine
                     case SetupStepKind.CapybaraStreams:
                         return $"Special setup, before anyone else: click {CapybaraStreamTiles} forest tiles one at a time to turn them into streams. Each new stream must touch a stream.";
                     case SetupStepKind.TanukiCoins:
-                        return "Everyone has set up. Click 12 different forest tiles with no enemy units for your Coin Tokens. Coins must be at least 2 tiles apart.";
+                        return "Everyone has set up. Click 12 different forest tiles with no enemy units for your Coin Tokens. Coins must be at least 2 tiles apart and at least 2 tiles from your Shrine.";
                 }
                 return SetupInstructions(Players[seat].Faction.Id);
             }
@@ -97,7 +97,7 @@ namespace CrittersOfCalamity.Engine
             PrepareTableAndPlayers(playerNames);
             CurrentPhase = TurnPhase.PreGame_DraftRoll;
             StartRollOff();
-            Log("Roll for faction pick order: everyone rolls 2 dice. Highest roll picks first.");
+            Log("Roll for faction pick order: everyone rolls the 3-sided die. Highest roll picks first.");
             OnStateChanged?.Invoke();
         }
 
@@ -111,14 +111,14 @@ namespace CrittersOfCalamity.Engine
         {
             if (!CanRollPreGameDice(seat)) return false;
 
-            int total = Roll2D6(out int d1, out int d2);
+            int total = RollD3();
             PreGameRollHistory[seat].Add(total);
-            PreGameLastDie1[seat] = d1;
-            PreGameLastDie2[seat] = d2;
+            PreGameLastDie1[seat] = total;
+            PreGameLastDie2[seat] = 0;
             PreGameSeatsToRoll.Remove(seat);
 
             string what = CurrentPhase == TurnPhase.PreGame_DraftRoll ? "faction pick order" : "turn order";
-            Log($"{Players[seat].DisplayName} rolled {d1} + {d2} = {total} for {what}.");
+            Log($"{Players[seat].DisplayName} rolled {total} for {what}.");
 
             if (PreGameSeatsToRoll.Count == 0)
                 ResolveRollOff();
@@ -146,7 +146,7 @@ namespace CrittersOfCalamity.Engine
             {
                 CurrentPhase = TurnPhase.PreGame_TurnOrderRoll;
                 StartRollOff();
-                Log("Roll for turn order: everyone rolls 2 dice. Highest roll takes the first turn.");
+                Log("Roll for turn order: everyone rolls the 3-sided die. Highest roll takes the first turn.");
             }
 
             OnStateChanged?.Invoke();
@@ -251,6 +251,10 @@ namespace CrittersOfCalamity.Engine
             if (p.Faction.Id != FactionId.GoatCabal && NearGoatUnit(p.PlayerIndex, c))
             { reason = "Too close to the Goat Cabal (no pieces within 2 tiles of a Goat during setup)."; return false; }
 
+            // Nobody else may set up within 4 tiles of Curly Tail.
+            if (p.Faction.Id != FactionId.CurlyTail && NearCurlyTail(p.PlayerIndex, c))
+            { reason = "Too close to Curly Tail (no one sets up within 4 tiles of him)."; return false; }
+
             switch (p.Faction.Id)
             {
                 case FactionId.GoatCabal:
@@ -303,6 +307,11 @@ namespace CrittersOfCalamity.Engine
             return true;
         }
 
+        /// <summary>Curly Tail setup rule: other factions can't set up within 4 tiles of Curly Tail.</summary>
+        bool NearCurlyTail(int seat, HexCoord c) =>
+            Board.Values.Any(t => HexCoord.Distance(t.Coord, c) <= 4 &&
+                                  t.Units.Any(u => u.OwnerPlayerIndex != seat && u.Definition.Id == "curly_tail"));
+
         /// <summary>Goat Cabal setup rule: other factions can't place pieces within 2 tiles of a Goat unit.</summary>
         bool NearGoatUnit(int seat, HexCoord c) =>
             Board.Values.Any(t => HexCoord.Distance(t.Coord, c) <= 2 &&
@@ -332,6 +341,10 @@ namespace CrittersOfCalamity.Engine
                 case SetupStepKind.TanukiCoins:
                     if (tile.EffectiveTerrain != TileTerrainType.Forest) { reason = "Coins go on forest tiles."; return false; }
                     if (NearGoatUnit(p.PlayerIndex, c)) { reason = "Not within 2 tiles of a Goat."; return false; }
+                    if (NearCurlyTail(p.PlayerIndex, c)) { reason = "Not within 4 tiles of Curly Tail."; return false; }
+                    if (Board.Values.Any(t => t.Building != null && t.Building.Type == BuildingType.Shrine && t.Building.OwnerPlayerIndex == p.PlayerIndex &&
+                                              HexCoord.Distance(t.Coord, c) < 2))
+                    { reason = "Coins must be at least 2 tiles away from your Shrine."; return false; }
                     if (tile.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex)) { reason = "That tile has enemy units."; return false; }
                     if (tile.Building != null && tile.Building.Type == BuildingType.Shrine) { reason = "Not on a Shrine."; return false; }
                     if (tile.Tokens.Any(t => t.Type == TokenType.Coin) || tile.Tokens.Count >= 2) { reason = "No room for a coin there."; return false; }

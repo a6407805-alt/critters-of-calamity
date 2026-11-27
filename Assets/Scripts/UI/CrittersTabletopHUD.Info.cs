@@ -62,7 +62,9 @@ namespace CrittersOfCalamity.UI
             CreateButton(modal, "TabFactions", "Factions in this game", new Vector2(0.14f, 0.935f), new Vector2(0.30f, 0.99f),
                 Palette.FromHex("#2E7D5B"), () => { _infoShowingRulebook = false; RefreshInfoModal(); });
             CreateButton(modal, "BtnLeave", "Leave Game", new Vector2(0.74f, 0.935f), new Vector2(0.86f, 0.99f),
-                Palette.FromHex("#5A2A2A"), async () => { _infoModal.SetActive(false); await _mpManager.LeaveAsync(); });
+                Palette.FromHex("#5A2A2A"), () => ShowConfirm("Leave the game?",
+                    _mpManager.IsOnline ? "You'll drop out of this online match." : "This game will end and you'll go back to the main menu.",
+                    async () => { _infoModal.SetActive(false); await _mpManager.LeaveAsync(); }));
             CreateButton(modal, "BtnClose", "Close", new Vector2(0.87f, 0.935f), new Vector2(0.99f, 0.99f),
                 Palette.FromHex("#3E4A59"), () => _infoModal.SetActive(false));
 
@@ -108,7 +110,7 @@ namespace CrittersOfCalamity.UI
             bodyRt.offsetMax = new Vector2(-16f, 0f);
             _infoBodyText = bodyGo.AddComponent<Text>();
             _infoBodyText.font = _uiFont;
-            _infoBodyText.fontSize = 16;
+            SetFontSize(_infoBodyText, 16);
             _infoBodyText.color = new Color(0.92f, 0.90f, 0.85f);
             _infoBodyText.supportRichText = true;
             _infoBodyText.alignment = TextAnchor.UpperLeft;
@@ -133,8 +135,9 @@ namespace CrittersOfCalamity.UI
             var pm = CreatePanel(canvasParent, "PieceDetails", new Vector2(0.30f, 0.18f), new Vector2(0.70f, 0.86f),
                 new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.08f, 0.10f, 0.14f, 0.98f));
             _pieceModal = pm.gameObject;
-            _pieceModalText = CreateText(pm, "Text", "", 15, TextAnchor.UpperLeft, new Vector2(0.04f, 0.10f), new Vector2(0.96f, 0.97f),
+            _pieceModalText = CreateText(pm, "Text", "", 19, TextAnchor.UpperLeft, new Vector2(0.04f, 0.10f), new Vector2(0.96f, 0.97f),
                 Vector2.zero, Vector2.zero, Color.white);
+            _pieceModalText.resizeTextMinSize = 12;   // long meter boards shrink to fit
             CreateButton(pm, "BtnClose", "Close", new Vector2(0.35f, 0.02f), new Vector2(0.65f, 0.08f),
                 Palette.FromHex("#3E4A59"), () => _pieceModal.SetActive(false));
             _pieceModal.SetActive(false);
@@ -181,7 +184,7 @@ namespace CrittersOfCalamity.UI
                         i == _infoSelectedSection ? Palette.FromHex("#8C5328") : new Color(0.16f, 0.19f, 0.25f, 1f),
                         () => { _infoSelectedSection = idx; RefreshInfoModal(); _infoBodyScroll.verticalNormalizedPosition = 1f; });
                     btn.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
-                    btn.GetComponentInChildren<Text>().fontSize = 14;
+                    SetFontSize(btn.GetComponentInChildren<Text>(), 14);
                 }
                 _infoBodyText.text = sections.Count > 0 ? FormatRulebookSection(sections[_infoSelectedSection]) : "The rulebook couldn't be loaded.";
                 return;
@@ -202,7 +205,7 @@ namespace CrittersOfCalamity.UI
                 Color col = pl.Faction != null ? pl.Faction.PrimaryColor * 0.7f + new Color(0.05f, 0.05f, 0.05f, 1f) : new Color(0.2f, 0.2f, 0.25f, 1f);
                 if (i == _infoSelectedPlayer) col += new Color(0.15f, 0.15f, 0.15f, 0f);
                 var tab = CreateLayoutButton(_infoTabsRoot, $"PTab_{i}", label, col, () => { _infoSelectedPlayer = idx; RefreshInfoModal(); });
-                tab.GetComponentInChildren<Text>().fontSize = 13;
+                SetFontSize(tab.GetComponentInChildren<Text>(), 13);
                 tab.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleCenter;
             }
             var p = _engine.Players[_infoSelectedPlayer];
@@ -221,7 +224,7 @@ namespace CrittersOfCalamity.UI
                     RefreshInfoModal();
                 });
                 btn.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
-                btn.GetComponentInChildren<Text>().fontSize = 13;
+                SetFontSize(btn.GetComponentInChildren<Text>(), 13);
             }
         }
 
@@ -239,33 +242,53 @@ namespace CrittersOfCalamity.UI
             sb.AppendLine("<b><color=#F2B83B>HOW THEY SCORE AUTHORITY</color></b>");
             sb.AppendLine(f.HowToScoreAuthority);
             sb.AppendLine();
-            sb.AppendLine("<b><color=#F2B83B>UNITS</color></b>  (Attack / Defense / HP)");
-            foreach (var u in f.Units)
+            int num = (int)f.Id + 1;
+            var section = LoadRulebook().FirstOrDefault(sx => FactionNumber(sx.Title) == num);
+            if (section == null)   // the full rules below cover units, traits, buildings and equipment; this is the fallback
             {
-                sb.AppendLine($"<b>{u.Name}</b> {(u.IsSpecialUnit ? "(special unit)" : "(basic unit)")}  {u.BaseAttack}/{u.BaseDefense}/{u.BaseMaxHP}");
-                if (!string.IsNullOrEmpty(u.SummoningCondition)) sb.AppendLine($"   How it enters play: {u.SummoningCondition}");
-                if (!string.IsNullOrEmpty(u.AbilitiesText)) sb.AppendLine($"   {u.AbilitiesText}");
-            }
-            sb.AppendLine();
-            sb.AppendLine("<b><color=#F2B83B>SPECIES TRAITS</color></b>");
-            foreach (var t in f.SpeciesTraits) sb.AppendLine($" • {t}");
-            sb.AppendLine();
-            sb.AppendLine($"<b><color=#F2B83B>BUILDING</color></b>\n{f.BuildingRules}");
-            if (f.Equipment.Count > 0)
-            {
+                sb.AppendLine("<b><color=#F2B83B>UNITS</color></b>  (Attack / Defense / HP)");
+                foreach (var u in f.Units)
+                {
+                    sb.AppendLine($"<b>{u.Name}</b> {(u.IsSpecialUnit ? "(special unit)" : "(basic unit)")}  {u.BaseAttack}/{u.BaseDefense}/{u.BaseMaxHP}");
+                    if (!string.IsNullOrEmpty(u.SummoningCondition)) sb.AppendLine($"   How it enters play: {u.SummoningCondition}");
+                    if (!string.IsNullOrEmpty(u.AbilitiesText)) sb.AppendLine($"   {u.AbilitiesText}");
+                }
                 sb.AppendLine();
-                sb.AppendLine("<b><color=#F2B83B>EQUIPMENT</color></b>");
-                foreach (var e in f.Equipment) sb.AppendLine($" • <b>{e.Name}</b> (cost {e.Cost}): {e.EffectText}");
+                sb.AppendLine("<b><color=#F2B83B>SPECIES TRAITS</color></b>");
+                foreach (var t in f.SpeciesTraits) sb.AppendLine($" • {t}");
+                sb.AppendLine();
+                sb.AppendLine($"<b><color=#F2B83B>BUILDING</color></b>\n{f.BuildingRules}");
+                if (f.Equipment.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("<b><color=#F2B83B>EQUIPMENT</color></b>");
+                    foreach (var e in f.Equipment) sb.AppendLine($" • <b>{e.Name}</b> (cost {e.Cost}): {e.EffectText}");
+                }
+                sb.AppendLine();
+                sb.AppendLine("<b><color=#F2B83B>PIECES</color></b>");
+                sb.AppendLine(string.Join(" · ", f.MaterialsManifest));
+                sb.AppendLine();
             }
-            sb.AppendLine();
-            sb.AppendLine("<b><color=#F2B83B>PIECES</color></b>");
-            sb.AppendLine(string.Join(" · ", f.MaterialsManifest));
-            sb.AppendLine();
+            else
+            {
+                sb.AppendLine("<b><color=#F2B83B>UNITS</color></b>  (Attack / Defense / HP)");
+                foreach (var u in f.Units)
+                    sb.AppendLine($"<b>{u.Name}</b> {(u.IsSpecialUnit ? "(special unit)" : "(basic unit)")}  {u.BaseAttack}/{u.BaseDefense}/{u.BaseMaxHP}");
+                sb.AppendLine();
+            }
             sb.AppendLine("<b><color=#F2B83B>HOW OPPONENTS SCORE AUTHORITY FROM THEM</color></b>");
             foreach (var w in f.EnemyAuthorityScoring) sb.AppendLine($" • {w}");
             sb.AppendLine();
             sb.AppendLine("<b><color=#F2B83B>THEIR SUPPLY RIGHT NOW</color></b>");
-            sb.Append(SupplySummary(p));
+            sb.AppendLine(SupplySummary(p));
+
+            // The full faction rules from the rulebook (every trait, meter, Crusade, ability and card), so the tab is complete.
+            if (section != null)
+            {
+                sb.AppendLine();
+                sb.AppendLine("<b><color=#F2B83B>FULL FACTION RULES</color></b>");
+                sb.Append(FormatRulebookSection(section));
+            }
             return sb.ToString();
         }
 
@@ -392,7 +415,7 @@ namespace CrittersOfCalamity.UI
                     int atk = _engine.DisplayAttack(u), dfn = _engine.DisplayDefense(u);
                     sb.AppendLine($"<b>{def.Name}</b> ({OwnerLabel(u.OwnerPlayerIndex)})");
                     sb.AppendLine($"Attack <b>{atk}</b>   Defense <b>{dfn}</b>   HP <b>{u.CurrentHP}/{u.MaxHP}</b>" +
-                                  (atk != def.BaseAttack || dfn != def.BaseDefense || u.MaxHP != def.BaseMaxHP ? $"   <size=12>(base {def.BaseAttack}/{def.BaseDefense}/{def.BaseMaxHP})</size>" : ""));
+                                  (atk != def.BaseAttack || dfn != def.BaseDefense || u.MaxHP != def.BaseMaxHP ? $"   <size=14>(base {def.BaseAttack}/{def.BaseDefense}/{def.BaseMaxHP})</size>" : ""));
                     var tags = new List<string>();
                     if (u.IsGuest) tags.Add("Guest");
                     if (u.TrapLeafTurnsRemaining > 0 || u.CannotMoveThisTurn) tags.Add("can't move this turn");
@@ -400,6 +423,11 @@ namespace CrittersOfCalamity.UI
                     if (tags.Count > 0) sb.AppendLine(string.Join(" · ", tags));
                     string meters = UnitMeterSummary(u);
                     if (!string.IsNullOrEmpty(meters)) sb.AppendLine(meters);
+                    if (full)
+                    {
+                        string board = UnitMeterBoard(u);
+                        if (!string.IsNullOrEmpty(board)) sb.AppendLine("\n" + board);
+                    }
 
                     if (full)
                     {
@@ -435,7 +463,7 @@ namespace CrittersOfCalamity.UI
                     sb.AppendLine($"<b>{SplitWords(t.Type.ToString())} Token</b> ({OwnerLabel(t.OwnerPlayerIndex)})");
                     if (t.Type == TokenType.Catapult) sb.AppendLine($"Uses left: {t.RemainingUses}");
                     if (t.Type == TokenType.Coin) sb.AppendLine("Coin Tokens can't be removed; Tanukis carry them to a Shrine for 2 Authority.");
-                    if (full) sb.AppendLine($"\n{TokenRulesText(t.Type)}");
+                    sb.AppendLine(TokenRulesText(t.Type));
                     break;
                 }
                 case PieceKind.FactionTile:
@@ -452,7 +480,7 @@ namespace CrittersOfCalamity.UI
                     break;
                 }
             }
-            if (!full) sb.Append("<size=11><color=#8899AA>Click for full details</color></size>");
+            if (!full) sb.Append("<size=13><color=#8899AA>Click for full details</color></size>");
             return sb.ToString();
         }
 
@@ -469,7 +497,7 @@ namespace CrittersOfCalamity.UI
                 case "blooming_briar":
                     return $"<color=#F2B83B>Thorns {p.BriaredFlowerThorns}/6" + (p.BriaredFlowerThorns == 0 ? " · FRENZIED BLOOM" : "") + "</color>";
                 case "necromouser":
-                    return $"<color=#F2B83B>Cauldron: {p.NecromouserCauldronDeadCount} Dead · Special summons used {p.NecromouserSpecialSummonsUsed}/4</color>";
+                    return $"<color=#F2B83B>Cauldron: {p.NecromouserCauldronDeadCount} Dead</color>";
                 case "faust": return "<color=#D2462F>Binding: 2 Purged on Purgatory in your End phase · Unbound: lose 3 Gold</color>";
                 case "the_midian": return "<color=#D2462F>Binding: lose 2 Authority each End phase · Unbound: roll a die</color>";
                 case "serpentine_sovereign":
@@ -479,6 +507,55 @@ namespace CrittersOfCalamity.UI
                 case "horned_beast": return "<color=#D2462F>Binding: 2 Gold, 1 Hand card, 1 Authority, 1 Purged each End phase, and 3 Summoning Circles · Unbound: lose 1 Main action</color>";
             }
             return null;
+        }
+
+        /// <summary>The full meter board for units with meters (Curly Tail, the Platy-Pope), with the current level marked.</summary>
+        private string UnitMeterBoard(UnitInstance u)
+        {
+            var p = _engine.Players[u.OwnerPlayerIndex];
+            var sb = new StringBuilder();
+            void Meter(string name, int level, string[] rows)
+            {
+                sb.AppendLine($"<b><color=#F2B83B>{name}</color></b> (now Level {level})");
+                for (int i = 0; i < rows.Length; i++)
+                    sb.AppendLine(i == level ? $"<color=#7CE07C><b>> Lv {i}: {rows[i]}</b></color>" : $"<color=#B8C2CC>   Lv {i}: {rows[i]}</color>");
+            }
+            switch (u.Definition.Id)
+            {
+                case "curly_tail":
+                {
+                    Meter("Thirst for Glory", p.CurlyTailThirstForGlory, new[] {
+                        "no bonus", "Curly Tail +1 Attack", "he and Warband moving with him may move 1 extra tile",
+                        "Curly Tail +1 Defense and Taunt", "once per turn, one more battle with Curly Tail for free" });
+                    Meter("Hunger (paid at the end of your Main phase)", p.CurlyTailHunger, new[] {
+                        "draw 1 resource card", "discard 1 resource", "discard 2 resources", "discard 2 resources", "discard 2 resources and 1 Hand card" });
+                    Meter("Momentum", p.CurlyTailMomentum, new[] {
+                        "End phase: draw 1 resource card", "Pillage also draws 1 relic card", "+1 Attack; End phase +1 Authority if you won a battle",
+                        "+1 maximum HP", "+1 Attack" });
+                    if (ControlsSeat(u.OwnerPlayerIndex))
+                    {
+                        string[] pay = { "nothing (you draw 1 resource card)", "1 resource", "2 resources", "2 resources", "2 resources and 1 Hand card" };
+                        int lvl = Mathf.Clamp(p.CurlyTailHunger, 0, 4);
+                        int res = p.ResourcePile.Count;
+                        sb.AppendLine($"\n<b>Hunger to pay this turn:</b> {pay[lvl]}. You have {res} resource card(s) and {p.RelicHand.Count} Hand card(s)." +
+                                      (lvl >= 1 && res < (lvl == 1 ? 1 : 2) ? " <color=#E06060>You can't pay it all: you'll lose 1 Momentum and 1 Thirst for Glory.</color>" : ""));
+                    }
+                    break;
+                }
+                case "platy_pope":
+                {
+                    Meter("Platy-Pope Level", p.PlatyPopeLevel, new[] {
+                        "Recruit places 1 Pilgrim", "Recruit also places 1 Crusader; gain Crusade",
+                        "Crusaders +1 Attack and +1 Defense; Cleanse Crusaders (1 Gold)", "Recruit places 2 more Crusaders; 2 Faith removes an enemy basic unit; Crusader moves go 2 tiles",
+                        "Crusaders +1 Attack and +1 Defense; Crusade removals score Authority", "once per turn, 3 Faith gives 1 Authority" });
+                    sb.AppendLine($"<b>Faith:</b> {p.PlatypusFaith}/5 (Alms at 5 raises the level and starts a Crusade)");
+                    sb.AppendLine(p.CrusadeActive || p.CrusadeTurnsRemaining > 0
+                        ? $"<b>Crusade:</b> {(p.CrusadeActive ? "ON this round" : "starts next turn")}, {p.CrusadeTurnsRemaining} more Crusade turn(s) to come."
+                        : "<b>Crusade:</b> not active.");
+                    break;
+                }
+            }
+            return sb.ToString().TrimEnd();
         }
 
         private static string TokenRulesText(TokenType type)
@@ -592,14 +669,14 @@ namespace CrittersOfCalamity.UI
                     $"<size=20><b>{p.DisplayName}, place your {what}</b></size>\n" +
                     $"{_engine.CurrentSetupInstructions}\n" +
                     $"Placed: <b>{_engine.SetupPicks.Count} of {need}</b>. {pickNote}\n" +
-                    $"<size=12>Setup order: {order}</size>";
+                    $"<size=14>Setup order: {order}</size>";
                 _boardRenderer.SetHighlights(_engine.LegalSetupTiles(), new Color(0.30f, 0.85f, 0.35f, 1f), _engine.SetupPicks, Palette.AuthorityGold);
             }
             else
             {
                 _setupBannerText.text =
                     $"<size=20><b>{p.DisplayName} is placing their {what}</b></size>\n" +
-                    $"{_engine.CurrentSetupInstructions}\n<size=12>Setup order (reverse turn order): {order}</size>";
+                    $"{_engine.CurrentSetupInstructions}\n<size=14>Setup order (reverse turn order): {order}</size>";
                 _boardRenderer.SetHighlights(null, Color.clear, _engine.SetupPicks, Palette.AuthorityGold);
             }
             _setupHighlightsShown = true;

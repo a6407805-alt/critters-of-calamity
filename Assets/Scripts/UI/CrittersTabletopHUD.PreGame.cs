@@ -31,6 +31,12 @@ namespace CrittersOfCalamity.UI
         private readonly Dictionary<int, float> _diceAnimEnd = new Dictionary<int, float>();
         private readonly Dictionary<int, Text[]> _diceFaces = new Dictionary<int, Text[]>();
         private const float DiceAnimSeconds = 0.9f;
+        /// <summary>After a roll-off finishes, the results stay up this long so everyone can see them.</summary>
+        private const float RollResultHoldSeconds = 3f;
+        private float _rollHoldUntil;
+        private bool _rollHoldWasDraft;
+        private bool _prevPhaseWasRoll;
+        private bool _prevPhaseWasDraft;
 
         private void BuildPreGamePanel(Transform canvasParent)
         {
@@ -68,7 +74,7 @@ namespace CrittersOfCalamity.UI
             gridGo.transform.SetParent(pick, false);
             var gridRt = gridGo.AddComponent<RectTransform>();
             gridRt.anchorMin = new Vector2(0.01f, 0.02f);
-            gridRt.anchorMax = new Vector2(0.49f, 0.98f);
+            gridRt.anchorMax = new Vector2(0.47f, 0.98f);
             gridRt.offsetMin = Vector2.zero;
             gridRt.offsetMax = Vector2.zero;
             var grid = gridGo.AddComponent<GridLayoutGroup>();
@@ -78,8 +84,15 @@ namespace CrittersOfCalamity.UI
             grid.constraintCount = 2;
             _factionGridRoot = gridGo.transform;
 
-            _factionDetailText = CreateText(pick, "Detail", "", 14, TextAnchor.UpperLeft,
-                new Vector2(0.51f, 0.16f), new Vector2(0.99f, 0.98f), Vector2.zero, Vector2.zero, Color.white);
+            _factionDetailText = CreateText(pick, "Detail", "", 16, TextAnchor.UpperLeft,
+                new Vector2(0.50f, 0.16f), new Vector2(0.99f, 0.98f), Vector2.zero, Vector2.zero, Color.white);
+            // Long faction write-ups shrink to fit their box instead of spilling over the cards or the Pick button.
+            _factionDetailText.resizeTextForBestFit = true;
+            _factionDetailText.resizeTextMinSize = 10;
+            _factionDetailText.resizeTextMaxSize = 16 + FontBump;
+            _factionDetailText.verticalOverflow = VerticalWrapMode.Truncate;
+            _factionDetailText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            gridGo.AddComponent<RectMask2D>();
             _factionPickButton = CreateButton(pick, "BtnPick", "Pick", new Vector2(0.62f, 0.02f), new Vector2(0.88f, 0.13f),
                 Palette.FromHex("#B86B28"), () =>
                 {
@@ -87,7 +100,7 @@ namespace CrittersOfCalamity.UI
                     if (picker >= 0) _mpManager.Submit(GameCommand.PickFaction(_inspectedFaction), picker);
                 });
             _factionPickButtonLabel = _factionPickButton.GetComponentInChildren<Text>();
-            _factionPickButtonLabel.fontSize = 18;
+            SetFontSize(_factionPickButtonLabel, 18);
 
             _preGameRoot.SetActive(false);
         }
@@ -98,19 +111,43 @@ namespace CrittersOfCalamity.UI
         private void RefreshPreGame()
         {
             if (_preGameRoot == null) return;
-            bool show = _engine != null && _engine.Players.Count > 0 && _engine.IsPreGame &&
-                        _engine.CurrentPhase != TurnPhase.PreGame_ReverseFactionSetup; // setup uses the board, with a banner
+            if (_engine == null || _engine.Players.Count == 0) { _preGameRoot.SetActive(false); return; }
+
+            // When a roll-off finishes, keep the dice on screen for a few seconds so everyone sees the result.
+            bool rollPhase = _engine.CurrentPhase == TurnPhase.PreGame_DraftRoll || _engine.CurrentPhase == TurnPhase.PreGame_TurnOrderRoll;
+            if (_prevPhaseWasRoll && !rollPhase)
+            {
+                float lastAnim = _diceAnimEnd.Count > 0 ? _diceAnimEnd.Values.Max() : Time.unscaledTime;
+                _rollHoldUntil = Mathf.Max(Time.unscaledTime, lastAnim) + RollResultHoldSeconds;
+                _rollHoldWasDraft = _prevPhaseWasDraft;
+                StartCoroutine(EndRollHoldLater());
+            }
+            _prevPhaseWasRoll = rollPhase;
+            _prevPhaseWasDraft = _engine.CurrentPhase == TurnPhase.PreGame_DraftRoll;
+            bool holding = Time.unscaledTime < _rollHoldUntil;
+
+            bool show = holding || (_engine.IsPreGame &&
+                        _engine.CurrentPhase != TurnPhase.PreGame_ReverseFactionSetup); // setup uses the board, with a banner
             _preGameRoot.SetActive(show);
             if (!show) return;
             _preGameRoot.transform.SetAsLastSibling();
 
-            bool picking = _engine.CurrentPhase == TurnPhase.PreGame_FactionPick;
+            bool picking = !holding && _engine.CurrentPhase == TurnPhase.PreGame_FactionPick;
             bool draftRoll = _engine.CurrentPhase == TurnPhase.PreGame_DraftRoll;
 
-            if (draftRoll)
+            if (holding)
+            {
+                var ranking = Enumerable.Range(0, _engine.Players.Count)
+                    .OrderByDescending(i => i < _engine.PreGameLastDie1.Count ? _engine.PreGameLastDie1[i] : 0).ToList();
+                _preGameTitle.text = _rollHoldWasDraft ? "FACTION PICK ORDER ROLLED" : "TURN ORDER ROLLED";
+                _preGameSubtitle.text = _rollHoldWasDraft
+                    ? $"Pick order: {string.Join("  >  ", _engine.FactionPickOrder.Select(i => _engine.Players[i].DisplayName))}"
+                    : $"{_engine.Players[_engine.CurrentTurnPlayerIndex].DisplayName} rolled highest and goes first.";
+            }
+            else if (draftRoll)
             {
                 _preGameTitle.text = "ROLL FOR FACTION PICK ORDER";
-                _preGameSubtitle.text = "Everyone rolls 2 dice. The highest roll picks a faction first. Ties roll again.";
+                _preGameSubtitle.text = "Everyone rolls the 3-sided die. The highest roll picks a faction first. Ties roll again.";
             }
             else if (picking)
             {
@@ -126,12 +163,19 @@ namespace CrittersOfCalamity.UI
             else
             {
                 _preGameTitle.text = "ROLL FOR TURN ORDER";
-                _preGameSubtitle.text = "Everyone rolls 2 dice again. The highest roll takes the first turn, then play goes clockwise. Ties roll again.";
+                _preGameSubtitle.text = "Everyone rolls the 3-sided die again. The highest roll takes the first turn, then play goes clockwise. Ties roll again.";
             }
 
             BuildDiceCards(showDice: !picking);
             _factionPickArea.SetActive(picking);
             if (picking) RefreshFactionPick();
+        }
+
+        private IEnumerator EndRollHoldLater()
+        {
+            while (Time.unscaledTime < _rollHoldUntil) yield return new WaitForSecondsRealtime(0.1f);
+            RefreshPreGame();
+            RefreshHUD();
         }
 
         private void BuildDiceCards(bool showDice)
@@ -148,7 +192,7 @@ namespace CrittersOfCalamity.UI
                                            : new Color(0.16f, 0.19f, 0.25f, 0.95f));
 
                 string you = _mpManager.IsOnline && seat == _mpManager.LocalSeat ? " (you)" : "";
-                string faction = player.Faction != null ? $"\n<size=13>{player.Faction.Name}</size>" : "";
+                string faction = player.Faction != null ? $"\n<size=19><b>{player.Faction.Name}</b></size>" : "";
                 CreateText(card, "Name", $"<b>{player.DisplayName}</b>{you}{faction}", 17, TextAnchor.UpperCenter,
                     new Vector2(0.02f, 0.64f), new Vector2(0.98f, 0.97f), Vector2.zero, Vector2.zero, Color.white);
 
@@ -166,26 +210,23 @@ namespace CrittersOfCalamity.UI
                 bool hasRolled = hist.Count > 0;
                 bool animating = _diceAnimEnd.TryGetValue(seat, out float end) && end > Time.unscaledTime;
                 int d1 = seat < _engine.PreGameLastDie1.Count ? _engine.PreGameLastDie1[seat] : 0;
-                int d2 = seat < _engine.PreGameLastDie2.Count ? _engine.PreGameLastDie2[seat] : 0;
-
-                var face1 = MakeDie(card, "Die1", new Vector2(0.18f, 0.30f), new Vector2(0.46f, 0.62f), hasRolled ? d1.ToString() : "?");
-                var face2 = MakeDie(card, "Die2", new Vector2(0.54f, 0.30f), new Vector2(0.82f, 0.62f), hasRolled ? d2.ToString() : "?");
-                _diceFaces[seat] = new[] { face1, face2 };
+                var face1 = MakeDie(card, "Die1", new Vector2(0.36f, 0.30f), new Vector2(0.64f, 0.62f), hasRolled ? d1.ToString() : "?");
+                _diceFaces[seat] = new[] { face1 };
 
                 bool mustRoll = _engine.CanRollPreGameDice(seat);
                 bool tied = _engine.IsSeatTied(seat);
                 string status = animating ? "Rolling..."
                     : mustRoll && tied ? $"Tied at {hist.Last()}! Roll again"
                     : mustRoll ? "Needs to roll"
-                    : hasRolled ? $"Total: <b>{d1 + d2}</b>" + (hist.Count > 1 ? $"  (rolls: {string.Join(", ", hist)})" : "")
+                    : hasRolled ? $"Rolled: <b>{d1}</b>" + (hist.Count > 1 ? $"  (rolls: {string.Join(", ", hist)})" : "")
                     : "";
 
                 if (mustRoll && !animating && ControlsSeat(seat))
                 {
                     int captured = seat;
-                    CreateButton(card, "BtnRoll", tied ? "Roll Again" : "Roll Dice", new Vector2(0.15f, 0.04f), new Vector2(0.85f, 0.26f),
-                        Palette.FromHex("#B86B28"), () => _mpManager.Submit(GameCommand.RollDice(), captured))
-                        .GetComponentInChildren<Text>().fontSize = 16;
+                    var rollBtn = CreateButton(card, "BtnRoll", tied ? "Roll Again" : "Roll Dice", new Vector2(0.15f, 0.04f), new Vector2(0.85f, 0.26f),
+                        Palette.FromHex("#B86B28"), () => _mpManager.Submit(GameCommand.RollDice(), captured));
+                    SetFontSize(rollBtn.GetComponentInChildren<Text>(), 16);
                 }
                 else
                 {
@@ -216,7 +257,7 @@ namespace CrittersOfCalamity.UI
             {
                 if (_diceFaces.TryGetValue(seat, out var faces))
                     foreach (var f in faces)
-                        if (f != null) f.text = Random.Range(1, 7).ToString();
+                        if (f != null) f.text = Random.Range(1, 4).ToString();
                 yield return new WaitForSecondsRealtime(0.07f);
             }
             _diceAnimEnd.Remove(seat);
@@ -228,6 +269,13 @@ namespace CrittersOfCalamity.UI
         {
             foreach (Transform child in _factionGridRoot) Destroy(child.gameObject);
             var all = RulebookDatabase.GetAllFactions();
+            // Size the faction cards to fit their half of the panel (two columns), so they never run under the details.
+            var gridLayout = _factionGridRoot.GetComponent<GridLayoutGroup>();
+            var gridRect = ((RectTransform)_factionGridRoot).rect;
+            int rows = Mathf.CeilToInt(all.Count / 2f);
+            if (gridRect.width > 10f && gridRect.height > 10f)
+                gridLayout.cellSize = new Vector2((gridRect.width - gridLayout.spacing.x) / 2f - 1f,
+                                                  Mathf.Min(92f, (gridRect.height - gridLayout.spacing.y * (rows - 1)) / rows - 1f));
             int picker = _engine.CurrentFactionPicker;
 
             // Default the details view to the first faction that's still available.
@@ -244,8 +292,8 @@ namespace CrittersOfCalamity.UI
                 var captured = f.Id;
                 var owner = TakenBy(f.Id);
                 string label = owner != null
-                    ? $"<b>{f.Name}</b>\n<size=12>Taken by {owner.DisplayName}</size>"
-                    : $"<b>{f.Name}</b>\n<size=12>Difficulty {f.DifficultyRatingOutOf10}/10</size>";
+                    ? $"<b>{f.Name}</b>\n<size=20><b>Taken by {owner.DisplayName}</b></size>"
+                    : $"<b>{f.Name}</b>\n<size=14>Difficulty {f.DifficultyRatingOutOf10}/10</size>";
                 Color bg = owner != null ? new Color(0.22f, 0.22f, 0.22f, 0.8f)
                     : f.Id == _inspectedFaction ? f.PrimaryColor * 0.85f + new Color(0.1f, 0.1f, 0.1f, 1f)
                     : f.PrimaryColor * 0.55f + new Color(0.05f, 0.05f, 0.05f, 1f);
@@ -254,11 +302,11 @@ namespace CrittersOfCalamity.UI
                     _inspectedFaction = captured;
                     RefreshFactionPick();
                 });
-                btn.GetComponentInChildren<Text>().fontSize = 16;
+                SetFontSize(btn.GetComponentInChildren<Text>(), 16);
             }
 
             var sb = new StringBuilder();
-            sb.AppendLine($"<size=22><b>{inspected.Name}</b></size>   <i>Difficulty {inspected.DifficultyRatingOutOf10}/10</i>");
+            sb.AppendLine($"<size=24><b>{inspected.Name}</b></size>   <i>Difficulty {inspected.DifficultyRatingOutOf10}/10</i>");
             sb.AppendLine();
             sb.AppendLine(inspected.ShortSummary);
             sb.AppendLine();

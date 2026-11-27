@@ -136,11 +136,14 @@ namespace CrittersOfCalamity.UI
                 _engine.OnStateChanged -= RefreshHUD;
                 _engine.OnBattleResolved -= ShowBattleReportPopup;
                 _engine.OnBattleDecisionRequired -= ShowBattleDecisionModal;
+                _engine.OnAnnouncement -= OnEngineAnnouncement;
             }
             _engine = engine;
             _engine.OnStateChanged += RefreshHUD;
             _engine.OnBattleResolved += ShowBattleReportPopup;
             _engine.OnBattleDecisionRequired += ShowBattleDecisionModal;
+            _engine.OnAnnouncement += OnEngineAnnouncement;
+            _announcements.Clear();
 
             _awaitingMoveDestination = false;
             _boardRenderer.BindEngine(_engine);
@@ -368,6 +371,7 @@ namespace CrittersOfCalamity.UI
             BuildTurnGuide(canvasGo.transform);
             BuildInfoScreens(canvasGo.transform);
             BuildChoicePopup(canvasGo.transform);
+            BuildPopups(canvasGo.transform);
             BuildPreGamePanel(canvasGo.transform);
             BuildMainMenu(canvasGo.transform);
         }
@@ -515,6 +519,9 @@ namespace CrittersOfCalamity.UI
             _battlePopupModal.SetActive(false);
         }
 
+        private GameObject _battleDecisionUse, _battleDecisionPass;
+        private Transform _battleDecisionOptions;
+
         private void BuildBattleDecisionModal(Transform canvasParent)
         {
             var modalRt = CreatePanel(canvasParent, "BattleDecisionModal",
@@ -528,10 +535,21 @@ namespace CrittersOfCalamity.UI
             _battleDecisionBodyText = CreateText(modalRt, "Body", "", 13, TextAnchor.MiddleLeft,
                 new Vector2(0.05f, 0.26f), new Vector2(0.95f, 0.78f), Vector2.zero, Vector2.zero, Color.white);
 
-            CreateButton(modalRt, "BtnUse", "Use It",
-                new Vector2(0.12f, 0.05f), new Vector2(0.46f, 0.20f), Palette.FromHex("#2F7A3E"), () => AnswerBattleDecision(true));
-            CreateButton(modalRt, "BtnPass", "Pass",
-                new Vector2(0.54f, 0.05f), new Vector2(0.88f, 0.20f), Palette.FromHex("#7A2828"), () => AnswerBattleDecision(false));
+            _battleDecisionUse = CreateButton(modalRt, "BtnUse", "Use It",
+                new Vector2(0.12f, 0.05f), new Vector2(0.46f, 0.20f), Palette.FromHex("#2F7A3E"), () => AnswerBattleDecision(true)).gameObject;
+            _battleDecisionPass = CreateButton(modalRt, "BtnPass", "Pass",
+                new Vector2(0.54f, 0.05f), new Vector2(0.88f, 0.20f), Palette.FromHex("#7A2828"), () => AnswerBattleDecision(false)).gameObject;
+            var optGo = new GameObject("Options");
+            optGo.transform.SetParent(modalRt, false);
+            var optRt = optGo.AddComponent<RectTransform>();
+            optRt.anchorMin = new Vector2(0.04f, 0.04f);
+            optRt.anchorMax = new Vector2(0.96f, 0.40f);
+            optRt.offsetMin = optRt.offsetMax = Vector2.zero;
+            var optGrid = optGo.AddComponent<GridLayoutGroup>();
+            optGrid.cellSize = new Vector2(150f, 34f);
+            optGrid.spacing = new Vector2(6f, 6f);
+            optGrid.childAlignment = TextAnchor.MiddleCenter;
+            _battleDecisionOptions = optGo.transform;
 
             _battleDecisionModal.SetActive(false);
         }
@@ -541,8 +559,25 @@ namespace CrittersOfCalamity.UI
             if (d == null || _battleDecisionModal == null) return;
             if (_mpManager.IsOnline && d.PlayerIndex != _mpManager.LocalSeat) return; // only the player being asked sees the prompt
             var p = _engine.Players[d.PlayerIndex];
-            _battleDecisionHeaderText.text = $"{p.DisplayName} ({p.Faction.Name}): use {d.Title}?";
+            bool pickOne = d.Options.Count > 0;
+            _battleDecisionHeaderText.text = pickOne ? $"{p.DisplayName} ({p.Faction.Name}): {d.Title}" : $"{p.DisplayName} ({p.Faction.Name}): use {d.Title}?";
             _battleDecisionBodyText.text = d.Prompt;
+            _battleDecisionUse.SetActive(!pickOne);
+            _battleDecisionPass.SetActive(!pickOne);
+            var bodyRt = _battleDecisionBodyText.rectTransform;
+            bodyRt.anchorMin = new Vector2(0.05f, pickOne ? 0.42f : 0.26f);
+            foreach (Transform c in _battleDecisionOptions) Destroy(c.gameObject);
+            for (int i = 0; i < d.Options.Count; i++)
+            {
+                int captured = i;
+                var b = CreateLayoutButton(_battleDecisionOptions, $"Opt{i}", d.Options[i], Palette.FromHex("#7A4A28"), () =>
+                {
+                    _battleDecisionModal.SetActive(false);
+                    _mpManager.Submit(GameCommand.BattleOption(captured));
+                    RefreshHUD();
+                });
+                SetFontSize(b.GetComponentInChildren<Text>(), 14);
+            }
             _battleDecisionModal.transform.SetAsLastSibling();
             _battleDecisionModal.SetActive(true);
         }
@@ -563,7 +598,7 @@ namespace CrittersOfCalamity.UI
 
             var sb = new StringBuilder();
             sb.AppendLine($"<b>{atk.DisplayName}</b> ({atk.Faction.Name}) attacked <b>{def.DisplayName}</b> ({def.Faction.Name}) at {r.TileCoord}.");
-            sb.AppendLine($"Dice: {r.AttackerDice1}+{r.AttackerDice2}{Bonus(r.AttackerDiceBonus)} vs {r.DefenderDice1}+{r.DefenderDice2}{Bonus(r.DefenderDiceBonus)}.   " +
+            sb.AppendLine($"Dice (3-sided): {r.AttackerDice1}{Bonus(r.AttackerDiceBonus)} vs {r.DefenderDice1}{Bonus(r.DefenderDiceBonus)}.   " +
                           $"Totals: <b>{r.AttackerTotal}</b> (Attack {r.AttackerUnitAttackSum}) vs <b>{r.DefenderTotal}</b> (Defense {r.DefenderUnitDefenseSum}).");
             if (r.IsTie) sb.AppendLine("<b>Tie:</b> each side takes 1 HP.");
             else sb.AppendLine($"<b>{_engine.Players[r.WinnerPlayerIndex].DisplayName} wins</b>: {r.WinnerDamageDealt} HP dealt, {r.MandatoryLoserDamageDealt} HP back from the loser.");
@@ -624,6 +659,7 @@ namespace CrittersOfCalamity.UI
             RefreshSetupBanner();
             RefreshChoicePopup();
             RefreshGuideHighlights();
+            RefreshCrusadePanel();
             if (_infoModal != null && _infoModal.activeSelf && !_infoShowingRulebook) RefreshInfoModal();
 
             if (_activityPanel != null) _activityPanel.SetActive(!_engine.IsPreGame);
@@ -667,7 +703,7 @@ namespace CrittersOfCalamity.UI
                 string turnMark = isTurn ? "> " : "";
                 string facColor = ColorUtility.ToHtmlStringRGB(p.Faction.PrimaryColor);
                 _playerScoreBadges[i].text = $"{turnMark}<b>{p.DisplayName}</b> <color=#{facColor}>{p.Faction.Name}</color>\n" +
-                                             $"<size=16><b>{p.Authority}</b>/30 Authority</size>  <size=10>Res {p.ResourcePile.Count} · Hand {p.RelicHand.Count}</size>";
+                                             $"<size=16><b>{p.Authority}</b>/30 Authority</size>  <size=12>Res {p.ResourcePile.Count} · Hand {p.RelicHand.Count}</size>";
                 _playerScoreBadges[i].color = isTurn ? Palette.AuthorityGold : Color.white;
             }
 
@@ -679,13 +715,17 @@ namespace CrittersOfCalamity.UI
             {
                 int slotIdx = i;
                 var card = _engine.ExcavationArea[i];
-                CreateLayoutButton(_excavationButtonsRoot, $"ExcSlot_{i}",
+                var excBtn = CreateLayoutButton(_excavationButtonsRoot, $"ExcSlot_{i}",
                     $"<b>[Unearth] {card.Name}</b> (Cost: {card.Cost})\n{card.EffectText}",
                     new Color(0.20f, 0.25f, 0.32f, 0.95f), () =>
                     {
                         _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slotIdx));
                         RefreshHUD();
                     });
+                var excLabel = excBtn.GetComponentInChildren<Text>();
+                SetFontSize(excLabel, 15);
+                excLabel.resizeTextMinSize = 11;
+                AttachCardHover(excBtn.gameObject, card);   // hovering shows the full card
             }
 
             // Selected Hex Inspector
@@ -743,7 +783,7 @@ namespace CrittersOfCalamity.UI
                 $"<color=#{ColorUtility.ToHtmlStringRGB(Palette.RuinStoneLight)}>Stone</color> <b>{sCount}</b>    " +
                 $"<color=#{ColorUtility.ToHtmlStringRGB(Palette.AuthorityGold)}>Gold</color> <b>{gCount}</b>" +
                 (cCount > 0 || viewer.Faction.Id == FactionId.FirestartingSquirrels ? $"    <color=#{ColorUtility.ToHtmlStringRGB(Palette.FireTile)}>Charcoal</color> <b>{cCount}</b>" : "") +
-                $"      <size=12>Hand: {viewer.RelicHand.Count} card(s)" + (viewer.PurchasedTradedGoods.Count > 0 ? $"   Traded Goods: {string.Join(", ", viewer.PurchasedTradedGoods.Select(g => g.Title))}" : "") + "</size>";
+                $"      <size=14>Hand: {viewer.RelicHand.Count} card(s)" + (viewer.PurchasedTradedGoods.Count > 0 ? $"   Traded Goods: {string.Join(", ", viewer.PurchasedTradedGoods.Select(g => g.Title))}" : "") + "</size>";
 
             foreach (Transform child in _handButtonsRoot)
                 Destroy(child.gameObject);
@@ -755,36 +795,62 @@ namespace CrittersOfCalamity.UI
                 var card = viewer.RelicHand[hIdx];
                 CreateRelicHandCardWidget(_handButtonsRoot, card, capturedIdx);
             }
+            // Crafted cards sit on your Table: they show here next to your Hand, marked CRAFTED.
+            for (int tIdx = 0; tIdx < viewer.TableRelics.Count; tIdx++)
+                CreateRelicHandCardWidget(_handButtonsRoot, viewer.TableRelics[tIdx], 100 + tIdx, crafted: true);
+            for (int fIdx = 0; fIdx < viewer.SquirrelsCraftedFirestarters; fIdx++)
+                CreateRelicHandCardWidget(_handButtonsRoot, AcornFirestarterCard, 200 + fIdx, crafted: true);
         }
 
+        /// <summary>The Firestarting Squirrels' Acorn Firestarter, shown as a crafted card.</summary>
+        private static readonly RelicCardDef AcornFirestarterCard = new RelicCardDef
+        {
+            Id = "acorn_firestarter", Name = "Acorn Firestarter", Cost = new ResourceCost(wood: 1, charcoal: 1),
+            DisassembleGain = new ResourceCost(),
+            EffectText = "Crafted card (Firestarting Squirrels). Once per Main phase, discard it to place a Fire Tile on a forest tile with a Squirrel."
+        };
+
         /// <summary>A compact hand card: name, cost and effect. (Assemble and Disassemble are in the Turn Guide.)</summary>
-        private void CreateRelicHandCardWidget(Transform parent, RelicCardDef card, int handIdx)
+        private void CreateRelicHandCardWidget(Transform parent, RelicCardDef card, int handIdx, bool crafted = false)
         {
             var cardBox = new GameObject($"RelicCard_{handIdx}");
             cardBox.transform.SetParent(parent, false);
             cardBox.AddComponent<RectTransform>();
             cardBox.AddComponent<LayoutElement>().preferredWidth = 230f;
             var bg = cardBox.AddComponent<Image>();
-            bg.color = Palette.UICard;
-            var t = CreateText(cardBox.transform, "Text", $"<b>{card.Name}</b>  <size=10>({card.Cost})</size>\n<size=10>{card.EffectText}</size>",
-                12, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, new Vector2(6f, 3f), new Vector2(-6f, -3f), Palette.ParchmentMap);
+            bg.color = crafted ? new Color(0.16f, 0.30f, 0.18f, 0.97f) : Palette.UICard;
+            string tag = crafted ? "<color=#9BE07A><b>CRAFTED</b></color>  " : "";
+            var t = CreateText(cardBox.transform, "Text", $"{tag}<b>{card.Name}</b>  <size=14>({card.Cost})</size>\n<size=14>{card.EffectText}</size>",
+                14, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, new Vector2(6f, 3f), new Vector2(-6f, -3f), Palette.ParchmentMap);
             t.verticalOverflow = VerticalWrapMode.Truncate;
             t.raycastTarget = false;
 
             // Hovering a card pops up the full card above the hand
             var trigger = cardBox.AddComponent<EventTrigger>();
             var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            enter.callback.AddListener(_ => ShowCardPreview(card, cardBox.GetComponent<RectTransform>()));
+            enter.callback.AddListener(_ => ShowCardPreview(card, cardBox.GetComponent<RectTransform>(), crafted));
             trigger.triggers.Add(enter);
             var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
             exit.callback.AddListener(_ => HideCardPreview());
             trigger.triggers.Add(exit);
         }
 
+        /// <summary>Hovering this UI element pops up the full relic card (name, cost, effect, disassemble).</summary>
+        private void AttachCardHover(GameObject go, RelicCardDef card)
+        {
+            var trig = go.GetComponent<EventTrigger>() ?? go.AddComponent<EventTrigger>();
+            var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enter.callback.AddListener(_ => ShowCardPreview(card, go.GetComponent<RectTransform>()));
+            trig.triggers.Add(enter);
+            var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+            exit.callback.AddListener(_ => HideCardPreview());
+            trig.triggers.Add(exit);
+        }
+
         private GameObject _cardPreview;
         private Text _cardPreviewText;
 
-        private void ShowCardPreview(RelicCardDef card, RectTransform anchor)
+        private void ShowCardPreview(RelicCardDef card, RectTransform anchor, bool crafted = false)
         {
             if (_cardPreview == null)
             {
@@ -800,12 +866,13 @@ namespace CrittersOfCalamity.UI
                 _cardPreview.GetComponent<Image>().raycastTarget = false;
             }
             var sb = new StringBuilder();
-            sb.AppendLine($"<size=20><b>{card.Name}</b></size>");
+            sb.AppendLine($"<size=20><b>{card.Name}</b></size>" + (crafted ? "   <color=#9BE07A>CRAFTED (on your Table)</color>" : ""));
             sb.AppendLine($"<color=#{ColorUtility.ToHtmlStringRGB(Palette.AuthorityGold)}>Cost: {card.Cost}</color>");
             sb.AppendLine();
             sb.AppendLine(card.EffectText);
             sb.AppendLine();
-            sb.Append(card.DisassembleChoiceWoodOrStone ? "<b>Disassemble:</b> gain 1 Wood or 1 Stone (your choice)" : $"<b>Disassemble:</b> gain {card.DisassembleGain}");
+            if (card.Id != "acorn_firestarter")
+                sb.Append(card.DisassembleChoiceWoodOrStone ? "<b>Disassemble:</b> gain 1 Wood or 1 Stone (your choice)" : $"<b>Disassemble:</b> gain {card.DisassembleGain}");
             _cardPreviewText.text = sb.ToString();
 
             // place it just above the hovered card, kept on screen
@@ -898,11 +965,26 @@ namespace CrittersOfCalamity.UI
             var txt = go.AddComponent<Text>();
             txt.font = _uiFont;
             txt.text = content;
-            txt.fontSize = fontSize;
+            // Text runs a couple of points larger than its box was designed for; if it doesn't fit, it shrinks back.
+            txt.fontSize = fontSize + FontBump;
+            txt.resizeTextForBestFit = true;
+            txt.resizeTextMaxSize = fontSize + FontBump;
+            txt.resizeTextMinSize = Mathf.Max(8, fontSize - 2);
             txt.alignment = align;
             txt.color = color;
             txt.supportRichText = true;
             return txt;
+        }
+
+        private const int FontBump = 2;
+
+        /// <summary>Sets a text's size (plus the same bump CreateText gives) and keeps its shrink-to-fit range in step.</summary>
+        private static void SetFontSize(Text t, int size)
+        {
+            if (t == null) return;
+            t.fontSize = size + FontBump;
+            t.resizeTextMaxSize = size + FontBump;
+            t.resizeTextMinSize = Mathf.Max(8, size - 2);
         }
 
         private Button CreateButton(Transform parent, string name, string label, Vector2 anchorMin, Vector2 anchorMax, Color bgColor, UnityEngine.Events.UnityAction onClick)

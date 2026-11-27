@@ -85,7 +85,7 @@ namespace CrittersOfCalamity.UI
                     _mpManager.Submit(GameCommand.Make(GameCommandType.AdvancePhase));
                 });
             _guideEndLabel = _guideEndButton.GetComponentInChildren<Text>();
-            _guideEndLabel.fontSize = 16;
+            SetFontSize(_guideEndLabel, 16);
 
             var tab = CreateButton(canvasParent, "TurnGuideTab", "Show Turn Guide", new Vector2(0.895f, 0.012f), new Vector2(0.995f, 0.057f),
                 Palette.FromHex("#C87A28"), () => { _guideMinimized = false; RefreshTurnGuide(); });
@@ -156,7 +156,7 @@ namespace CrittersOfCalamity.UI
             var btn = CreateLayoutButton(_guideBody, "Opt", label, color, onClick);
             btn.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
             btn.interactable = enabled;
-            btn.GetComponentInChildren<Text>().fontSize = 14;
+            SetFontSize(btn.GetComponentInChildren<Text>(), 14);
             return btn;
         }
 
@@ -267,8 +267,9 @@ namespace CrittersOfCalamity.UI
                     int slot = i;
                     var card = _engine.ExcavationArea[i];
                     var ucost = _engine.RelicCostFor(p, card);
-                    GuideButton($"   Unearth <b>{card.Name}</b> (cost {ucost})", new Color(0.18f, 0.24f, 0.32f, 1f),
+                    var ub = GuideButton($"   Unearth <b>{card.Name}</b> (cost {ucost})", new Color(0.18f, 0.24f, 0.32f, 1f),
                         () => _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slot)), 40f, _engine.CanAfford(p, ucost));
+                    AttachCardHover(ub.gameObject, card);
                 }
             }
 
@@ -279,7 +280,7 @@ namespace CrittersOfCalamity.UI
                 string label = comeback
                     ? $"<b>Comeback (free craft)</b>: place a {p.Faction.PrimaryBuilding} and 2 basic units"
                     : $"<b>Craft</b> a {p.Faction.PrimaryBuilding} (cost {(p.Faction.Id == FactionId.PlatypusPapacy ? "2 Stone, 2 Wood" : p.Faction.PrimaryBuildingCost.ToString())}){Used(_engine.UsedFactionCraftThisTurn)}";
-                GuideButton(label + (canCraft ? " - then click a green tile" : $"<size=12>\n   {craftWhy}</size>"), Palette.FromHex("#4A6B48"),
+                GuideButton(label + (canCraft ? " - then click a green tile" : $"<size=14>\n   {craftWhy}</size>"), Palette.FromHex("#4A6B48"),
                     () => { _tileAction = TileAction.Craft; RefreshTurnGuide(); }, 46f, canCraft && _engine.LegalBuildingTiles(p).Count > 0);
             }
 
@@ -292,8 +293,9 @@ namespace CrittersOfCalamity.UI
                     int idx = i;
                     var card = p.RelicHand[i];
                     var acost = _engine.RelicCostFor(p, card);
-                    GuideButton($"   Assemble <b>{card.Name}</b> (cost {acost})", new Color(0.22f, 0.18f, 0.30f, 1f),
+                    var ab = GuideButton($"   Assemble <b>{card.Name}</b> (cost {acost})", new Color(0.22f, 0.18f, 0.30f, 1f),
                         () => _mpManager.Submit(GameCommand.Make(GameCommandType.Assemble, idx)), 40f, _engine.CanAfford(p, acost));
+                    AttachCardHover(ab.gameObject, card);
                 }
             }
 
@@ -309,7 +311,7 @@ namespace CrittersOfCalamity.UI
                         int idx = i;
                         bool fromTable = table;
                         var card = pile[i];
-                        string where = table ? " <size=12>(from your Table)</size>" : "";
+                        string where = table ? " <size=14>(from your Table)</size>" : "";
                         if (card.DisassembleChoiceWoodOrStone)
                         {
                             GuideButton($"   Disassemble <b>{card.Name}</b> for 1 Wood{where}", new Color(0.30f, 0.20f, 0.12f, 1f),
@@ -332,7 +334,7 @@ namespace CrittersOfCalamity.UI
         {
             int left = _engine.MainPhaseActionsRemaining;
             int extra = _engine.ExtraBattleActions;
-            _guideHint.text = $"<b>{left} of 3 actions left.</b>" + (extra > 0 ? $" Plus <b>{extra} extra Battle</b> from Abandoned Road." : "") +
+            _guideHint.text = $"<b>{left} of 3 actions left.</b>" + (extra > 0 ? $" Plus <b>{extra} extra Battle</b> from Rally." : "") +
                               " Pick any mix, including the same one more than once. Faction abilities are free.";
 
             GuideButton("<b>Move</b>: move units from one tile to an adjacent tile", Palette.FromHex("#35688C"),
@@ -348,7 +350,7 @@ namespace CrittersOfCalamity.UI
             BuildTableRelicOptions(p);
         }
 
-        /// <summary>Relic cards on your Table that can be used now, on your own turn (Abandoned Road, Ceremonial Bow and Arrow).</summary>
+        /// <summary>Relic cards on your Table that can be used now, on your own turn (Rally, Ceremonial Bow and Arrow).</summary>
         private void BuildTableRelicOptions(PlayerState p)
         {
             bool road = _engine.CanUseTableRelic(p, "abandoned_road");
@@ -358,7 +360,7 @@ namespace CrittersOfCalamity.UI
             OptionHeader("relics", "Relic cards on your Table you can use now", "#8C5328", true);
             if (_guideExpanded != "relics") return;
             if (road)
-                GuideButton("   <b>Abandoned Road</b>: discard it for 1 extra Battle action this turn (not one of your 3)",
+                GuideButton("   <b>Rally</b>: discard it for 1 extra Battle action this turn (not one of your 3)",
                     new Color(0.30f, 0.20f, 0.12f, 1f), () => _mpManager.Submit(GameCommand.UseTableRelic("abandoned_road")), 48f);
             if (bow)
             {
@@ -393,8 +395,8 @@ namespace CrittersOfCalamity.UI
             foreach (var ab in abilities)
             {
                 var a = ab;
-                string tag = a.IsGeneral ? " <size=11>(any faction)</size>" : "";
-                string text = $"   <b>{a.Name}</b>{tag}<size=12>\n   {a.Summary}" + (a.Available ? "" : $"\n   <color=#E0A060>{a.Blocked}</color>") + "</size>";
+                string tag = a.IsGeneral ? " <size=13>(any faction)</size>" : "";
+                string text = $"   <b>{a.Name}</b>{tag}<size=14>\n   {a.Summary}" + (a.Available ? "" : $"\n   <color=#E0A060>{a.Blocked}</color>") + "</size>";
                 GuideButton(text, a.Available ? new Color(0.30f, 0.18f, 0.38f, 1f) : new Color(0.20f, 0.18f, 0.22f, 1f),
                     () => BeginAbility(a), 30f + 15f * Mathf.Ceil(text.Length / 95f), a.Available);
             }
@@ -474,7 +476,7 @@ namespace CrittersOfCalamity.UI
                     {
                         var unit = u;
                         bool on = _moveSelection.Count == 0 || _moveSelection.Contains(u.InstanceId);
-                        string state = u.CannotMoveThisTurn ? " <size=11>(can't move this turn)</size>" : "";
+                        string state = u.CannotMoveThisTurn ? " <size=13>(can't move this turn)</size>" : "";
                         GuideButton($"{(on ? "[x]" : "[  ]")} {u.Definition.Name} ({u.CurrentHP} HP){state}", on ? new Color(0.20f, 0.32f, 0.44f, 1f) : new Color(0.18f, 0.18f, 0.22f, 1f),
                             () => ToggleMoveUnit(unit, tile, p), 32f, !u.CannotMoveThisTurn);
                     }
@@ -528,9 +530,7 @@ namespace CrittersOfCalamity.UI
                          (t.OverlayOwnerPlayerIndex >= 0 && t.OverlayOwnerPlayerIndex != me && t.Overlay != FactionOverlayTileType.FallenLeaf_Unflipped &&
                           t.Overlay != FactionOverlayTileType.CapybaraStream && t.Overlay != FactionOverlayTileType.Fire))).Select(t => t.Coord).ToList();
                 case TileAction.Loot:
-                    return board.Where(t => !t.LootedThisTurn && t.Units.Any(u => u.OwnerPlayerIndex == me) && !t.Units.Any(u => u.OwnerPlayerIndex != me) &&
-                        !(t.Building != null && t.Building.OwnerPlayerIndex != me) && !t.Tokens.Any(k => k.OwnerPlayerIndex != me && k.Type != TokenType.Coin))
-                        .Select(t => t.Coord).ToList();
+                    return board.Where(t => _engine.CanLootTile(t.Coord)).Select(t => t.Coord).ToList();
                 case TileAction.Craft:
                     return _engine.LegalBuildingTiles(p);
                 case TileAction.Ability:
@@ -548,7 +548,10 @@ namespace CrittersOfCalamity.UI
             var picked = new List<HexCoord>();
             if (_engine.IsChoicePending)
             {
-                if (ControlsSeat(_engine.PendingChoice.PlayerIndex) && _engine.PendingChoice.Tiles.Count > 0) legal = _engine.PendingChoice.Tiles;
+                var pc = _engine.PendingChoice;
+                if (ControlsSeat(pc.PlayerIndex) && pc.Tiles.Count > 0) legal = pc.Tiles;
+                else if (ControlsSeat(pc.PlayerIndex) && pc.UnitIds != null && pc.UnitIds.Count > 0)   // choices about units: green where those units stand
+                    legal = _engine.Board.Values.Where(t => t.Units.Any(u => pc.UnitIds.Contains(u.InstanceId))).Select(t => t.Coord).ToList();
             }
             else if (_tileAction != TileAction.None && ControlsSeat(_engine.CurrentTurnPlayerIndex))
             {
@@ -692,7 +695,7 @@ namespace CrittersOfCalamity.UI
                 {
                     int s = cmd.Seat;
                     return s < _engine.PreGameLastDie1.Count && _engine.PreGameLastDie1[s] > 0
-                        ? $"rolled {_engine.PreGameLastDie1[s]} + {_engine.PreGameLastDie2[s]} = {_engine.PreGameLastDie1[s] + _engine.PreGameLastDie2[s]}"
+                        ? $"rolled {_engine.PreGameLastDie1[s]}"
                         : "rolled the dice";
                 }
                 case GameCommandType.PickFaction: return $"picked {_engine.Players[cmd.Seat].Faction?.Name}";
@@ -717,7 +720,7 @@ namespace CrittersOfCalamity.UI
                 case GameCommandType.BattleDecision: return cmd.A == 1 ? "used a card in the battle" : "passed on a battle card";
                 case GameCommandType.SetupPlace: return $"picked tile ({cmd.A}, {cmd.B}) for setup";
                 case GameCommandType.UseTableRelic:
-                    return cmd.S == "abandoned_road" ? "used Abandoned Road for an extra Battle"
+                    return cmd.S == "abandoned_road" ? "used Rally for an extra Battle"
                          : $"used Ceremonial Bow and Arrow on {(cmd.A >= 0 && cmd.A < _engine.Players.Count ? _engine.Players[cmd.A].DisplayName : "another player")}";
             }
             return null;

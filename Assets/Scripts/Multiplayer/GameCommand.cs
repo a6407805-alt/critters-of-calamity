@@ -22,7 +22,7 @@ namespace CrittersOfCalamity.Multiplayer
         FactionAction = 9,   // S = ability id[#option], A,B = first tile (q,r), C,D = second tile (q,r)
         CraftEquipment = 10, // S = equipment id
         BuyTradedGood = 11,  // A = stall slot
-        BattleDecision = 12, // A = 1 use / 0 pass
+        BattleDecision = 12, // A = 1 use / 0 pass / 2+ option (A - 2)
         RollDice = 13,       // pre-game roll for pick order / turn order (the seat rolls for itself)
         PickFaction = 14,    // A = FactionId
         SetupPlace = 15,     // A,B = tile (q,r) for your starting pieces (click again to un-pick)
@@ -59,6 +59,8 @@ namespace CrittersOfCalamity.Multiplayer
         public static GameCommand BattleAgainst(HexCoord at, int defenderSeat) => Make(GameCommandType.Battle, at.q, at.r, defenderSeat + 1);
         public static GameCommand CraftEquipment(string equipmentId) => Make(GameCommandType.CraftEquipment, s: equipmentId);
         public static GameCommand BattleDecision(bool use) => Make(GameCommandType.BattleDecision, use ? 1 : 0);
+        /// <summary>Picks option i of a pick-one battle decision (such as which unit takes damage).</summary>
+        public static GameCommand BattleOption(int i) => Make(GameCommandType.BattleDecision, i + 2);
         public static GameCommand RollDice() => Make(GameCommandType.RollDice);
         public static GameCommand PickFaction(FactionId faction) => Make(GameCommandType.PickFaction, (int)faction);
         public static GameCommand SetupPlace(HexCoord at) => Make(GameCommandType.SetupPlace, at.q, at.r);
@@ -219,7 +221,7 @@ namespace CrittersOfCalamity.Multiplayer
                 case GameCommandType.BuyTradedGood:
                     return engine.TryBuyTradedGoodFromCapybaraStall(cmd.A);
                 case GameCommandType.BattleDecision:
-                    engine.RespondToBattleDecision(cmd.A == 1);
+                    engine.RespondToBattleDecision(cmd.A);
                     return true;
                 case GameCommandType.RollDice:
                     return engine.RollPreGameDice(cmd.Seat);

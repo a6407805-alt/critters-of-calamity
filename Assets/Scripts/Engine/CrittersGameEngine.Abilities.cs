@@ -381,16 +381,17 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "supply_line", Name = "Supply Line", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Free, up to twice per Main phase: discard 1 Wood to place a Supply Line Token within 2 tiles of your War Party, Supply Line Token or Warband unit (not on a stream).",
-                Prompt1 = "Click a tile within 2 of your War Parties, Supply Lines or Warband units.",
+                Summary = "Free, up to twice per Main phase: discard 1 Wood to place a Supply Line Token on a forest tile with Curly Tail or a Warband unit, adjacent to your War Party or a Supply Line Token.",
+                Prompt1 = "Click a forest tile with Curly Tail or a Warband unit, next to your War Party or a Supply Line.",
                 Check = pl => Uses("supply_line") >= 2 ? "Already used twice this Main phase." :
                               Count(pl, ResourceType.Wood) < 1 ? "Needs 1 Wood." :
                               TokenSupplyLeft(pl, TokenType.SupplyLine) <= 0 ? "No Supply Line Tokens left in your supply." : null,
                 Legal1 = (pl, t) => CanPlaceTokenOn(t, TokenType.SupplyLine) && !t.Tokens.Any(k => k.Type == TokenType.SupplyLine && k.OwnerPlayerIndex == me) &&
-                                    Board.Values.Any(o => HexCoord.Distance(o.Coord, t.Coord) <= 2 &&
-                                        ((o.Building != null && o.Building.Type == BuildingType.WarParty && o.Building.OwnerPlayerIndex == me) ||
-                                         o.Tokens.Any(k => k.Type == TokenType.SupplyLine && k.OwnerPlayerIndex == me) ||
-                                         Has(o, pl, "warband"))),
+                                    t.EffectiveTerrain == TileTerrainType.Forest &&
+                                    (Has(t, pl, "warband") || Has(t, pl, "curly_tail")) &&
+                                    Neighbors(t).Any(o =>
+                                        (o.Building != null && o.Building.Type == BuildingType.WarParty && o.Building.OwnerPlayerIndex == me) ||
+                                        o.Tokens.Any(k => k.Type == TokenType.SupplyLine && k.OwnerPlayerIndex == me)),
                 Run = (pl, a, b, o) =>
                 {
                     RemoveResources(pl, ResourceType.Wood, 1);
@@ -488,9 +489,9 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "summon_king", Name = "Summon King of the Millions", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Once per game: discard 1 Gold, 1 Stone and 1 Wood to place the King on a tile with a Burrow. Spread the Fun: every other player draws 1 Forage card.",
+                Summary = "When the King isn't on the board: discard 1 Gold, 1 Stone and 1 Wood to place the King on a tile with a Burrow. Spread the Fun: every other player draws 1 Forage card.",
                 Prompt1 = "Click one of your Burrow tiles.",
-                Check = pl => pl.KingOfTheMillionsSummonedOnce ? "The King can only be summoned once per game." :
+                Check = pl => OnBoard(pl, "king_of_the_millions") ? "The King is already on the board." :
                               !CanAfford(pl, new ResourceCost(wood: 1, stone: 1, gold: 1)) ? "Needs 1 Gold, 1 Stone and 1 Wood." : null,
                 Legal1 = (pl, t) => t.Building != null && t.Building.Type == BuildingType.Burrow && t.Building.OwnerPlayerIndex == me && CanAddUnitToTile(t, me),
                 Run = (pl, a, b, o) =>
@@ -506,18 +507,18 @@ namespace CrittersOfCalamity.Engine
 
             L.Add(new AbilitySpec
             {
-                Id = "rabbit_hill", Name = "King of the Rabbit Hill", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
-                Summary = "Once per Main phase: place 1 Millions unit on the King's tile.",
+                Id = "rabbit_hill", Name = "Multiply", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
+                Summary = "Once per Main phase, with the King on the board: place 1 Millions unit on a forest tile with an enemy unit of your choosing.",
+                Prompt1 = "Click a forest tile with an enemy unit.",
                 Check = pl => Uses("rabbit_hill") > 0 ? "Already used this Main phase." :
                               !OnBoard(pl, "king_of_the_millions") ? "The King isn't on the board." :
-                              UnitSupplyLeft(pl, "millions") <= 0 ? "No Millions units left in your supply." :
-                              !CanAddUnitToTile(TileOf(pl, "king_of_the_millions"), me) ? "The King's tile is full (6 units)." : null,
+                              UnitSupplyLeft(pl, "millions") <= 0 ? "No Millions units left in your supply." : null,
+                Legal1 = (pl, t) => t.EffectiveTerrain == TileTerrainType.Forest && HasEnemyUnits(t, me) && CanAddUnitToTile(t, me),
                 Run = (pl, a, b, o) =>
                 {
-                    var k = TileOf(pl, "king_of_the_millions");
-                    SpawnUnit(k.Coord, "millions", pl, 1);
+                    SpawnUnit(a, "millions", pl, 1);
                     MarkUsed("rabbit_hill");
-                    Log($"King of the Rabbit Hill: 1 Millions unit joined the King at {k.Coord}.");
+                    Log($"Multiply: 1 Millions unit appeared at {a}.");
                     return true;
                 }
             });
@@ -709,9 +710,9 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "summon_band", Name = "Summon A Band of Troublemakers", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "With 3+ Tanukis on one tile: remove 3 of them and discard 1 Gold to place the Band there. Only one Band at a time.",
+                Summary = "With 3+ Tanukis on one tile: remove 3 of them and discard 1 Gold to place the Band there. You can only have one Band at a time.",
                 Prompt1 = "Click a tile with 3 or more of your Tanukis.",
-                Check = pl => OnBoard(pl, "band_of_troublemakers") ? "The Band is already on the board." :
+                Check = pl => OnBoard(pl, "band_of_troublemakers") ? "You can only have one Band at a time." :
                               Count(pl, ResourceType.Gold) < 1 ? "Needs 1 Gold." : null,
                 Legal1 = (pl, t) => t.Units.Count(u => u.OwnerPlayerIndex == me && u.Definition.Id == "tanuki") >= 3,
                 Run = (pl, a, b, o) =>
@@ -805,13 +806,12 @@ namespace CrittersOfCalamity.Engine
                 L.Add(new AbilitySpec
                 {
                     Id = "summon:" + uid, Name = "Necromancy: " + uname, Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
-                    Summary = $"With the Necromouser on the board, one summon per turn (4 per game): remove {cost} Dead from the Cauldron, gain {cost} Authority and summon {uname} on his tile.",
+                    Summary = $"With the Necromouser on the board, one summon per turn: remove {cost} Dead from the Cauldron, gain {cost} Authority and summon {uname} on his tile.",
                     Check = pl =>
                     {
                         var nt = TileOf(pl, "necromouser");
                         if (nt == null) return "The Necromouser isn't on the board.";
                         if (Uses("necromancy") > 0) return "You already summoned this turn.";
-                        if (pl.NecromouserSpecialSummonsUsed >= 4) return "All 4 summons for this game are used.";
                         if (pl.NecromouserCauldronDeadCount < cost) return $"Needs {cost} Dead in the Cauldron.";
                         if (UnitSupplyLeft(pl, uid) <= 0) return $"No {uname} left in your supply.";
                         return CanAddUnitToTile(nt, me) ? null : "The Necromouser's tile is full (6 units).";
@@ -876,16 +876,16 @@ namespace CrittersOfCalamity.Engine
 
             L.Add(new AbilitySpec
             {
-                Id = "craft_firestarter", Name = "Craft Acorn Firestarter", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
-                Summary = "Once per Main phase: discard 1 Charcoal and 1 Wood to craft an Acorn Firestarter (you have 3 cards).",
-                Check = pl => Uses("craft_firestarter") > 0 ? "Already crafted one this Main phase." :
+                Id = "craft_firestarter", Name = "Craft Acorn Firestarter", Phase = TurnPhase.ExcavationPhase, Target = AbilityTarget.None,
+                Summary = "Excavation phase, uses your Craft action: discard 1 Charcoal and 1 Wood to craft an Acorn Firestarter (you have 3 cards). It sits with your crafted cards.",
+                Check = pl => UsedFactionCraftThisTurn && !QualifiesForComeback(pl) ? "You already used your Craft action." :
                               pl.SquirrelsCraftedFirestarters >= 3 ? "All 3 Acorn Firestarters are crafted." :
                               !CanAfford(pl, new ResourceCost(wood: 1, charcoal: 1)) ? "Needs 1 Charcoal and 1 Wood." : null,
                 Run = (pl, a, b, o) =>
                 {
                     SpendResources(pl, new ResourceCost(wood: 1, charcoal: 1));
                     pl.SquirrelsCraftedFirestarters++;
-                    MarkUsed("craft_firestarter");
+                    UsedFactionCraftThisTurn = true;
                     Log($"{pl.DisplayName} crafted an Acorn Firestarter ({pl.SquirrelsCraftedFirestarters} ready).");
                     return true;
                 }
@@ -913,12 +913,12 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "unquenchable", Name = "Unquenchable Spirit", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Once per Main phase, uses 1 Main Phase action: a Squirrel next to a Fire Tile loots it for 1 Charcoal.",
-                Prompt1 = "Click a Fire Tile next to your Squirrel.",
+                Summary = "Once per Main phase, uses 1 Main Phase action: a Squirrel on a Fire Tile loots it for 1 Charcoal. (Only the Squirrels can loot Fire Tiles, and only for Charcoal.)",
+                Prompt1 = "Click a Fire Tile with your Squirrel on it.",
                 Check = pl => Uses("unquenchable") > 0 ? "Already used this Main phase." :
                               MainPhaseActionsRemaining < 1 ? "No Main Phase actions left." :
                               Count(pl, ResourceType.Charcoal) + BurnedResources.Count(r => r == ResourceType.Charcoal) >= 6 ? "All 6 Charcoal cards are out." : null,
-                Legal1 = (pl, t) => fire(t) && Neighbors(t).Any(n => Has(n, pl, "squirrel")),
+                Legal1 = (pl, t) => fire(t) && Has(t, pl, "squirrel"),
                 Run = (pl, a, b, o) =>
                 {
                     MainPhaseActionsRemaining--;
@@ -966,9 +966,9 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "summon_pyromaniac", Name = "Summon the Pyromaniac", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Once per game: burn 1 Wood, 1 Stone, 1 Gold and 1 Charcoal to summon the Pyromaniac on a Fire Tile.",
+                Summary = "When the Pyromaniac isn't on the board: burn 1 Wood, 1 Stone, 1 Gold and 1 Charcoal to summon the Pyromaniac on a Fire Tile.",
                 Prompt1 = "Click a Fire Tile.",
-                Check = pl => pl.PyromaniacSummonedOnce ? "The Pyromaniac can only be summoned once per game." :
+                Check = pl => OnBoard(pl, "pyromaniac") ? "The Pyromaniac is already on the board." :
                               !CanAfford(pl, new ResourceCost(wood: 1, stone: 1, gold: 1, charcoal: 1)) ? "Needs 1 Wood, 1 Stone, 1 Gold and 1 Charcoal." : null,
                 Legal1 = (pl, t) => fire(t) && CanAddUnitToTile(t, me),
                 Run = (pl, a, b, o) =>
@@ -1216,13 +1216,13 @@ namespace CrittersOfCalamity.Engine
             Func<int> barrageRange = () =>
             {
                 var bt = TileOf(p, "blooming_briar");
-                return bt == null ? 0 : 4 + Mathf.Min(2, bt.Units.Count(u => u.OwnerPlayerIndex == me && u.Definition.Id == "thorned_seed"));
+                return bt == null ? 0 : 3 + (ownThicket(bt) ? 1 : 0);   // base 3, +1 while the Briar is on your Prickly Thicket
             };
 
             L.Add(new AbilitySpec
             {
                 Id = "barrage", Name = "Thistle Barrage", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Up to twice per Main phase (shared with the structure option), with 1+ Thorns: pick a tile with enemy units within 4 tiles of the Briar (+1 per Seed on its tile, max +2). Spend 1 Thorn and 1 resource per unit to deal 1 HP each, then place that many Thorned Seeds on a forest tile next to it. 1 Authority per 2 HP dealt.",
+                Summary = "Up to twice per Main phase (shared with the structure option), with 1+ Thorns: pick a tile with enemy units within 3 tiles of the Briar (4 while the Briar is on your Prickly Thicket). Spend 1 Thorn and 1 resource per unit to deal 1 HP each, then place that many Thorned Seeds on a forest tile next to it. 1 Authority per 2 HP dealt.",
                 Prompt1 = "Click a tile with enemy units in range of the Blooming Briar.",
                 Check = pl => !OnBoard(pl, "blooming_briar") ? "The Blooming Briar isn't on the board." : pl.BriaredFlowerThorns < 1 ? "Needs 1 Thorn." :
                               Uses("barrage") >= 2 ? "Thistle Barrage was already used twice this Main phase." : pl.ResourcePile.Count < 1 ? "Needs 1 resource card per target." : null,
@@ -1344,9 +1344,9 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "bloom", Name = "Bursting Into Bloom", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Remove up to 3 Thorned Seeds (click them one at a time). Each deals 1 HP to 1 enemy unit on its tile. Gain 1 Authority if you removed an enemy unit.",
+                Summary = "Once per turn: remove 1 Thorned Seed to deal 1 HP to 1 enemy unit on its tile. Gain 1 Authority if that removes the enemy unit.",
                 Prompt1 = "Click a tile with your Thorned Seed.",
-                Check = pl => Uses("bloom") >= 3 ? "Already removed 3 Seeds this turn." : null,
+                Check = pl => Uses("bloom") >= 1 ? "Already used this turn." : null,
                 Legal1 = (pl, t) => Has(t, pl, "thorned_seed"),
                 Run = (pl, a, b, o) =>
                 {
@@ -1431,15 +1431,15 @@ namespace CrittersOfCalamity.Engine
                 L.Add(new AbilitySpec
                 {
                     Id = "catapult_craft", Name = "Craft a Catapult", Phase = TurnPhase.ExcavationPhase, Target = AbilityTarget.Tile, General = true,
-                    Summary = "Any player, free craft while one is in the supply (2 in the game): discard 2 Stone and 1 Wood to place a Catapult Token on a tile with a Millions unit and at least one of your units. It has 2 uses, once per turn.",
+                    Summary = "Any player, free craft while one is in the supply (2 in the game): discard 1 Stone and 1 Wood to place a Catapult Token on a tile with a Millions unit and at least one of your units. It has 2 uses, once per turn.",
                     Prompt1 = "Click a tile with a Millions unit and your unit.",
                     Check = pl => TokenSupplyLeft(pl, TokenType.Catapult) <= 0 ? "Both Catapults are on the board." :
-                                  !CanAfford(pl, new ResourceCost(wood: 1, stone: 2)) ? "Needs 2 Stone and 1 Wood." : null,
+                                  !CanAfford(pl, new ResourceCost(wood: 1, stone: 1)) ? "Needs 1 Stone and 1 Wood." : null,
                     Legal1 = (pl, t) => t.Units.Any(u => u.OwnerPlayerIndex == hs && u.Definition.Id == "millions") &&
                                         t.Units.Any(u => u.OwnerPlayerIndex == me) && CanPlaceTokenOn(t, TokenType.Catapult),
                     Run = (pl, a, b, o) =>
                     {
-                        SpendResources(pl, new ResourceCost(wood: 1, stone: 2));
+                        SpendResources(pl, new ResourceCost(wood: 1, stone: 1));
                         PlaceToken(a, TokenType.Catapult, pl);
                         Log($"{pl.DisplayName} built a Catapult at {a}.");
                         return true;

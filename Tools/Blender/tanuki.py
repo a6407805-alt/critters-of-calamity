@@ -10,7 +10,7 @@ OUT_DIR = sys.argv[1] if len(sys.argv) > 1 else "/tmp"
 OUT_PNG = sys.argv[2] if len(sys.argv) > 2 else "/tmp/tanuki.png"
 
 make_materials({
-    "Body":    "#B5652A",  # Tanuki primary
+    "Body":    "#CC9A2E",  # Tanuki primary
     "Belly":   "#D8A77A",
     "Blanket": "#F2C94C",  # Tanuki secondary: scarf, drum cord
     "Ink":     "#2A2320",  # eye mask, paws, tail rings

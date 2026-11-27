@@ -213,7 +213,7 @@ namespace CrittersOfCalamity.Engine
                     if (skip) { ContinueEndPhase(); break; }
                     var legal = IgnitePlacementTiles(p, tile);
                     if (legal.Count == 0) { Log("Ignite: no legal tile for the new Fire Tile, so nothing happened."); ContinueEndPhase(); break; }
-                    var next = NewChoice("ignite_place", p.PlayerIndex, "Ignite", "Click the forest tile for the new Fire Tile (next to an enemy unit, within 3 tiles of a Squirrel).");
+                    var next = NewChoice("ignite_place", p.PlayerIndex, "Ignite", "Click the forest tile for the new Fire Tile (next to an enemy unit).");
                     next.Cards = c.Cards;
                     next.Coord = tile;
                     next.Tiles = legal;
@@ -230,6 +230,12 @@ namespace CrittersOfCalamity.Engine
                     Log($"{p.DisplayName} looted 1 {r} from the fallen unit's equipment; {necro.DisplayName} adds a Skeleton to the Cauldron.");
                     break;
                 }
+
+                case "trader_visit":
+                    if (!skip && option >= 0 && option < TradedGoodsStall.Count && CanAfford(p, TradedGoodsStall[option].Cost))
+                        BuyTradedGood(p, option);
+                    else Log($"{p.DisplayName} didn't buy from the Capybara Trader.");
+                    break;
 
                 case "guest_wallow":
                 {
@@ -356,11 +362,10 @@ namespace CrittersOfCalamity.Engine
         /// <summary>Ignite (Squirrels' End phase): legal tiles for the new Fire Tile after removing one.</summary>
         private List<HexCoord> IgnitePlacementTiles(PlayerState p, HexCoord removing)
         {
-            var squirrelTiles = Board.Values.Where(t => Has(t, p, "squirrel")).Select(t => t.Coord).ToList();
+            // Ignite no longer needs a Squirrel nearby: any forest tile next to an enemy unit.
             return Board.Values.Where(t =>
                     (CanTakeForestOverlay(t) || t.Coord.Equals(removing)) && t.BaseTerrain == TileTerrainType.Forest &&
-                    Neighbors(t).Any(n => HasEnemyUnits(n, p.PlayerIndex)) &&
-                    squirrelTiles.Any(s => HexCoord.Distance(s, t.Coord) <= 3))
+                    Neighbors(t).Any(n => HasEnemyUnits(n, p.PlayerIndex)))
                 .Select(t => t.Coord).ToList();
         }
 
@@ -424,7 +429,7 @@ namespace CrittersOfCalamity.Engine
             var fires = Board.Values.Where(t => t.Overlay == FactionOverlayTileType.Fire && t.OverlayOwnerPlayerIndex == p.PlayerIndex).ToList();
             if (!fires.Any(f => IgnitePlacementTiles(p, f.Coord).Any(x => !x.Equals(f.Coord)))) return false;
             var c = NewChoice("ignite_card", p.PlayerIndex, "Ignite",
-                "End phase: burn 1 card from your Hand to move a Fire Tile onto a forest tile next to an enemy unit within 3 tiles of a Squirrel. Pick the card to burn.");
+                "End phase: burn 1 card from your Hand to move a Fire Tile onto a forest tile next to an enemy unit. Pick the card to burn.");
             foreach (var card in p.RelicHand) AddOption(c, $"Burn {card.Name}");
             c.CanSkip = true;
             c.SkipLabel = "Don't Ignite";
