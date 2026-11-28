@@ -67,7 +67,7 @@ Firestarting Squirrels: aggressive early game faction that burns down the forest
 Capybara Caravan: peaceful economic faction that expands the stream network and profits from enemy movements through hospitality and trade. (Difficulty 5/10)
 Briared Flower: explosive special unit faction that scores Authority by hurling thorns across the board and scattering seeds in its wake. (Difficulty 7/10)
 The Goat Cabal: occult faction that sacrifices its own flock, its treasure and even its Authority to summon demons that reshape the Continent, so long as it keeps paying. (Difficulty 9/10)
-Each player rolls one 3-sided die. The highest roll chooses a faction first, then the second highest, then third, then fourth. Reroll ties. (In the game, the results stay on screen for about 3 seconds so everyone can see them.)
+Each player rolls one six-sided die (1 to 6). The highest roll chooses a faction first, then the second highest, then third, then fourth. Reroll ties. (In the game, the results stay on screen for about 3 seconds so everyone can see them.)
 Part 4: Faction Materials
 Each faction has some or all of the following materials. Each faction's full material list is at the end of its section in Part 17. Every faction's pieces have the same design on the back.
 Faction Board
@@ -118,7 +118,7 @@ Draws 2 cards from the resource deck into their Resource Pile.
 Draws 1 card from the relic deck into their Hand.
 Then place the top 5 cards of the relic deck faceup in the Excavation Area.
 Turn order
-All players roll one 3-sided die. The highest roll takes the first turn, and play continues clockwise. Reroll ties.
+All players roll one six-sided die (1 to 6). The highest roll takes the first turn, and play continues clockwise. Reroll ties.
 Setup happens in reverse turn order
 To reduce first player advantage, setup happens in reverse turn order. The player who will go last sets up first, then setup continues counterclockwise, and the player who will go first sets up last.
 Each player follows the Setup on their faction board.
@@ -303,7 +303,7 @@ Cost: 1 Wood, 1 Stone
 When Crafted: Gain 2 Authority.
 Disassemble: Gain 1 Wood.
 Damaged Anankian Chariot (2 copies)
-Cost: 1 Wood, 2 Stone
+Cost: 1 Wood, 1 Stone
 When Crafted: Recruit 1 basic unit at each of your recruitment buildings. Those units cannot move this turn, but they can loot and battle.
 Disassemble: Gain 1 Stone.
 War Horn (2 copies)

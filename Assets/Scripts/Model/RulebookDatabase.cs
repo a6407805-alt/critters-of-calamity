@@ -158,7 +158,7 @@ namespace CrittersOfCalamity.Model
                 new RelicCardDef
                 {
                     Id = "damaged_anankian_chariot", Name = "Damaged Anankian Chariot", CopiesInDeck = 2,
-                    Cost = new ResourceCost(wood: 1, stone: 2),
+                    Cost = new ResourceCost(wood: 1, stone: 1),
                     DisassembleGain = new ResourceCost(stone: 1),
                     KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
                     EffectText = "When Crafted: Recruit 1 basic unit at each of your recruitment buildings. Those units cannot move this turn, but they can loot and battle."

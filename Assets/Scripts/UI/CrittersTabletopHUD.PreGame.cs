@@ -147,7 +147,7 @@ namespace CrittersOfCalamity.UI
             else if (draftRoll)
             {
                 _preGameTitle.text = "ROLL FOR FACTION PICK ORDER";
-                _preGameSubtitle.text = "Everyone rolls the 3-sided die. The highest roll picks a faction first. Ties roll again.";
+                _preGameSubtitle.text = "Everyone rolls a six-sided die (1 to 6). The highest roll picks a faction first. Ties roll again.";
             }
             else if (picking)
             {
@@ -163,7 +163,7 @@ namespace CrittersOfCalamity.UI
             else
             {
                 _preGameTitle.text = "ROLL FOR TURN ORDER";
-                _preGameSubtitle.text = "Everyone rolls the 3-sided die again. The highest roll takes the first turn, then play goes clockwise. Ties roll again.";
+                _preGameSubtitle.text = "Everyone rolls a six-sided die (1 to 6) again. The highest roll takes the first turn, then play goes clockwise. Ties roll again.";
             }
 
             BuildDiceCards(showDice: !picking);
@@ -257,7 +257,7 @@ namespace CrittersOfCalamity.UI
             {
                 if (_diceFaces.TryGetValue(seat, out var faces))
                     foreach (var f in faces)
-                        if (f != null) f.text = Random.Range(1, 4).ToString();
+                        if (f != null) f.text = Random.Range(1, 7).ToString();
                 yield return new WaitForSecondsRealtime(0.07f);
             }
             _diceAnimEnd.Remove(seat);

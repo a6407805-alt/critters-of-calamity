@@ -456,8 +456,8 @@ namespace CrittersOfCalamity.UI
                 Vector2.zero, Vector2.zero, new Color(0.10f, 0.13f, 0.17f, 0.98f));
             _stallModal = modalRt.gameObject;
 
-            CreateText(modalRt, "Header", "THE CAPYBARA CARAVAN — 3-CARD TRADED GOODS STALL",
-                15, TextAnchor.MiddleLeft, new Vector2(0.03f, 0.87f), new Vector2(0.85f, 0.97f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
+            CreateText(modalRt, "Header", "THE CAPYBARA CARAVAN: TRADED GOODS STALL",
+                20, TextAnchor.MiddleLeft, new Vector2(0.03f, 0.87f), new Vector2(0.85f, 0.97f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
             CreateButton(modalRt, "BtnClose", "Close [X]",
                 new Vector2(0.87f, 0.88f), new Vector2(0.97f, 0.96f), Palette.FromHex("#7A2828"), () =>
@@ -492,14 +492,15 @@ namespace CrittersOfCalamity.UI
             {
                 int slot = i;
                 var tg = _engine.TradedGoodsStall[i];
-                CreateLayoutButton(_stallButtonsRoot, $"Stall_{i}",
-                    $"<b>[Buy Traded Good] {tg.Title}</b>\n{tg.EffectText}\n(Purchasing grants +1 Authority to Buyer & +1 Authority to Capybara Caravan, and places 1 Basic Unit as a Guest at a Wallow!)",
+                var sb = CreateLayoutButton(_stallButtonsRoot, $"Stall_{i}",
+                    $"<b>Buy {tg.Title}</b>  (cost {tg.Cost})\n{tg.EffectText}\n<i>You and the Capybaras each gain 1 Authority, and 1 of your basic units visits a Wallow as a guest.</i>",
                     Palette.FromHex("#3A6B6C"), () =>
                     {
                         _mpManager.Submit(GameCommand.Make(GameCommandType.BuyTradedGood, slot));
                         RefreshStallModal();
                         RefreshHUD();
                     });
+                SetFontSize(sb.GetComponentInChildren<Text>(), 19);
             }
         }
 

@@ -6,9 +6,9 @@ namespace CrittersOfCalamity.Engine
 {
     /// <summary>
     /// The start of a game, before the first turn:
-    /// 1. Part 3: every player rolls the 3-sided die; the highest roll picks a faction first, then the next highest, and so on.
+    /// 1. Part 3: every player rolls a six-sided die; the highest roll picks a faction first, then the next highest, and so on.
     /// 2. Players pick factions in that order (each faction once).
-    /// 3. Part 5: every player rolls the 3-sided die again; the highest roll takes the first turn and play continues clockwise.
+    /// 3. Part 5: every player rolls a six-sided die again; the highest roll takes the first turn and play continues clockwise.
     /// 4. Every deck is shuffled and starting cards are dealt. The Capybara Caravan places its streams, then each
     ///    player, in reverse turn order, clicks the tiles for their starting pieces (Part 17 "Setup"). The Tanuki
     ///    player's Coin Tokens go down after everyone else, then the first turn begins.
@@ -21,7 +21,7 @@ namespace CrittersOfCalamity.Engine
         /// <summary>Seat index of the player who took the first turn (setup runs in reverse from here).</summary>
         public int FirstPlayerIndex;
 
-        /// <summary>For each seat, every 3-sided die result rolled in the current roll-off (rerolls are appended).</summary>
+        /// <summary>For each seat, every six-sided die result rolled in the current roll-off (rerolls are appended).</summary>
         public List<List<int>> PreGameRollHistory = new List<List<int>>();
         /// <summary>For each seat, the two dice of their latest roll (0 = not rolled yet).</summary>
         public List<int> PreGameLastDie1 = new List<int>();
@@ -97,7 +97,7 @@ namespace CrittersOfCalamity.Engine
             PrepareTableAndPlayers(playerNames);
             CurrentPhase = TurnPhase.PreGame_DraftRoll;
             StartRollOff();
-            Log("Roll for faction pick order: everyone rolls the 3-sided die. Highest roll picks first.");
+            Log("Roll for faction pick order: everyone rolls a six-sided die. Highest roll picks first.");
             OnStateChanged?.Invoke();
         }
 
@@ -111,7 +111,7 @@ namespace CrittersOfCalamity.Engine
         {
             if (!CanRollPreGameDice(seat)) return false;
 
-            int total = RollD3();
+            int total = RollD6();
             PreGameRollHistory[seat].Add(total);
             PreGameLastDie1[seat] = total;
             PreGameLastDie2[seat] = 0;
@@ -146,7 +146,7 @@ namespace CrittersOfCalamity.Engine
             {
                 CurrentPhase = TurnPhase.PreGame_TurnOrderRoll;
                 StartRollOff();
-                Log("Roll for turn order: everyone rolls the 3-sided die. Highest roll takes the first turn.");
+                Log("Roll for turn order: everyone rolls a six-sided die. Highest roll takes the first turn.");
             }
 
             OnStateChanged?.Invoke();

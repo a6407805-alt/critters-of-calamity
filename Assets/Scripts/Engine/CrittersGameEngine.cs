@@ -338,7 +338,7 @@ namespace CrittersOfCalamity.Engine
         }
 
         public int RollD6() => _rng.Next(1, 7);
-        /// <summary>The battle and roll-off die: one 3-sided die (1 to 3).</summary>
+        /// <summary>The battle die: one 3-sided die (1 to 3). Faction pick order and turn order use RollD6.</summary>
         public int RollD3() => _rng.Next(1, 4);
 
         /// <summary>
@@ -1403,7 +1403,7 @@ namespace CrittersOfCalamity.Engine
                 var c = NewChoice("trader_visit", seat, "The Capybara Trader is here",
                     $"{capy.DisplayName}'s Capybara Trader arrived on your tile. Buy one Traded Good before {capy.DisplayName} acts again? (You and the Capybaras each gain 1 Authority.)");
                 foreach (var g in TradedGoodsStall)
-                    AddOption(c, $"Buy {g.Title} ({g.Cost}): {g.EffectText}", CanAfford(buyer, g.Cost));
+                    AddOption(c, $"<b>Buy {g.Title}</b> (cost {g.Cost})\n{g.EffectText}", CanAfford(buyer, g.Cost));
                 c.CanSkip = true;
                 c.SkipLabel = "Don't buy anything";
             }

@@ -65,9 +65,10 @@ namespace CrittersOfCalamity.UI
                 int opt = i;
                 var btn = CreateLayoutButton(_choiceList, "Opt", c.Options[i], new Color(0.30f, 0.18f, 0.38f, 1f),
                     () => _mpManager.Submit(GameCommand.Choice(opt, default(HexCoord))));
-                btn.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+                bool stall = c.Kind == "trader_visit";   // Traded Goods carry their full card text, so give them room
+                btn.gameObject.AddComponent<LayoutElement>().preferredHeight = stall ? 84f : 40f;
                 btn.interactable = c.OptionEnabled[i];
-                SetFontSize(btn.GetComponentInChildren<Text>(), 14);
+                SetFontSize(btn.GetComponentInChildren<Text>(), stall ? 17 : 14);
                 // Choices about relic cards (Prophetic Vision, Ignite, ...): hover a card's button to see the whole card
                 if (c.Cards != null && i < c.Cards.Count) AttachCardHover(btn.gameObject, c.Cards[i]);
             }

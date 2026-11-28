@@ -1134,6 +1134,8 @@ namespace CrittersOfCalamity.Engine
                     tr.HasMovedThisTurn = true;
                     MarkUsed("peddling");
                     Log($"The Capybara Trader peddled from {from.Coord} to {a}.");
+                    // Arriving on a tile with other players' units opens the stall to them (same as a Move action)
+                    if (Board[a].Units.Any(u => u.OwnerPlayerIndex != me)) OfferTraderVisit(pl, Board[a]);
                     return true;
                 }
             });
