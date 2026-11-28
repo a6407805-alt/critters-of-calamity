@@ -22,8 +22,8 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Critters of Calamity Launcher")]
 [assembly: AssemblyProduct("Critters of Calamity")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.1.1.0")]
+[assembly: AssemblyFileVersion("1.1.1.0")]
 
 namespace CrittersOfCalamity.Launcher
 {
@@ -33,7 +33,7 @@ namespace CrittersOfCalamity.Launcher
         public const string RawBase = "https://raw.githubusercontent.com/ebenlyon/critters-of-calamity-releases/main/";
         public const string Manifest = RawBase + "latest.json";
         public const string GameExe = "Critters of Calamity.exe";
-        public static readonly Version LauncherVersion = new Version(1, 1, 0);
+        public static readonly Version LauncherVersion = new Version(1, 1, 1);
 
         public static string InstallRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CrittersOfCalamity");
         public static string GameDir => Path.Combine(InstallRoot, "Game");
@@ -279,7 +279,9 @@ namespace CrittersOfCalamity.Launcher
         {
             string exe = Path.Combine(Config.GameDir, Config.GameExe);
             if (!File.Exists(exe)) { _status.Text = "The game isn't installed yet."; return; }
-            Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = Config.GameDir, UseShellExecute = true, Arguments = DisplaySettings.Load().ToArgs() });
+            string args = "";
+            try { args = DisplaySettings.Load().ToArgs(); } catch { }   // a settings problem never stops the game from starting
+            Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = Config.GameDir, UseShellExecute = true, Arguments = args });
             Close();
         }
 
@@ -331,7 +333,7 @@ namespace CrittersOfCalamity.Launcher
             {
                 if (File.Exists(Config.DisplayFile))
                 {
-                    var p = File.ReadAllText(Config.DisplayFile).Trim().Split(' ');
+                    var p = File.ReadAllText(Config.DisplayFile).Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     if (p.Length >= 3 && int.TryParse(p[0], out var w) && int.TryParse(p[1], out var h) && w >= 640 && h >= 480 && Modes.Contains(p[2]))
                     { d.Width = w; d.Height = h; d.Mode = p[2]; }
                 }
