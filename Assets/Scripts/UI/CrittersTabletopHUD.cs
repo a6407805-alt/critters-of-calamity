@@ -282,7 +282,9 @@ namespace CrittersOfCalamity.UI
                     RefreshStallModal();
                 }).gameObject;
             CreateButton(topBar, "BtnRulebook", "Rulebook & Factions",
-                new Vector2(0.865f, 0.15f), new Vector2(0.995f, 0.85f), Palette.UIButtonWarm, () => ToggleInfoModal());
+                new Vector2(0.865f, 0.15f), new Vector2(0.945f, 0.85f), Palette.UIButtonWarm, () => ToggleInfoModal());
+            CreateButton(topBar, "BtnSettings", "Settings",
+                new Vector2(0.948f, 0.15f), new Vector2(0.997f, 0.85f), Palette.UIPanelMid, () => OpenSettings());
 
             // 2. LEFT DRAWER TABS (just under the top bar)
             CreateButton(canvasGo.transform, "TabMyFaction", "My Faction",

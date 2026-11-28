@@ -13,15 +13,17 @@ using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Critters of Calamity Launcher")]
 [assembly: AssemblyProduct("Critters of Calamity")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace CrittersOfCalamity.Launcher
 {
@@ -31,11 +33,13 @@ namespace CrittersOfCalamity.Launcher
         public const string RawBase = "https://raw.githubusercontent.com/ebenlyon/critters-of-calamity-releases/main/";
         public const string Manifest = RawBase + "latest.json";
         public const string GameExe = "Critters of Calamity.exe";
-        public static readonly Version LauncherVersion = new Version(1, 0, 0);
+        public static readonly Version LauncherVersion = new Version(1, 1, 0);
 
         public static string InstallRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CrittersOfCalamity");
         public static string GameDir => Path.Combine(InstallRoot, "Game");
         public static string VersionFile => Path.Combine(GameDir, "version.txt");
+        /// <summary>Screen settings shared with the game: "width height mode" (mode = borderless, exclusive or windowed).</summary>
+        public static string DisplayFile => Path.Combine(InstallRoot, "display.txt");
     }
 
     class ReleaseInfo
@@ -64,6 +68,7 @@ namespace CrittersOfCalamity.Launcher
         readonly ProgressBar _progress = new ProgressBar();
         readonly Button _play = new Button();
         readonly Button _check = new Button();
+        readonly Button _settings = new Button();
         readonly TextBox _notes = new TextBox();
         ReleaseInfo _latest;
         bool _busy;
@@ -105,16 +110,21 @@ namespace CrittersOfCalamity.Launcher
             StyleButton(_play, Orange, 14f);
             _play.Click += async (s, e) => await PlayOrUpdate();
 
-            _check.SetBounds(20, 326, 200, 52);
+            _check.SetBounds(20, 326, 175, 52);
             StyleButton(_check, Panel, 11f);
             _check.Text = "Check for updates";
             _check.Click += async (s, e) => await CheckForUpdates();
 
-            Controls.AddRange(new Control[] { title, _versions, _notes, _status, _progress, _play, _check });
+            _settings.SetBounds(205, 326, 115, 52);
+            StyleButton(_settings, Panel, 11f);
+            _settings.Text = "Settings";
+            _settings.Click += (s, e) => { using (var f = new SettingsForm()) f.ShowDialog(this); };
+
+            Controls.AddRange(new Control[] { title, _versions, _notes, _status, _progress, _play, _check, _settings });
             Shown += async (s, e) => await CheckForUpdates();
         }
 
-        static void StyleButton(Button b, Color bg, float size)
+        internal static void StyleButton(Button b, Color bg, float size)
         {
             b.FlatStyle = FlatStyle.Flat;
             b.FlatAppearance.BorderSize = 0;
@@ -269,7 +279,7 @@ namespace CrittersOfCalamity.Launcher
         {
             string exe = Path.Combine(Config.GameDir, Config.GameExe);
             if (!File.Exists(exe)) { _status.Text = "The game isn't installed yet."; return; }
-            Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = Config.GameDir, UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = Config.GameDir, UseShellExecute = true, Arguments = DisplaySettings.Load().ToArgs() });
             Close();
         }
 
@@ -299,6 +309,162 @@ namespace CrittersOfCalamity.Launcher
                 _busy = false;
                 RefreshButtons();
             }
+        }
+    }
+
+    /// <summary>The screen size and display mode the game starts with. Shared with the game's own Settings window.</summary>
+    class DisplaySettings
+    {
+        public int Width, Height;
+        public string Mode = "borderless";   // borderless (fullscreen window), exclusive (fullscreen), windowed
+
+        public static readonly string[] Modes = { "borderless", "exclusive", "windowed" };
+        public static readonly string[] ModeNames = { "Fullscreen", "Exclusive fullscreen", "Windowed" };
+
+        /// <summary>Saved settings, or the desktop's own resolution in fullscreen if none were saved.</summary>
+        public static DisplaySettings Load()
+        {
+            var d = new DisplaySettings();
+            var native = Screens.Native();
+            d.Width = native.Width; d.Height = native.Height;
+            try
+            {
+                if (File.Exists(Config.DisplayFile))
+                {
+                    var p = File.ReadAllText(Config.DisplayFile).Trim().Split(' ');
+                    if (p.Length >= 3 && int.TryParse(p[0], out var w) && int.TryParse(p[1], out var h) && w >= 640 && h >= 480 && Modes.Contains(p[2]))
+                    { d.Width = w; d.Height = h; d.Mode = p[2]; }
+                }
+            }
+            catch { }
+            // Never start bigger than the screen
+            if (d.Width > native.Width || d.Height > native.Height) { d.Width = native.Width; d.Height = native.Height; }
+            return d;
+        }
+
+        public void Save()
+        {
+            Directory.CreateDirectory(Config.InstallRoot);
+            File.WriteAllText(Config.DisplayFile, $"{Width} {Height} {Mode}");
+        }
+
+        /// <summary>Unity's standard command-line options for the player window.</summary>
+        public string ToArgs() =>
+            $"-screen-width {Width} -screen-height {Height} -screen-fullscreen {(Mode == "windowed" ? 0 : 1)} -window-mode {Mode}";
+    }
+
+    /// <summary>Reads the real (not DPI-scaled) display modes of the main screen.</summary>
+    static class Screens
+    {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct DEVMODE
+        {
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string dmDeviceName;
+            public short dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra;
+            public int dmFields, dmPositionX, dmPositionY, dmDisplayOrientation, dmDisplayFixedOutput;
+            public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string dmFormName;
+            public short dmLogPixels;
+            public int dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency;
+            public int dmICMMethod, dmICMIntent, dmMediaType, dmDitherType, dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight;
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern bool EnumDisplaySettings(string deviceName, int modeNum, ref DEVMODE devMode);
+        const int ENUM_CURRENT_SETTINGS = -1;
+
+        public static Size Native()
+        {
+            try
+            {
+                var dm = new DEVMODE { dmSize = (short)Marshal.SizeOf(typeof(DEVMODE)) };
+                if (EnumDisplaySettings(null, ENUM_CURRENT_SETTINGS, ref dm) && dm.dmPelsWidth > 0) return new Size(dm.dmPelsWidth, dm.dmPelsHeight);
+            }
+            catch { }
+            return Screen.PrimaryScreen.Bounds.Size;
+        }
+
+        public static List<Size> All()
+        {
+            var native = Native();
+            var list = new List<Size>();
+            try
+            {
+                var dm = new DEVMODE { dmSize = (short)Marshal.SizeOf(typeof(DEVMODE)) };
+                for (int i = 0; EnumDisplaySettings(null, i, ref dm); i++)
+                {
+                    var sz = new Size(dm.dmPelsWidth, dm.dmPelsHeight);
+                    if (sz.Width >= 800 && sz.Height >= 600 && sz.Width <= native.Width && sz.Height <= native.Height && !list.Contains(sz)) list.Add(sz);
+                }
+            }
+            catch { }
+            if (!list.Contains(native)) list.Add(native);
+            return list.OrderByDescending(z => z.Width * z.Height).ThenByDescending(z => z.Width).ToList();
+        }
+    }
+
+    /// <summary>Lets the player pick the game's screen size and display mode before playing.</summary>
+    class SettingsForm : Form
+    {
+        static readonly Color Bg = ColorTranslator.FromHtml("#1A222D");
+        static readonly Color Panel = ColorTranslator.FromHtml("#2A3442");
+        static readonly Color Parchment = ColorTranslator.FromHtml("#E5D5B5");
+        static readonly Color Gold = ColorTranslator.FromHtml("#F2B83B");
+        static readonly Color Muted = ColorTranslator.FromHtml("#AAB8C6");
+        static readonly Color Green = ColorTranslator.FromHtml("#2F7A3E");
+
+        readonly ComboBox _res = new ComboBox();
+        readonly ComboBox _mode = new ComboBox();
+        readonly List<Size> _sizes = Screens.All();
+
+        public SettingsForm()
+        {
+            Text = "Settings";
+            ClientSize = new Size(420, 280);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false; MinimizeBox = false;
+            StartPosition = FormStartPosition.CenterParent;
+            BackColor = Bg; ForeColor = Parchment;
+            Font = new Font("Segoe UI", 10f);
+
+            var title = new Label { Text = "SCREEN SETTINGS", ForeColor = Gold, Font = new Font("Segoe UI", 15f, FontStyle.Bold), Bounds = new Rectangle(20, 14, 380, 32) };
+            var native = Screens.Native();
+            var cur = DisplaySettings.Load();
+
+            var resLabel = new Label { Text = "Resolution", Bounds = new Rectangle(20, 60, 120, 24) };
+            _res.SetBounds(150, 58, 250, 28);
+            _res.DropDownStyle = ComboBoxStyle.DropDownList;
+            foreach (var z in _sizes) _res.Items.Add($"{z.Width} x {z.Height}" + (z == native ? "  (your screen)" : ""));
+            int idx = _sizes.FindIndex(z => z.Width == cur.Width && z.Height == cur.Height);
+            _res.SelectedIndex = idx >= 0 ? idx : _sizes.FindIndex(z => z == native);
+
+            var modeLabel = new Label { Text = "Display mode", Bounds = new Rectangle(20, 102, 120, 24) };
+            _mode.SetBounds(150, 100, 250, 28);
+            _mode.DropDownStyle = ComboBoxStyle.DropDownList;
+            _mode.Items.AddRange(DisplaySettings.ModeNames);
+            _mode.SelectedIndex = Math.Max(0, Array.IndexOf(DisplaySettings.Modes, cur.Mode));
+
+            var hint = new Label
+            {
+                Text = "If the game doesn't fit your screen, click \"Match my screen\" and Save. You can also change this in the game's Settings button.",
+                ForeColor = Muted, Bounds = new Rectangle(20, 140, 380, 60)
+            };
+
+            var match = new Button { Text = "Match my screen", Bounds = new Rectangle(20, 214, 150, 44) };
+            LauncherForm.StyleButton(match, Panel, 10f);
+            match.Click += (s, e) => { _res.SelectedIndex = _sizes.FindIndex(z => z == native); _mode.SelectedIndex = 0; };
+
+            var save = new Button { Text = "Save", Bounds = new Rectangle(250, 214, 150, 44) };
+            LauncherForm.StyleButton(save, Green, 11f);
+            save.Click += (s, e) =>
+            {
+                var z = _sizes[Math.Max(0, _res.SelectedIndex)];
+                var d = new DisplaySettings { Width = z.Width, Height = z.Height, Mode = DisplaySettings.Modes[Math.Max(0, _mode.SelectedIndex)] };
+                try { d.Save(); } catch (Exception ex) { MessageBox.Show(this, "Couldn't save: " + ex.Message, "Settings"); return; }
+                Close();
+            };
+
+            Controls.AddRange(new Control[] { title, resLabel, _res, modeLabel, _mode, hint, match, save });
         }
     }
 

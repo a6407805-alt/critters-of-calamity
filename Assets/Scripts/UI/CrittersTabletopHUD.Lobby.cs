@@ -92,7 +92,9 @@ namespace CrittersOfCalamity.UI
                     await _mpManager.JoinOnlineAsync(_menuJoinCodeInput.text);
                 });
 
-            CreateButton(menu, "BtnQuit", "Quit Game", new Vector2(0.36f, 0.03f), new Vector2(0.64f, 0.10f),
+            CreateButton(menu, "BtnMenuSettings", "Settings", new Vector2(0.20f, 0.03f), new Vector2(0.48f, 0.10f),
+                Palette.FromHex("#3A4B63"), () => OpenSettings());
+            CreateButton(menu, "BtnQuit", "Quit Game", new Vector2(0.52f, 0.03f), new Vector2(0.80f, 0.10f),
                 Palette.FromHex("#5A2A2A"), () => Application.Quit());
 
             // ----- LOBBY VIEW -----
