@@ -371,12 +371,19 @@ namespace CrittersOfCalamity.UI
                 string line = raw.TrimEnd();
                 if (line.Length == 0) { sb.AppendLine(); continue; }
                 // Short lines without a full stop are sub-headings in the rulebook.
-                bool heading = line.Length < 48 && !line.EndsWith(".") && !line.StartsWith("•") && !char.IsDigit(line[0]);
+                bool heading = line.Length < 48 && !line.EndsWith(".") && !line.StartsWith("•") && !char.IsDigit(line[0]) &&
+                               !line.StartsWith("Cost:") && !line.StartsWith("Stats:");   // these belong with the line above
                 if (heading) { sb.AppendLine($"\n<b><color=#F2B83B>{line}</color></b>"); continue; }
                 // Unity's text can't draw tabs, so "•\tText" and "1.\tText" ran together: indent them with spaces instead.
                 var bullet = Regex.Match(line, @"^(•|\d+\.|[a-z]\.)\t(.*)$");
                 if (bullet.Success)
                     line = bullet.Groups[1].Value == "•" ? $"   •  {bullet.Groups[2].Value}" : $"   <b>{bullet.Groups[1].Value}</b>  {bullet.Groups[2].Value}";
+                else
+                {
+                    // Bold the short label that starts a rule ("Pilgrim Ability: Martyrdom." / "Recruit: ...") so each rule is easy to find
+                    var label = Regex.Match(line, @"^([A-Z][^:.<>]{1,45}):\s");
+                    if (label.Success) line = $"<b>{label.Groups[1].Value}:</b>{line.Substring(label.Length - 1)}";
+                }
                 sb.AppendLine(line.Replace("\t", "    "));
             }
             return AddBreathingRoom(sb.ToString());
