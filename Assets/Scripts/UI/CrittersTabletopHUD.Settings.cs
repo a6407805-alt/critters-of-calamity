@@ -145,7 +145,7 @@ namespace CrittersOfCalamity.UI
             if (_settingsRevert == null)
                 _settingsInfoText.text = $"Now: {Screen.width} x {Screen.height}, {DisplayModeNames[FromUnityMode(Screen.fullScreenMode)]}.\n" +
                     "If the game doesn't fit your screen, click \"Match my screen\" and then Apply. " +
-                    "In Windowed mode you can also drag the window's edges.";
+                    "";
         }
 
         private void ApplySettings()
