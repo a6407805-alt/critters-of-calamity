@@ -119,7 +119,7 @@ namespace CrittersOfCalamity.Model
             {
                 new FactionSubDeckCardDef { Id = "plague_authority", DeckName = "Forage Deck", Title = "Plague: Authority Drain", Copies = 1, EffectText = "You lose 1 Authority and the Horde player gains 1 Authority." },
                 new FactionSubDeckCardDef { Id = "plague_infest", DeckName = "Forage Deck", Title = "Plague: Rummaging Swarm", Copies = 1, EffectText = "Place 1 Millions unit from the Horde player's supply on a tile with one of your pieces, then discard 1 resource from your Resource Pile." },
-                new FactionSubDeckCardDef { Id = "plague_sickness", DeckName = "Forage Deck", Title = "Plague: Sickness", Copies = 1, EffectText = "If you have units on a tile with a Millions unit, one of those units (your choice) loses 1 HP." },
+                new FactionSubDeckCardDef { Id = "plague_sickness", DeckName = "Forage Deck", Title = "Plague: Sickness", Copies = 1, EffectText = "One of your units on a tile with a Millions unit loses 1 HP. Then the Horde player summons 1 Millions unit on any tile with an enemy unit." },
                 new FactionSubDeckCardDef { Id = "rummage_stone_1", DeckName = "Forage Deck", Title = "Rummage: 2 Stone", Copies = 1, EffectText = "The Horde player gains 2 Stone from the resource deck." },
                 new FactionSubDeckCardDef { Id = "rummage_stone_2", DeckName = "Forage Deck", Title = "Rummage: 2 Stone", Copies = 1, EffectText = "The Horde player gains 2 Stone from the resource deck." },
                 new FactionSubDeckCardDef { Id = "rummage_wood_1", DeckName = "Forage Deck", Title = "Rummage: 2 Wood", Copies = 1, EffectText = "The Horde player gains 2 Wood from the resource deck." },
@@ -159,7 +159,7 @@ namespace CrittersOfCalamity.Model
                 {
                     Id = "damaged_anankian_chariot", Name = "Damaged Anankian Chariot", CopiesInDeck = 2,
                     Cost = new ResourceCost(wood: 1, stone: 2),
-                    DisassembleGain = new ResourceCost(stone: 2),
+                    DisassembleGain = new ResourceCost(stone: 1),
                     KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
                     EffectText = "When Crafted: Recruit 1 basic unit at each of your recruitment buildings. Those units cannot move this turn, but they can loot and battle."
                 },
@@ -274,7 +274,7 @@ namespace CrittersOfCalamity.Model
                     Cost = new ResourceCost(wood: 1),
                     DisassembleGain = new ResourceCost(wood: 2),
                     KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
-                    EffectText = "When Crafted: Gain 2 Wood. Disassemble: Gain 2 Wood."
+                    EffectText = "When Crafted: Gain 2 Wood."
                 },
                 new RelicCardDef
                 {
@@ -282,7 +282,7 @@ namespace CrittersOfCalamity.Model
                     Cost = new ResourceCost(stone: 1),
                     DisassembleGain = new ResourceCost(stone: 2),
                     KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
-                    EffectText = "When Crafted: Gain 2 Stone. Disassemble: Gain 2 Stone."
+                    EffectText = "When Crafted: Gain 2 Stone."
                 },
                 new RelicCardDef
                 {
@@ -290,7 +290,7 @@ namespace CrittersOfCalamity.Model
                     Cost = new ResourceCost(any: 1),
                     DisassembleGain = new ResourceCost(wood: 1, stone: 1),
                     KeepOnTableWhenCrafted = false, HasCraftedEffect = true,
-                    EffectText = "When Crafted: Gain 1 Stone and 1 Wood. Disassemble: Gain 1 Stone and 1 Wood."
+                    EffectText = "When Crafted: Gain 1 Stone and 1 Wood."
                 }
             };
         }
@@ -412,7 +412,7 @@ namespace CrittersOfCalamity.Model
                     ShortSummary = "Mid to late game faction that martyrs Pilgrims to fuel a Crusade that only grows stronger with time.",
                     HowToScoreAuthority = "Martyrdom: 1 Authority per Pilgrim sacrificed. Holy Relic Tokens: 1 Authority when crafted. Alms: 1 Authority each time the Platy-Pope levels up. Level 5: turn 5 Faith into 1 Authority. Remove enemy buildings, tokens and special units (1 extra during a Crusade).",
                     LoreDescription = "The Papacy holds the platypus to be the divinely inspired creation of a divine being. Turning away from the heresy of the Ananke, the Platypus Pilgrims carry their gospel into hostile lands and die for it gladly.",
-                    SetupInstructions = "Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units. Set the Faith Meter and the Platy-Pope Level Meter to 0.",
+                    SetupInstructions = "Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units. Set the Faith Meter and the Platy-Pope Level Meter to 0. During setup, other factions cannot set up within 2 tiles of the Citadel.",
                     PrimaryColor = Palette.FromHex("#C49A6C"),
                     SecondaryColor = Palette.FromHex("#F5E6A8"),
                     PrimaryBuilding = BuildingType.TheCitadel,
@@ -423,6 +423,8 @@ namespace CrittersOfCalamity.Model
                         "Prophetic Vision: At the start of your Draw phase, before drawing, look at top 3 Relic cards: add 1 to Hand and put 2 on bottom of deck.",
                         "Alms: Once per Main phase while Platy-Pope is on board and Faith == 5 -> Raise Platy-Pope Level by 1, gain 1 Authority, reset Faith to 0.",
                         "Indulgences: During your Main phase, discard 1 Gold to gain 2 Faith.",
+                        "Peaceful Travelers (Pilgrims): When a side made up only of Pilgrims loses a battle, it does not deal the 1 HP of mandatory loser damage.",
+                        "Crucifixion (Platy-Pope Level 4+): During your Main phase, remove 1 of your Pilgrims from the board to gain 1 Faith.",
                         "Platy-Pope Return: Start of Excavation phase, if Platy-Pope is off board and Citadel is on board, place Platy-Pope at Citadel at full HP (Level resets to 1, Faith to 0).",
                         "Crusade: When the Platy-Pope reaches Level 1, and each time it levels up after that, enter a Crusade for your next 2 turns (overlapping Crusades add together). During a Crusade, Crusaders gain +1 Attack, removing an enemy building, token or special unit gives 1 extra Authority, and winning a battle gives 1 Faith. At Level 4, Crusaders removing enemy units score Authority (and enemies removing Crusaders score too)."
                     },
@@ -439,9 +441,9 @@ namespace CrittersOfCalamity.Model
                     },
                     Units = new List<UnitDef>
                     {
-                        new UnitDef { Id = "pilgrim", Name = "Pilgrim", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 6, SummoningCondition = "Recruit at The Citadel", AbilitiesText = "Martyrdom: When a Pilgrim ends a Move action on a tile with enemy units, remove that Pilgrim to gain 1 Faith and 1 Authority!" },
+                        new UnitDef { Id = "pilgrim", Name = "Pilgrim", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 6, SummoningCondition = "Recruit at The Citadel", AbilitiesText = "Martyrdom: When a Pilgrim ends a Move action on a tile with enemy units, remove that Pilgrim to gain 1 Faith and 1 Authority! Peaceful Travelers: when a side made up only of Pilgrims loses a battle, it does not deal the 1 HP of mandatory loser damage." },
                         new UnitDef { Id = "crusader", Name = "Crusader", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = false, BaseAttack = 1, BaseDefense = 1, BaseMaxHP = 1, SupplyCount = 13, SummoningCondition = "Recruit at The Citadel (Platy-Pope Lv1+)", AbilitiesText = "Holy Relic Token: Once per Main phase while a Crusader is on board, discard 1W+1S+1G to place 1 Holy Relic Token on the Citadel's tile and immediately gain 1 Authority (+1 Faith each End phase)." },
-                        new UnitDef { Id = "platy_pope", Name = "The Platy-Pope", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 3, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "Starts on board; returns at Citadel at start of Excavation phase if removed.", AbilitiesText = "Unyielding: Cannot move or be moved. Crusade (2 turns on each level-up): Crusaders +1 Attack, +1 extra Authority on removing enemy building/token/special unit, +1 Faith on battle win. Lv5: Spend 3 Faith -> +1 Authority." }
+                        new UnitDef { Id = "platy_pope", Name = "The Platy-Pope", Faction = FactionId.PlatypusPapacy, IsSpecialUnit = true, BaseAttack = 0, BaseDefense = 3, BaseMaxHP = 3, SupplyCount = 1, SummoningCondition = "Starts on board; returns at Citadel at start of Excavation phase if removed.", AbilitiesText = "Unyielding: Cannot move or be moved. Crusade (2 turns on each level-up): Crusaders +1 Attack, +1 extra Authority on removing enemy building/token/special unit, +1 Faith on battle win. Lv4: Crucifixion (remove 1 Pilgrim -> +1 Faith). Lv4: Crucifixion (remove 1 Pilgrim -> +1 Faith). Lv5: Spend 5 Faith -> +1 Authority." }
                     }
                 },
 
@@ -496,7 +498,7 @@ namespace CrittersOfCalamity.Model
                     ShortSummary = "Late game faction that harvests the dead from every battle, hoards resources, and spends fallen units to summon powerful undead horrors.",
                     HowToScoreAuthority = "Undead Shackles: 1 Authority per 2 Dead in the Cauldron each End phase (max 2). Summoning special units: The Bloat 1, The Vanguard 3, The Brute 4. Ring of Favor explosions: 2 more. Remove enemy buildings, tokens and special units.",
                     LoreDescription = "The incarnate of death came to the Continent long before the other factions did. Where armies clash he seeds his creeping miasma, and the fallen of every banner rise again in his service.",
-                    SetupInstructions = "Place 3 Miasma Tiles facedown on the gameboard in any pattern (not directly adjacent or on the same tile). Start with 3 Skeleton Units on the Cauldron ('Dead' units).",
+                    SetupInstructions = "At the very end of setup (after any Tanuki Coin Tokens), place 3 Miasma Tiles facedown on any tiles, ignoring other factions' setup restrictions (not directly adjacent or on the same tile). Start with 3 Skeleton Units on the Cauldron ('Dead' units).",
                     PrimaryColor = Palette.FromHex("#7B46B8"),
                     SecondaryColor = Palette.FromHex("#D6C9E8"),
                     PrimaryBuilding = BuildingType.None,
@@ -508,7 +510,7 @@ namespace CrittersOfCalamity.Model
                         "Plague: When you spend Gold on equipment, place 1 Miasma Tile directly adjacent to an existing Miasma Tile.",
                         "Undead Shackles: Once during your end phase, gain 1 Authority per 2 Dead in the Cauldron (cap 2 Authority per turn).",
                         "Cauldron: When a unit is removed on a Miasma Tile or an adjacent tile, place 1 removed unit from each faction onto the Cauldron as 'Dead'.",
-                        "Arise: Once per turn, spend 1 Dead from the Cauldron to summon 1 Skeleton Unit on a Miasma Tile."
+                        "Arise: Twice per turn, spend 1 Dead from the Cauldron to summon 1 Skeleton Unit on a Miasma Tile."
                     },
                     EnemyAuthorityScoring = new List<string>
                     {
@@ -561,7 +563,7 @@ namespace CrittersOfCalamity.Model
                         "Unquenchable Spirit: Once per Main phase, a Squirrel on a Fire Tile can use a Main Phase action to loot the Fire Tile for 1 Charcoal card. Only the Squirrels can loot Fire Tiles, and only for Charcoal.",
                         "Flames of War: End of Fire Tile resolutions -> +1 Authority per 2HP damage dealt to enemies, +1 Authority per 2 enemies moved by Fire (max 4/turn).",
                         "Forest Fire: During End phase -> +1 Authority for every Fire Tile adjacent to another faction's pieces (cap 2).",
-                        "Ignite: During End phase -> Burn 1 card from Hand to relocate 1 Fire Tile to a forest tile adjacent to an enemy unit.",
+                        "Ignite: During End phase, after all Fire Tiles resolve -> Burn 1 card from Hand to relocate 1 Fire Tile to a forest tile adjacent to an enemy unit (or a stream or ruin tile with a Tar Pit Token).",
                         "Disruption: Once per Main phase -> Burn 2 cards of your choice in your Resource Pile to burn 1 Excavation card and 1 card from each player's Resource Pile (+1 Authority if Gold or Gold-disassemble relic burned)."
                     },
                     EnemyAuthorityScoring = new List<string>
@@ -632,7 +634,7 @@ namespace CrittersOfCalamity.Model
                     Tier = FactionDifficultyTier.RecommendedForNewPlayers,
                     DifficultyRatingOutOf10 = 7,
                     ShortSummary = "Explosive special unit faction that scores Authority by hurling thorns across the board and scattering seeds in its wake.",
-                    HowToScoreAuthority = "Thistle Barrage and Furious Lashing: 1 Authority per 2 HP of damage. Bursting Into Bloom: 1 Authority if it removes an enemy unit. Pollination: 1 Authority with Thorned Seeds on 4+ tiles (2 with 7+). Remove enemy buildings, tokens and special units.",
+                    HowToScoreAuthority = "Thistle Barrage: 1 Authority per 2 HP of damage. Furious Lashing: 1 Authority if it removes the unit. Bursting Into Bloom: 1 Authority if it removes an enemy unit. Pollination: 1 Authority with Thorned Seeds on 4+ tiles (2 with 7+). Remove enemy buildings, tokens and special units.",
                     LoreDescription = "Born with an instinctual hatred of other creatures, the Blooming Briar hurls its spines across the Continent so that its seedlings might take root, and when stripped bare, thrashes out one last fury.",
                     SetupInstructions = "Place the Blooming Briar with 6 Thorns, 2 Thorned Seeds, and 1 Prickly Thicket on a forest tile with no enemy pieces within 4 tiles. Other factions cannot place their pieces within 4 tiles of any Briared Flower pieces during setup.",
                     PrimaryColor = Palette.FromHex("#C2295A"),
@@ -661,7 +663,7 @@ namespace CrittersOfCalamity.Model
                     Units = new List<UnitDef>
                     {
                         new UnitDef { Id = "thorned_seed", Name = "Thorned Seed", Faction = FactionId.BriaredFlower, IsSpecialUnit = false, BaseAttack = 0, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 20, SummoningCondition = "Recruit at Prickly Thickets or spawned via Thistle Barrage / Propagation", AbilitiesText = "Bursting Into Bloom: Once during your Main phase, remove 1 Thorned Seed from the board to deal 1HP damage to 1 enemy unit on its tile, then gain 1 Authority if you removed an enemy unit." },
-                        new UnitDef { Id = "blooming_briar", Name = "Blooming Briar", Faction = FactionId.BriaredFlower, IsSpecialUnit = true, BaseAttack = 6, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 1, SummoningCondition = "Starts on board with 6 Thorns; respawns via In Half Bloom.", AbilitiesText = "With 1-6 Thorns: Thistle Barrage (up to 2x/Main phase, 3 tile range, 4 on a Prickly Thicket, 1 Thorn + 1 Res per unit -> 1HP each & spawn Seed; +1 Auth per 2HP dealt; or 1 Thorn to remove isolated enemy buildings/tokens within 3 tiles), Thorn Armor (1 Thorn blocks 1HP), Sun Eater (2 Seeds + 3 Res -> +2 Thorns). At 0 Thorns (Frenzied Bloom): Withered Blossom (+3 ATK, 2HP bypass), Furious Lashing (1HP AoE within 3 tiles), Propagation." }
+                        new UnitDef { Id = "blooming_briar", Name = "Blooming Briar", Faction = FactionId.BriaredFlower, IsSpecialUnit = true, BaseAttack = 6, BaseDefense = 0, BaseMaxHP = 1, SupplyCount = 1, SummoningCondition = "Starts on board with 6 Thorns; respawns via In Half Bloom.", AbilitiesText = "With 1-6 Thorns: Thistle Barrage (up to 2x/Main phase, 3 tile range, 4 on a Prickly Thicket, 1 Thorn + 1 Res of your choice per unit -> 1HP each & spawn Seed; +1 Auth per 2HP dealt; or 1 Thorn to remove isolated enemy buildings/tokens within 3 tiles), Thorn Armor (1 Thorn blocks 1HP), Sun Eater (2 Seeds + 3 Res -> +2 Thorns). At 0 Thorns (Frenzied Bloom): Withered Blossom (+3 ATK, 2HP bypass), Furious Lashing (1HP to 1 enemy unit within 2 tiles; +1 Auth if it is removed), Propagation." }
                     }
                 },
 

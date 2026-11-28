@@ -101,7 +101,12 @@ namespace CrittersOfCalamity.Visuals
                 case "capybara": if (!SculptedModel(body, "Models/Capybara", a, b, 0.55f, u)) Capybara(body, a, b); break;
                 case "capybara_trader": if (!SculptedModel(body, "Models/CapybaraTrader", a, b, 0.62f)) { Capybara(body, a, b); Pack(body, b); } break;
                 case "riverkeeper":
-                    if (!SculptedModel(body, "Models/Riverkeeper", a, b, 0.70f, u)) { Capybara(body, a, b); S(body, new Vector3(0f, 0.33f, -0.16f), Vector3.one * 0.09f, Palette.CarrotOrange); }
+                    // Darker fur, a river-blue blanket and a raised stone plinth so he stands out from the capybaras in front of him
+                    a = Palette.FromHex("#5A3A22");
+                    b = Palette.FromHex("#68B5D6");
+                    Cyl(root, new Vector3(0f, 0.06f, 0f), new Vector3(0.30f, 0.04f, 0.30f), Vector3.zero, Palette.RuinStoneLight, 0.4f);
+                    body.localPosition = new Vector3(0f, 0.10f, 0f);
+                    if (!SculptedModel(body, "Models/Riverkeeper", a, b, 0.62f, u)) { Capybara(body, a, b); S(body, new Vector3(0f, 0.33f, -0.16f), Vector3.one * 0.09f, Palette.CarrotOrange); }
                     break;
                 case "thorned_seed": if (!SculptedModel(body, "Models/ThornedSeed", a, b, 0.40f, u)) Seed(body, a, b); break;
                 case "blooming_briar":

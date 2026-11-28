@@ -929,6 +929,7 @@ namespace CrittersOfCalamity.Engine
             Log($"{Players[CurrentTurnPlayerIndex].DisplayName} entered 4. End Phase.");
             _endPhaseLogMark = _logTotal;
             _endPhaseIgniteAsked = false;
+            _endPhaseFiresResolved = false;
             _bindingsHandled.Clear();
             ContinueEndPhase();
         }
@@ -937,14 +938,10 @@ namespace CrittersOfCalamity.Engine
         private void ContinueEndPhase()
         {
             var p = Players[CurrentTurnPlayerIndex];
-            if (!_endPhaseIgniteAsked)
-            {
-                _endPhaseIgniteAsked = true;
-                if (OfferIgnite(p)) { OnStateChanged?.Invoke(); return; }
-            }
+            bool resumingAfterIgnite = _endPhaseIgniteAsked;
 
             // Step 1: Resolve "start of your end phase" effects (Part 6 Line 152)
-            if (p.Faction.Id == FactionId.HordeOfTheMillions)
+            if (p.Faction.Id == FactionId.HordeOfTheMillions && !resumingAfterIgnite)
             {
                 // Burrow Effect (start of your End phase): gain 1 Authority for every 2 Burrows on the board
                 int burrows = Board.Values.Count(t => t.Building != null && t.Building.Type == BuildingType.Burrow && t.Building.OwnerPlayerIndex == p.PlayerIndex);
@@ -1022,7 +1019,10 @@ namespace CrittersOfCalamity.Engine
                 case FactionId.FirestartingSquirrels:
                 {
                     int fires = Board.Values.Count(t => t.Overlay == FactionOverlayTileType.Fire && t.OverlayOwnerPlayerIndex == p.PlayerIndex);
-                    int logBefore = GameLog.Count, totalBefore = _logTotal;
+                    if (!_endPhaseFiresResolved)
+                    {
+                    _endPhaseFiresResolved = true;
+                    int totalBefore = _logTotal;
                     ResolveSquirrelsFireTilesEndPhase(p);
                     if (fires > 0)
                     {
@@ -1032,6 +1032,13 @@ namespace CrittersOfCalamity.Engine
                             "Each Fire Tile resolves in order: 1. Squirrels on it clear out for Charcoal. 2. One building or token burns. " +
                             "3. Enemy units are driven to an adjacent tile (forest costs 1 HP). 4. On a 1 or 6 the fire spreads. 5. The top resource card burns (Gold gives 1 Authority).\n\n" +
                             "What happened at each Fire Tile is listed in the End phase popup that follows.");
+                    }
+                    }
+                    // Ignite comes after every Fire Tile has resolved.
+                    if (!_endPhaseIgniteAsked)
+                    {
+                        _endPhaseIgniteAsked = true;
+                        if (OfferIgnite(p)) { OnStateChanged?.Invoke(); return; }
                     }
                 }
                     // Forest Fire: +1 Authority for every Fire Tile adjacent to another faction's pieces (cap 2)
@@ -1283,6 +1290,19 @@ namespace CrittersOfCalamity.Engine
                         if (victim.CurrentHP <= 0)
                             RemoveUnitFromBoard(sharedTile, victim, millionsPlayer != null ? millionsPlayer.PlayerIndex : -1);
                     }
+                    // Then the Horde summons 1 Millions on any tile with an enemy unit.
+                    if (millionsPlayer != null && UnitSupplyLeft(millionsPlayer, "millions") > 0)
+                    {
+                        int hordeSeat = millionsPlayer.PlayerIndex;
+                        var plagueTiles = Board.Values.Where(t => t.Units.Any(u => u.OwnerPlayerIndex != hordeSeat) && CanAddUnitToTile(t, hordeSeat))
+                                                      .Select(t => t.Coord).ToList();
+                        if (plagueTiles.Count > 0)
+                        {
+                            var pc = NewChoice("plague_summon", hordeSeat, "Plague: Sickness",
+                                "Summon 1 Millions on any tile with an enemy unit. Click a green tile.");
+                            pc.Tiles = plagueTiles;
+                        }
+                    }
                     break;
                 case "rummage_stone_1":
                 case "rummage_stone_2":
@@ -1436,27 +1456,19 @@ namespace CrittersOfCalamity.Engine
             if (excavationIndex < 0 || excavationIndex >= ExcavationArea.Count) return false;
 
             var p = Players[CurrentTurnPlayerIndex];
-            if (p.ResourcePile.Count == 0) { Log("Unearthing costs 1 resource card of your choice."); return false; }
+            var card = ExcavationArea[excavationIndex];
+            var cost = RelicCostFor(p, card);
+            if (!CanAfford(p, cost)) return false;
 
-            // Unearth: discard 1 resource card of your choice to add the card to your Hand, uncrafted.
+            // Unearth: pay the card's cost to craft it immediately.
+            SpendResources(p, cost);
+            UseHorseHairBrushIfDiscounted(p, card);
+            ExcavationArea.RemoveAt(excavationIndex);
             UsedUnearthThisTurn = true;
-            var c = NewChoice("unearth_pay", p.PlayerIndex, $"Unearth {ExcavationArea[excavationIndex].Name}",
-                "Discard 1 resource card of your choice to add this card to your Hand (uncrafted).");
-            AddResourceOptions(c, p);
-            c.Number = excavationIndex;
+
+            ResolveCraftedRelic(p, card, "Unearthed");
             OnStateChanged?.Invoke();
             return true;
-        }
-
-        /// <summary>Finishes an Unearth once the player picked the resource card to discard.</summary>
-        private void FinishUnearth(PlayerState p, int excavationIndex, ResourceType pay)
-        {
-            RemoveResources(p, pay, 1);
-            if (excavationIndex < 0 || excavationIndex >= ExcavationArea.Count) return;
-            var card = ExcavationArea[excavationIndex];
-            ExcavationArea.RemoveAt(excavationIndex);
-            p.RelicHand.Add(card);
-            Log($"{p.DisplayName} discarded 1 {pay} to unearth '{card.Name}' into their Hand.");
         }
 
         public bool TryAssembleRelicFromHand(int handIndex)
@@ -2585,7 +2597,10 @@ namespace CrittersOfCalamity.Engine
                         pb.FinalWinnerDamage = Mathf.Min(rawDamage, damageCap);
 
                         // Mandatory Loser Damage: loser always deals 1 HP back to winner unless Horde of the Millions (Oblivious to Danger - Line 210)
-                        pb.MandatoryLoserDamage = (loser.Faction.Id == FactionId.HordeOfTheMillions) ? 0 : 1;
+                        // Pilgrims (Peaceful Travelers) never deal it back either.
+                        var loserUnits = pb.AttackerWon ? pb.DefenderUnits : pb.AttackerUnits;
+                        bool onlyPilgrims = loserUnits.Count > 0 && loserUnits.All(u => u.Definition.Id == "pilgrim");
+                        pb.MandatoryLoserDamage = (loser.Faction.Id == FactionId.HordeOfTheMillions || onlyPilgrims) ? 0 : 1;
 
                         pb.DamageToAttacker = pb.AttackerWon ? pb.MandatoryLoserDamage : pb.FinalWinnerDamage;
                         pb.DamageToDefender = pb.AttackerWon ? pb.FinalWinnerDamage : pb.MandatoryLoserDamage;
@@ -2875,7 +2890,6 @@ namespace CrittersOfCalamity.Engine
             {
                 if (owner.CrusadeActive) atk += 1;
                 if (owner.PlatyPopeLevel >= 2) atk += 1;
-                if (owner.PlatyPopeLevel >= 4) atk += 1;
             }
             else if (owner.Faction.Id == FactionId.BriaredFlower && u.Definition.Id == "blooming_briar" && owner.BriaredFlowerThorns == 0)
             {
@@ -2902,7 +2916,6 @@ namespace CrittersOfCalamity.Engine
             if (owner.Faction.Id == FactionId.PlatypusPapacy && u.Definition.Id == "crusader")
             {
                 if (owner.PlatyPopeLevel >= 2) def += 1;
-                if (owner.PlatyPopeLevel >= 4) def += 1;
             }
             // Anankian Shield on Vanguard buffs all friendly units on the same tile by +1 Defense
             if (owner.Faction.Id == FactionId.Necromouser &&

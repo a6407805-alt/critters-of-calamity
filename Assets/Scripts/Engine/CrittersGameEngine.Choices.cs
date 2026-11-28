@@ -38,6 +38,7 @@ namespace CrittersOfCalamity.Engine
         public const int ChooseSkip = -2;
 
         private bool _endPhaseIgniteAsked;
+        private bool _endPhaseFiresResolved;
 
         /// <summary>Choices waiting their turn (one opened while a battle or another choice was in progress).</summary>
         public List<PendingChoiceState> QueuedChoices = new List<PendingChoiceState>();
@@ -230,9 +231,26 @@ namespace CrittersOfCalamity.Engine
                     break;
                 }
 
-                case "unearth_pay":
-                    if (!skip) FinishUnearth(p, c.Number, ResourceForOption(option));
+                case "plague_summon":
+                    if (skip) break;
+                    SpawnUnit(tile, "millions", p, 1);
+                    Log($"Plague: Sickness: {p.DisplayName} summoned 1 Millions at {tile}.");
                     break;
+
+                case "barrage_pay":
+                {
+                    var r = skip ? (p.ResourcePile.Count > 0 ? p.ResourcePile[0] : ResourceType.Wood) : ResourceForOption(option);
+                    int ri = p.ResourcePile.IndexOf(r);
+                    if (ri < 0 && p.ResourcePile.Count > 0) ri = 0;
+                    if (ri >= 0) { r = p.ResourcePile[ri]; ReturnResourceToDeck(p.ResourcePile, ri); Log($"Thistle Barrage: {p.DisplayName} spent 1 {r}."); }
+                    if (c.Number > 1 && p.ResourcePile.Count > 0)
+                    {
+                        var next = NewChoice("barrage_pay", p.PlayerIndex, "Thistle Barrage", "Choose the next resource card to spend.");
+                        AddResourceOptions(next, p);
+                        next.Number = c.Number - 1;
+                    }
+                    break;
+                }
 
                 case "spoils":
                     GainSpecificResourceFromDeck(p, option == 1 ? ResourceType.Stone : ResourceType.Wood);

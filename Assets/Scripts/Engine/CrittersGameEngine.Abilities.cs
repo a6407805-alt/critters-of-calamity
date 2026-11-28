@@ -637,23 +637,19 @@ namespace CrittersOfCalamity.Engine
 
             L.Add(new AbilitySpec
             {
-                Id = "cleanse", Name = "Cleanse Crusaders (Level 2)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Platy-Pope level 2+, once per turn: discard 1 Gold to remove all debuffs (Trap Leaves, Gluttony) from your Crusaders on one tile.",
-                Prompt1 = "Click a tile with your Crusaders.",
-                Check = pl => pl.PlatyPopeLevel < 2 ? "Needs Platy-Pope level 2." : Uses("cleanse") > 0 ? "Already used this turn." :
-                              Count(pl, ResourceType.Gold) < 1 ? "Needs 1 Gold." : null,
-                Legal1 = (pl, t) => Has(t, pl, "crusader"),
+                Id = "crucifixion", Name = "Crucifixion (Level 4)", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
+                Summary = "Platy-Pope level 4+: remove 1 of your Pilgrims from the board to gain 1 Faith (Faith above 5 is lost).",
+                Prompt1 = "Click a tile with your Pilgrim.",
+                Check = pl => pl.PlatyPopeLevel < 4 ? "Needs Platy-Pope level 4." : pl.PlatypusFaith >= 5 ? "Your Faith is already 5." :
+                              !OnBoard(pl, "pilgrim") ? "No Pilgrim on the board." : null,
+                Legal1 = (pl, t) => Has(t, pl, "pilgrim"),
                 Run = (pl, a, b, o) =>
                 {
-                    RemoveResources(pl, ResourceType.Gold, 1);
-                    foreach (var u in Board[a].Units.Where(u => u.OwnerPlayerIndex == me && u.Definition.Id == "crusader"))
-                    {
-                        u.TrapLeafTurnsRemaining = 0;
-                        if (u.IsTrapped) { u.CannotMoveThisTurn = false; u.IsTrapped = false; }
-                        u.CleansedThisTurn = true;
-                    }
-                    MarkUsed("cleanse");
-                    Log($"{pl.DisplayName} cleansed the Crusaders at {a} of all debuffs.");
+                    var t = Board[a];
+                    var pil = t.Units.First(u => u.OwnerPlayerIndex == me && u.Definition.Id == "pilgrim");
+                    t.Units.Remove(pil);   // returned to the supply, not removed by an enemy
+                    pl.PlatypusFaith = Mathf.Min(5, pl.PlatypusFaith + 1);
+                    Log($"{pl.DisplayName} used Crucifixion on a Pilgrim at {a}: Faith {pl.PlatypusFaith}/5.");
                     return true;
                 }
             });
@@ -783,7 +779,7 @@ namespace CrittersOfCalamity.Engine
             {
                 Id = "necrosis", Name = "Necrosis (explode a Bloat)", Phase = TurnPhase.DrawPhase, Target = AbilityTarget.Tile,
                 Summary = "Draw phase: explode a Bloat. It deals 2 HP to every enemy unit on its tile (past the 1 HP cap). Locket of Memory: also the adjacent tiles. Ring of Favor: +2 Authority and a Miasma Tile there.",
-                Prompt1 = "Click a tile with your Bloat.",
+                Prompt1 = "Click a tile with your Bloat. Red tiles show where its explosion hits.",
                 Legal1 = (pl, t) => Has(t, pl, "the_bloat"),
                 Run = (pl, a, b, o) =>
                 {
@@ -816,9 +812,9 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "arise", Name = "Arise", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Once per turn: spend 1 Dead from the Cauldron to summon 1 Skeleton on a Miasma Tile.",
+                Summary = "Twice per turn: spend 1 Dead from the Cauldron to summon 1 Skeleton on a Miasma Tile.",
                 Prompt1 = "Click a Miasma Tile.",
-                Check = pl => Uses("arise") > 0 ? "Already used this turn." : pl.NecromouserCauldronDeadCount < 1 ? "The Cauldron is empty." :
+                Check = pl => Uses("arise") >= 2 ? "Already used twice this turn." : pl.NecromouserCauldronDeadCount < 1 ? "The Cauldron is empty." :
                               UnitSupplyLeft(pl, "skeleton") <= 0 ? "No Skeletons left in your supply." : null,
                 Legal1 = (pl, t) => IsMiasma(t) && CanAddUnitToTile(t, me),
                 Run = (pl, a, b, o) =>
@@ -943,12 +939,12 @@ namespace CrittersOfCalamity.Engine
             L.Add(new AbilitySpec
             {
                 Id = "firestarter", Name = "Light an Acorn Firestarter", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
-                Summary = "Once per Main phase: discard a crafted Acorn Firestarter to place a Fire Tile on a forest tile with a Squirrel.",
-                Prompt1 = "Click a forest tile with your Squirrel.",
+                Summary = "Once per Main phase: discard a crafted Acorn Firestarter to place a Fire Tile on a forest tile with a Squirrel or the Pyromaniac.",
+                Prompt1 = "Click a forest tile with your Squirrel or Pyromaniac.",
                 Check = pl => Uses("firestarter") > 0 ? "Already used this Main phase." :
                               pl.SquirrelsCraftedFirestarters < 1 ? "No crafted Acorn Firestarter." :
                               FireTilesLeft(pl) <= 0 ? "All 6 Fire Tiles are on the board." : null,
-                Legal1 = (pl, t) => CanTakeFireTile(t) && Has(t, pl, "squirrel"),
+                Legal1 = (pl, t) => CanTakeFireTile(t) && (Has(t, pl, "squirrel") || Has(t, pl, "pyromaniac")),
                 Run = (pl, a, b, o) =>
                 {
                     pl.SquirrelsCraftedFirestarters--;
@@ -1282,7 +1278,10 @@ namespace CrittersOfCalamity.Engine
                     int k = Mathf.Clamp(max - o, 1, max);
                     MarkUsed("barrage");
                     pl.BriaredFlowerThorns -= k;
-                    DiscardCheapest(pl, k);
+                    // The Briar player picks which resource cards pay for the barrage.
+                    var pay = NewChoice("barrage_pay", me, "Thistle Barrage", k == 1 ? "Choose the resource card to spend." : $"Choose resource card 1 of {k} to spend.");
+                    AddResourceOptions(pay, pl);
+                    pay.Number = k;
                     foreach (var enemy in enemies.Take(k))
                     {
                         enemy.CurrentHP -= 1;
@@ -1406,24 +1405,36 @@ namespace CrittersOfCalamity.Engine
 
             L.Add(new AbilitySpec
             {
-                Id = "lashing", Name = "Furious Lashing", Phase = TurnPhase.MainPhase, Target = AbilityTarget.None,
-                Summary = "Frenzied Bloom (0 Thorns), once per Main phase: deal 1 HP to every enemy unit within 3 tiles of the Briar. 1 Authority per 2 HP dealt.",
+                Id = "lashing", Name = "Furious Lashing", Phase = TurnPhase.MainPhase, Target = AbilityTarget.Tile,
+                Summary = "Frenzied Bloom (0 Thorns), once per Main phase: deal 1 HP to 1 enemy unit within 2 tiles of the Briar. If that unit is removed, gain 1 Authority.",
+                Prompt1 = "Click a tile with an enemy unit within 2 tiles of the Blooming Briar.",
                 Check = pl => !OnBoard(pl, "blooming_briar") ? "The Blooming Briar isn't on the board." : pl.BriaredFlowerThorns > 0 ? "Only at 0 Thorns (Frenzied Bloom)." :
                               Uses("lashing") > 0 ? "Already used this Main phase." : null,
-                Run = (pl, a, b, o) =>
+                Legal1 = (pl, t) =>
                 {
                     var bt = TileOf(pl, "blooming_briar");
-                    int dealt = 0;
-                    foreach (var t in Board.Values.Where(x => HexCoord.Distance(x.Coord, bt.Coord) <= 3).ToList())
-                        foreach (var enemy in t.Units.Where(u => u.OwnerPlayerIndex != me).ToList())
-                        {
-                            enemy.CurrentHP -= 1;
-                            dealt++;
-                            if (enemy.CurrentHP <= 0) RemoveUnitFromBoard(t, enemy, me);
-                        }
+                    return bt != null && HexCoord.Distance(bt.Coord, t.Coord) <= 2 && HasEnemyUnits(t, me);
+                },
+                Choices = (pl, a, b) =>
+                {
+                    if (!Board.TryGetValue(a, out var t)) return new List<string>();
+                    return t.Units.Where(u => u.OwnerPlayerIndex != me)
+                        .Select(u => $"Hit {Players[u.OwnerPlayerIndex].DisplayName}'s {u.Definition.Name} ({u.CurrentHP} HP)").ToList();
+                },
+                Run = (pl, a, b, o) =>
+                {
+                    var t = Board[a];
+                    var enemies = t.Units.Where(u => u.OwnerPlayerIndex != me).ToList();
+                    if (enemies.Count == 0) return false;
+                    var enemy = enemies[Mathf.Clamp(o, 0, enemies.Count - 1)];
+                    enemy.CurrentHP -= 1;
                     MarkUsed("lashing");
-                    if (dealt >= 2) AwardAuthority(me, dealt / 2, "Furious Lashing");
-                    Log($"Furious Lashing dealt {dealt} HP within 3 tiles.");
+                    if (enemy.CurrentHP <= 0)
+                    {
+                        RemoveUnitFromBoard(t, enemy, me);
+                        AwardAuthority(me, 1, "Furious Lashing");
+                    }
+                    Log($"Furious Lashing dealt 1 HP to {enemy.Definition.Name} at {a}.");
                     return true;
                 }
             });

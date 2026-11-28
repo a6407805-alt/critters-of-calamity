@@ -548,8 +548,8 @@ namespace CrittersOfCalamity.UI
                 {
                     Meter("Platy-Pope Level", p.PlatyPopeLevel, new[] {
                         "Recruit places 1 Pilgrim", "Recruit also places 1 Crusader; gain Crusade",
-                        "Crusaders +1 Attack and +1 Defense; Cleanse Crusaders (1 Gold)", "Recruit places 2 more Crusaders; 2 Faith removes an enemy basic unit; Crusader moves go 2 tiles",
-                        "Crusaders +1 Attack and +1 Defense; Crusade removals score Authority", "once per turn, 3 Faith gives 1 Authority" });
+                        "Crusaders +1 Attack and +1 Defense", "Recruit places 2 more Crusaders; 2 Faith removes an enemy basic unit; Crusader moves go 2 tiles",
+                        "Crucifixion (remove 1 Pilgrim for 1 Faith); Crusade removals score Authority", "once per turn, 5 Faith gives 1 Authority" });
                     sb.AppendLine($"<b>Faith:</b> {p.PlatypusFaith}/5 (Alms at 5 raises the level and starts a Crusade)");
                     sb.AppendLine(p.CrusadeActive || p.CrusadeTurnsRemaining > 0
                         ? $"<b>Crusade:</b> {(p.CrusadeActive ? "ON this round" : "starts next turn")}, {p.CrusadeTurnsRemaining} more Crusade turn(s) to come."

@@ -266,8 +266,9 @@ namespace CrittersOfCalamity.UI
                 {
                     int slot = i;
                     var card = _engine.ExcavationArea[i];
-                    var ub = GuideButton($"   Unearth <b>{card.Name}</b> (discard 1 resource; it goes to your Hand)", new Color(0.18f, 0.24f, 0.32f, 1f),
-                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slot)), 40f, p.ResourcePile.Count > 0);
+                    var ucost = _engine.RelicCostFor(p, card);
+                    var ub = GuideButton($"   Unearth <b>{card.Name}</b> (pay {ucost} to craft it now)", new Color(0.18f, 0.24f, 0.32f, 1f),
+                        () => _mpManager.Submit(GameCommand.Make(GameCommandType.Unearth, slot)), 40f, _engine.CanAfford(p, ucost));
                     AttachCardHover(ub.gameObject, card);
                 }
             }
@@ -342,8 +343,9 @@ namespace CrittersOfCalamity.UI
                 () => { _tileAction = TileAction.Battle; RefreshTurnGuide(); }, 44f, left > 0 || extra > 0);
             GuideButton("<b>Loot</b>: gather from a tile with your units and no enemies", Palette.FromHex("#8A6E2F"),
                 () => { _tileAction = TileAction.Loot; RefreshTurnGuide(); }, 44f, left > 0);
-            GuideButton("<b>Recruit</b>: place a basic unit at each recruitment building", Palette.FromHex("#4E568C"),
-                () => _mpManager.Submit(GameCommand.Make(GameCommandType.Recruit)), 44f, left > 0);
+            if (p.Faction.Id != FactionId.Necromouser)   // the Necromouser has no building and can't Recruit
+                GuideButton("<b>Recruit</b>: place a basic unit at each recruitment building", Palette.FromHex("#4E568C"),
+                    () => _mpManager.Submit(GameCommand.Make(GameCommandType.Recruit)), 44f, left > 0);
 
             BuildFactionAbilityOptions(p);
             BuildTableRelicOptions(p);
@@ -558,9 +560,13 @@ namespace CrittersOfCalamity.UI
                 if (_tileAction == TileAction.MoveTo) picked.Add(_tileActionOrigin);
                 if (_tileAction == TileAction.Ability && _abilityHasFirst) picked.Add(_abilityFirst);
             }
+            // Necrosis range indicator: every tile each Bloat's explosion would hit, in red.
+            List<HexCoord> blast = null;
+            if (_tileAction == TileAction.Ability && _ability != null && _ability.Id == "necrosis" && ControlsSeat(_engine.CurrentTurnPlayerIndex))
+                blast = NecrosisBlastTiles(_engine.CurrentTurnPlayerIndex);
             if (legal != null || picked.Count > 0)
             {
-                _boardRenderer.SetHighlights(legal, new Color(0.30f, 0.85f, 0.35f, 1f), picked, Palette.AuthorityGold);
+                _boardRenderer.SetHighlights(legal, new Color(0.30f, 0.85f, 0.35f, 1f), picked, Palette.AuthorityGold, blast, new Color(0.90f, 0.25f, 0.25f, 1f));
                 _guideHighlightsShown = true;
             }
             else if (_guideHighlightsShown)
@@ -568,6 +574,20 @@ namespace CrittersOfCalamity.UI
                 _boardRenderer.SetHighlights(null, Color.clear, null, Color.clear);
                 _guideHighlightsShown = false;
             }
+        }
+
+        /// <summary>The tiles a Bloat's explosion would hit: its own tile, plus the adjacent tiles with a Locket of Memory.</summary>
+        private List<HexCoord> NecrosisBlastTiles(int seat)
+        {
+            var tiles = new List<HexCoord>();
+            foreach (var t in _engine.Board.Values)
+                foreach (var b in t.Units.Where(u => u.OwnerPlayerIndex == seat && u.Definition.Id == "the_bloat"))
+                {
+                    if (!tiles.Contains(t.Coord)) tiles.Add(t.Coord);
+                    if (b.EquippedItems.Any(e => e.Id == "locket_of_memory"))
+                        foreach (var n in t.Coord.GetNeighbors()) if (_engine.Board.ContainsKey(n) && !tiles.Contains(n)) tiles.Add(n);
+                }
+            return tiles;
         }
 
         private void OptionHeader(string key, string label, string hexColor, bool available)

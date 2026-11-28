@@ -95,7 +95,12 @@ namespace CrittersOfCalamity.Visuals
         }
 
         /// <summary>Marks tiles on the board (for example, legal setup tiles). Pass null to clear.</summary>
-        public void SetHighlights(IEnumerable<HexCoord> legal, Color legalColor, IEnumerable<HexCoord> picked, Color pickedColor)
+        public void SetHighlights(IEnumerable<HexCoord> legal, Color legalColor, IEnumerable<HexCoord> picked, Color pickedColor) =>
+            SetHighlights(legal, legalColor, picked, pickedColor, null, Color.clear);
+
+        /// <summary>Like SetHighlights, plus a "range" set (for example a Bloat's blast area) drawn on the tiles that aren't already marked.</summary>
+        public void SetHighlights(IEnumerable<HexCoord> legal, Color legalColor, IEnumerable<HexCoord> picked, Color pickedColor,
+                                  IEnumerable<HexCoord> range, Color rangeColor)
         {
             if (_highlightRoot != null) Destroy(_highlightRoot.gameObject);
             _highlightRoot = null;
@@ -114,8 +119,10 @@ namespace CrittersOfCalamity.Visuals
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = GetHighlightMaterial(col);
             }
-            if (legal != null) foreach (var c in legal) Mark(c, legalColor);
-            if (picked != null) foreach (var c in picked) Mark(c, pickedColor);
+            var marked = new HashSet<HexCoord>();
+            if (legal != null) foreach (var c in legal) { Mark(c, legalColor); marked.Add(c); }
+            if (picked != null) foreach (var c in picked) { Mark(c, pickedColor); marked.Add(c); }
+            if (range != null) foreach (var c in range) if (marked.Add(c)) Mark(c, rangeColor);
         }
 
         private static void TagPiece(GameObject go, PieceKind kind, HexCoord coord, Vector3 colliderCenter, Vector3 colliderSize,

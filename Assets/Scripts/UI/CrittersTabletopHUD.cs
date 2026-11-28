@@ -193,7 +193,7 @@ namespace CrittersOfCalamity.UI
                     case GameCommandType.Loot: why = "Can't Loot there (you need units on the tile, no enemy pieces, and it can't have been looted this turn)."; break;
                     case GameCommandType.Recruit: why = "Can't Recruit right now (Main phase, an action left, and a recruitment building with room)."; break;
                     case GameCommandType.CraftBuilding: why = "Can't craft your building there (Excavation phase, unused Craft action, the cost, and a legal tile)."; break;
-                    case GameCommandType.Unearth: why = "Can't Unearth that card (Excavation phase, unused Unearth, and 1 resource card to discard)."; break;
+                    case GameCommandType.Unearth: why = "Can't Unearth that card (Excavation phase, unused Unearth, and its cost)."; break;
                     case GameCommandType.Assemble: why = "Can't Assemble that card (Excavation phase, unused Assemble, and its cost)."; break;
                     case GameCommandType.Disassemble: why = "Can't Disassemble that card (Excavation phase and unused Disassemble)."; break;
                     case GameCommandType.FactionAction: why = "That faction action can't be used right now (check costs, meters and the selected tile)."; break;
@@ -295,7 +295,7 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.005f, 0.36f), new Vector2(0.215f, 0.89f), new Vector2(0f, 0.5f),
                 Vector2.zero, Vector2.zero, Palette.UIPanelDark);
 
-            CreateText(_leftPanelRt, "ExcavationHeader", "EXCAVATION AREA  (Unearth: discard 1 resource)", 14, TextAnchor.MiddleCenter,
+            CreateText(_leftPanelRt, "ExcavationHeader", "EXCAVATION AREA  (Unearth: pay the cost to craft)", 14, TextAnchor.MiddleCenter,
                 new Vector2(0f, 0.945f), new Vector2(1f, 0.995f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
 
             var excRootGo = new GameObject("ExcavationSlots");
@@ -563,7 +563,15 @@ namespace CrittersOfCalamity.UI
             var p = _engine.Players[d.PlayerIndex];
             bool pickOne = d.Options.Count > 0;
             _battleDecisionHeaderText.text = pickOne ? $"{p.DisplayName} ({p.Faction.Name}): {d.Title}" : $"{p.DisplayName} ({p.Faction.Name}): use {d.Title}?";
-            _battleDecisionBodyText.text = d.Prompt;
+            var pr = _engine.PendingBattle != null ? _engine.PendingBattle.Report : null;
+            string sides = "";
+            if (pr != null && pr.AttackerPlayerIndex >= 0 && pr.DefenderPlayerIndex >= 0)
+            {
+                var pa = _engine.Players[pr.AttackerPlayerIndex];
+                var pd = _engine.Players[pr.DefenderPlayerIndex];
+                sides = $"<b>Attacker:</b> {pa.DisplayName} ({pa.Faction.Name})   <b>Defender:</b> {pd.DisplayName} ({pd.Faction.Name})\n";
+            }
+            _battleDecisionBodyText.text = sides + d.Prompt;
             _battleDecisionUse.SetActive(!pickOne);
             _battleDecisionPass.SetActive(!pickOne);
             var bodyRt = _battleDecisionBodyText.rectTransform;
@@ -599,11 +607,12 @@ namespace CrittersOfCalamity.UI
             var def = _engine.Players[r.DefenderPlayerIndex];
 
             var sb = new StringBuilder();
-            sb.AppendLine($"<b>{atk.DisplayName}</b> ({atk.Faction.Name}) attacked <b>{def.DisplayName}</b> ({def.Faction.Name}) at {r.TileCoord}.");
+            sb.AppendLine($"<b>Attacker:</b> {atk.DisplayName} ({atk.Faction.Name})     <b>Defender:</b> {def.DisplayName} ({def.Faction.Name})");
+            sb.AppendLine($"Battle at {r.TileCoord}.");
             sb.AppendLine($"Dice (3-sided): {r.AttackerDice1}{Bonus(r.AttackerDiceBonus)} vs {r.DefenderDice1}{Bonus(r.DefenderDiceBonus)}.   " +
                           $"Totals: <b>{r.AttackerTotal}</b> (Attack {r.AttackerUnitAttackSum}) vs <b>{r.DefenderTotal}</b> (Defense {r.DefenderUnitDefenseSum}).");
             if (r.IsTie) sb.AppendLine("<b>Tie:</b> each side takes 1 HP.");
-            else sb.AppendLine($"<b>{_engine.Players[r.WinnerPlayerIndex].DisplayName} wins</b>: {r.WinnerDamageDealt} HP dealt, {r.MandatoryLoserDamageDealt} HP back from the loser.");
+            else sb.AppendLine($"<b>{_engine.Players[r.WinnerPlayerIndex].DisplayName} ({(r.WinnerPlayerIndex == r.AttackerPlayerIndex ? "attacker" : "defender")}) wins</b>: {r.WinnerDamageDealt} HP dealt, {r.MandatoryLoserDamageDealt} HP back from the loser.");
             sb.Append(r.DestroyedUnitNames.Count > 0 ? $"Removed: {string.Join(", ", r.DestroyedUnitNames)}." : "No units removed.");
             _battlePopupText.text = sb.ToString();
             _battlePopupModal.SetActive(true);

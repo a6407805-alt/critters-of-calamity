@@ -184,10 +184,17 @@ namespace CrittersOfCalamity.Engine
             foreach (var capy in Players.Where(pl => pl.Faction.Id == FactionId.CapybaraCaravan))
             { SetupOrder.Add(capy.PlayerIndex); SetupKinds.Add(SetupStepKind.CapybaraStreams); }
             for (int k = Players.Count - 1; k >= 0; k--)
-            { SetupOrder.Add((FirstPlayerIndex + k) % Players.Count); SetupKinds.Add(SetupStepKind.Faction); } // last player in turn order first
+            {
+                int seat = (FirstPlayerIndex + k) % Players.Count;   // last player in turn order first
+                if (Players[seat].Faction.Id == FactionId.Necromouser) continue;   // Miasma goes down at the very end
+                SetupOrder.Add(seat); SetupKinds.Add(SetupStepKind.Faction);
+            }
             // The Tanuki player places 12 Coin Tokens after everyone else (Faction 4 Setup step 2)
             foreach (var tan in Players.Where(pl => pl.Faction.Id == FactionId.TroubleMakingTanukis))
             { SetupOrder.Add(tan.PlayerIndex); SetupKinds.Add(SetupStepKind.TanukiCoins); }
+            // The Necromouser places its Miasma Tiles last of all, after any Coin Tokens.
+            foreach (var necro in Players.Where(pl => pl.Faction.Id == FactionId.Necromouser))
+            { SetupOrder.Add(necro.PlayerIndex); SetupKinds.Add(SetupStepKind.Faction); }
             SetupCursor = 0;
             SetupPicks.Clear();
             Log($"Setup in reverse turn order: {string.Join(", ", SetupOrder.Select(i => Players[i].DisplayName))}.");
@@ -215,7 +222,7 @@ namespace CrittersOfCalamity.Engine
                 case FactionId.HordeOfTheMillions: return "Click 2 different forest tiles with no enemy units. Each gets a Burrow and 2 Millions units.";
                 case FactionId.PlatypusPapacy: return "Click a forest or stream tile with no enemy units for the Citadel, 3 Pilgrims and the Platy-Pope.";
                 case FactionId.TroubleMakingTanukis: return "Click a forest tile with no enemy units for 3 Tanukis and a Shrine. Your 12 Coin Tokens are placed after everyone else sets up.";
-                case FactionId.Necromouser: return "Click 3 tiles for your facedown Miasma Tiles. They can't be next to each other.";
+                case FactionId.Necromouser: return "Everyone else has set up. Click 3 tiles (any tiles, ignoring other factions' setup limits) for your facedown Miasma Tiles. They can't be next to each other.";
                 case FactionId.FirestartingSquirrels: return "Click 3 forest tiles that touch each other, with no enemy units. Each gets a Squirrel; the first gets your Bunker.";
                 case FactionId.CapybaraCaravan: return "Click a stream tile with no enemy units for 3 Capybaras, the Capybara Trader and a Wallow.";
                 case FactionId.BriaredFlower: return "Click a forest tile with no enemy units within 4 tiles for the Blooming Briar, 2 Thorned Seeds and a Prickly Thicket.";
@@ -235,6 +242,20 @@ namespace CrittersOfCalamity.Engine
             var enemyUnitTiles = Board.Values.Where(t => t.Units.Any(u => u.OwnerPlayerIndex != p.PlayerIndex)).Select(t => t.Coord).ToList();
             bool enemyUnitsHere = enemyUnitTiles.Contains(c);
             var terrain = tile.EffectiveTerrain;
+
+            // Miasma Tiles go down last and ignore every other faction's setup restrictions.
+            if (p.Faction.Id == FactionId.Necromouser)
+            {
+                if (tile.Overlay != FactionOverlayTileType.None) { reason = "A unique faction tile is already there."; return false; }
+                if (picksSoFar.Any(o => HexCoord.Distance(o, c) <= 1)) { reason = "Miasma Tiles can't be next to each other."; return false; }
+                return true;
+            }
+
+            // Nobody else may set up within 2 tiles of the Citadel.
+            if (p.Faction.Id != FactionId.PlatypusPapacy &&
+                Board.Values.Any(t => HexCoord.Distance(t.Coord, c) <= 2 && t.Building != null &&
+                                      t.Building.Type == BuildingType.TheCitadel && t.Building.OwnerPlayerIndex != p.PlayerIndex))
+            { reason = "Too close to the Citadel (no one sets up within 2 tiles of it)."; return false; }
 
             // Nobody else may place within 4 tiles of any Briared Flower piece during setup.
             if (p.Faction.Id != FactionId.BriaredFlower)

@@ -39,6 +39,9 @@ namespace CrittersOfCalamity.UI
             var c = _engine != null && _engine.Players.Count > 0 ? _engine.PendingChoice : null;
             if (c == null) { _choicePopup.SetActive(false); _choiceShownKey = null; return; }
 
+            // A choice (Prophetic Vision and others) waits until the table-wide popups (End phase summary etc.) are closed.
+            if (_announcePopup != null && _announcePopup.activeSelf) { _choicePopup.SetActive(false); return; }
+
             bool mine = ControlsSeat(c.PlayerIndex);
             string key = $"{c.Kind}|{c.PlayerIndex}|{c.Options.Count}|{c.Tiles.Count}|{mine}|{_engine.TurnNumber}";
             _choicePopup.SetActive(true);

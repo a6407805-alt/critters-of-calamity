@@ -22,6 +22,9 @@ namespace CrittersOfCalamity.UI
 
         private GameObject _crusadePanel;
         private Text _crusadeText;
+        private bool _crusadeMinimized;
+        private RectTransform _crusadeRt;
+        private Text _crusadeToggleLabel;
 
         private GameObject _confirmPopup;
         private Text _confirmTitle;
@@ -56,6 +59,14 @@ namespace CrittersOfCalamity.UI
             _crusadeText.resizeTextMinSize = 9;
             _crusadeText.raycastTarget = false;
             cru.GetComponent<Image>().raycastTarget = false;
+            _crusadeRt = cru;
+            // Each player can shrink the panel to a one-line "Crusade X turns" strip (local view only).
+            var tog = CreateButton(cru, "BtnMinimize", "-", new Vector2(0.86f, 0.80f), new Vector2(0.99f, 0.99f), Palette.FromHex("#244A52"), () =>
+            {
+                _crusadeMinimized = !_crusadeMinimized;
+                RefreshCrusadePanel();
+            });
+            _crusadeToggleLabel = tog.GetComponentInChildren<Text>();
             _crusadePanel.SetActive(false);
 
             // Confirm dialog
@@ -101,7 +112,7 @@ namespace CrittersOfCalamity.UI
         private void NextAnnouncement()
         {
             if (_announcePopup == null) return;
-            if (_announcements.Count == 0) { _announcePopup.SetActive(false); return; }
+            if (_announcements.Count == 0) { _announcePopup.SetActive(false); RefreshChoicePopup(); return; }
             var a = _announcements.Dequeue();
             _announceTitle.text = a.Key;
             _announceBody.text = a.Value;
@@ -124,6 +135,23 @@ namespace CrittersOfCalamity.UI
                 : null;
             _crusadePanel.SetActive(pope != null);
             if (pope == null) return;
+            int crusadeTurns = pope.CrusadeActive ? pope.CrusadeTurnsRemaining + 1 : pope.CrusadeTurnsRemaining;
+            if (_crusadeRt != null)
+            {
+                _crusadeRt.anchorMin = _crusadeMinimized ? new Vector2(0.585f, 0.885f) : new Vector2(0.585f, 0.70f);
+                _crusadeRt.anchorMax = new Vector2(0.745f, 0.93f);
+                var tr = _crusadeToggleLabel != null ? _crusadeToggleLabel.transform.parent as RectTransform : null;
+                if (tr != null) { tr.anchorMin = _crusadeMinimized ? new Vector2(0.86f, 0.08f) : new Vector2(0.86f, 0.80f); tr.anchorMax = new Vector2(0.99f, _crusadeMinimized ? 0.92f : 0.99f); }
+                _crusadeText.rectTransform.anchorMax = new Vector2(_crusadeMinimized ? 0.84f : 0.85f, 0.96f);
+            }
+            if (_crusadeToggleLabel != null) _crusadeToggleLabel.text = _crusadeMinimized ? "+" : "-";
+            if (_crusadeMinimized)
+            {
+                _crusadeText.alignment = TextAnchor.MiddleLeft;
+                _crusadeText.text = $"<b><color=#F2B83B>Crusade {crusadeTurns} turn{(crusadeTurns == 1 ? "" : "s")}</color></b>";
+                return;
+            }
+            _crusadeText.alignment = TextAnchor.UpperLeft;
             var lines = new List<string>
             {
                 $"<b><color=#F2B83B>{pope.DisplayName}'s Platypus Papacy is on Crusade!</color></b>",

@@ -125,14 +125,16 @@ Each player follows the Setup on their faction board.
 Setup restrictions only care about enemy units. Enemy buildings, tokens, and tiles never block a setup placement.
 The stacking limit (Part 10) is ignored during setup.
 Exception: if the Trouble Making Tanukis are in the game, the Tanuki player places their Coin Tokens after all other players have finished their setup entirely. See the Tanukis' Setup in Part 17 for details.
-After all players finish setup (including any Coin Token placement), the first player begins their first turn.
+Exception: if the Necro-mouser is in the game, the Necro-mouser places its Miasma Tiles at the very end of setup, after everyone else (and after any Coin Tokens). Miasma Tiles may go on any tile and ignore every other faction's setup restrictions.
+Exception: other factions cannot set up within 2 tiles of the Platypus Papacy's Citadel.
+After all players finish setup (including any Coin Token and Miasma Tile placement), the first player begins their first turn.
 Part 6: How to Play Your Turn
 Each turn has four phases, played in this order. You cannot skip a phase.
 1. Draw Phase
 Draw 1 card from the relic deck into your Hand.
 2. Excavation Phase
 You may take each of the following actions once, in any order:
-Unearth: discard 1 resource card of your choice from your Resource Pile to take 1 of the 5 relic cards in the Excavation Area into your Hand, uncrafted. You can craft it later with an Assemble action by paying its cost.
+Unearth: buy 1 of the 5 relic cards in the Excavation Area by paying the resource cost in its top left corner. The card is crafted immediately (see "When Crafted" and "Effect" in Part 16).
 Craft: craft one of your faction's buildings, tokens, cards, equipment, or tiles by paying its cost, then place it on a legal tile.
 Assemble: craft 1 relic card from your Hand by paying the resource cost in its top left corner.
 Disassemble: discard 1 relic card from your Hand or your Table to gain the resources listed under "Disassemble" on that card.
@@ -208,7 +210,7 @@ Damage Dealt = the winner's Attack Points minus the loser's Defense Points.
 Minimum: if Damage Dealt is less than 1, the winner still deals 1 HP of damage.
 Damage cap: Damage Dealt cannot be more than the number of the winner's participating units. Ignore any excess.
 One HP per unit: each unit can take at most 1 HP of damage per battle unless an effect says otherwise. Ignore damage that cannot be assigned.
-Mandatory loser damage: the loser always deals 1 HP of damage back to the winner. Exception: the Horde of the Millions (Oblivious to Danger).
+Mandatory loser damage: the loser always deals 1 HP of damage back to the winner. Exceptions: the Horde of the Millions (Oblivious to Danger), and a losing side made up only of Pilgrims (Peaceful Travelers).
 Each player chooses which of their own participating units take the damage (in the game, a popup asks you to pick a unit for each HP when not every unit will be hit).
 All damage is applied at the same time at the end of this phase.
 Phase 5: Battle Resolution
@@ -221,7 +223,7 @@ Attacker's Total: dice roll + Attack Points.
 Defender's Total: dice roll + Defense Points.
 Winner: higher Total. Tie: each side takes 1 HP, battle ends.
 Damage: winner's Attack Points minus loser's Defense Points (minimum 1, maximum 1 per winning unit).
-Loser damage: loser deals 1 HP to the winner (not the Horde).
+Loser damage: loser deals 1 HP to the winner (not the Horde, and not a side of only Pilgrims).
 Limit: each unit takes at most 1 HP per battle.
 Resolution: remove all 0 HP units, then resolve win/loss effects, then after-battle effects.
 Part 13: Removing Buildings, Tokens, and Tiles
@@ -303,7 +305,7 @@ Disassemble: Gain 1 Wood.
 Damaged Anankian Chariot (2 copies)
 Cost: 1 Wood, 2 Stone
 When Crafted: Recruit 1 basic unit at each of your recruitment buildings. Those units cannot move this turn, but they can loot and battle.
-Disassemble: Gain 2 Stone.
+Disassemble: Gain 1 Stone.
 War Horn (2 copies)
 Cost: 2 Wood
 Effect: When you are the Defender, at the start of the Attack and Defense Points phase (after the dice are rolled), you may discard this card to place 1 of your basic units from your supply on the battle tile. It participates in the battle.
@@ -496,7 +498,7 @@ After a Forage card is used, it goes to the Forage discard pile. When the Forage
 3 Plague Cards
 1 card: You lose 1 Authority and the Horde player gains 1 Authority.
 1 card: Place 1 Millions unit from the Horde player's supply on a tile with one of your pieces, then discard 1 resource from your Resource Pile.
-1 card: If you have units on a tile with a Millions unit, one of those units (your choice) loses 1 HP.
+1 card: One of your units on a tile with a Millions unit loses 1 HP. Then the Horde player summons 1 Millions unit on any tile with an enemy unit.
 5 Rummage Cards
 2 cards: The Horde player gains 2 Stone from the resource deck.
 2 cards: The Horde player gains 2 Wood from the resource deck.
@@ -534,7 +536,7 @@ Description
 The platypus: no creature so impossible could be an accident. The Papacy holds the platypus to be the divinely inspired creation of a divine being. Turning away from the heresy of the Ananke, the Platypus Pilgrims carry their gospel into hostile lands and die for it gladly. Through death, faith grows, and more Platypi take up the cause as Crusaders. Enshrine your holy relics, grow the Platy-Pope's holiness, crusade, and reclaim the Continent for its rightful heirs.
 How the Papacy scores Authority: Martyrdom (1 Authority each), Holy Relic Tokens (1 Authority when crafted), Alms (1 Authority each time it raises the Platy-Pope's level), Level 5 Faith conversion, and removing enemy buildings, tokens, and special units (extra Authority during a Crusade).
 Setup
-Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units. Set the Faith Meter and the Platy-Pope Level Meter to 0.
+Place the Citadel, 3 Pilgrims, and the Platy-Pope on a forest or stream tile with no enemy units. Set the Faith Meter and the Platy-Pope Level Meter to 0. During setup, other factions cannot set up within 2 tiles of the Citadel.
 Building: The Citadel
 The Papacy has only 1 building, the Citadel. The Citadel can be placed on a forest or stream tile.
 Recruit: place basic units at the Citadel as shown on the Platy-Pope Level Meter.
@@ -547,6 +549,7 @@ Indulgences. During your Main phase, you may discard 1 Gold to gain 2 Faith.
 Unit: Pilgrim
 Stats: 0/0/1
 Pilgrim Ability: Martyrdom. When a Pilgrim ends a Move action on a tile with enemy units, you may remove that Pilgrim to gain 1 Faith and 1 Authority. Martyrdom does not trigger when another faction moves onto the Pilgrim's tile.
+Pilgrim Trait: Peaceful Travelers. Pilgrims cannot deal the 1 HP of mandatory loser damage. When a side made up only of Pilgrims loses a battle, it deals no damage back to the winner.
 Unit: Crusader
 Stats: 1/1/1
 Crusader Ability: Holy Relic Token. Once during your Main phase, while you have a Crusader on the board, discard 1 Wood, 1 Stone, and 1 Gold to place 1 Holy Relic Token on the Citadel's tile and immediately gain 1 Authority. Holy Relic Tokens may be placed on a stream tile with the Citadel.
@@ -570,13 +573,12 @@ When you Recruit, also place 1 Crusader at the Citadel.
 Gain the Crusade ability.
 Level 2
 All Crusaders gain +1 Attack and +1 Defense for the rest of the game.
-Once per turn, you may discard 1 Gold to remove all debuffs from your Crusaders on one tile.
 Level 3
 When you Recruit, also place 2 more Crusaders at the Citadel.
 You may spend 2 Faith to remove 1 enemy basic unit on a tile with a Crusader, then place a Pilgrim on that tile.
 A Move action made only with Crusaders may move them up to 2 tiles.
 Level 4
-All Crusaders gain +1 Attack and +1 Defense for the rest of the game.
+Gain the Crucifixion ability: during your Main phase, you may remove 1 of your Pilgrims from the board (it returns to your supply) to gain 1 Faith.
 During a Crusade, when one of your Crusaders removes an enemy unit, gain 1 Authority. When an enemy removes one of your Crusaders during a Crusade, that enemy player gains 1 Authority.
 Level 5
 Once per turn during your Main phase, you may remove 5 Faith from your Faith Meter to gain 1 Authority.
@@ -659,13 +661,13 @@ Removed component lists: Snowfall and Egg Tokens; Igloo, Frozen Harbor, and Chry
 Removed rules: the Chrysalis battle exception in the building removal rules, and the faction pick note about Intermediate and Expert factions.
 Faction 5: The Necro-mouser
 Description: The Necromouser: The incarnate of death came to the Continent long before the other factions did, and the Necromouser has made a deal with death to make it his trade. Where armies clash he seeds his creeping miasma, and the fallen of every banner rise again in his service. Let the living wage their wars, the Necromouser hoards resources, harvests the dead, and spends the departed to raise horrors adorned in Anankian steel. Every soul in your cauldron and summon is Authority waiting to be claimed.
-Setup: During the Necromouser's setup turn, place three Miasma Tiles facedown (Necromouser side) on the gameboard in any pattern as long as they are not directly adjacent to each other or on the same tile. Miasma Tiles determine where the Necromouser can spawn at the start of the game so place them carefully. The Necromouser starts with 3 Skeleton Units on the Cauldron, units on the Cauldron are called "dead" units." These dead units can be used to summon your special units.
+Setup: The Necromouser sets up last, after every other player (and after any Tanuki Coin Tokens). Place three Miasma Tiles facedown (Necromouser side) on any tiles of the gameboard, ignoring every other faction's setup restrictions, as long as they are not directly adjacent to each other or on the same tile. Miasma Tiles determine where the Necromouser can spawn at the start of the game so place them carefully. The Necromouser starts with 3 Skeleton Units on the Cauldron, units on the Cauldron are called "dead" units." These dead units can be used to summon your special units.
 Building: The Necromouser has no building and cannot use the recruitment main phase action or the comeback mechanic.
 Species Trait - Hoarder: You can keep 8 resource cards in your resource pile during your end phase instead of 6.
 Species Trait - Plague: When you spend Gold on equipment, you can place one Miasma Tile directly adjacent to one Miasma Tile on the field of your choosing.
 Species Trait - Undead Shackles: Once during your end phase, gain 1 Authority per 2 Dead in the Cauldron (cap 2 Authority per turn).
 Species Trait - Cauldron: Begin the game with the Cauldron card, all units that are placed onto this card by a Miasma Tile become a "Dead" unit. Dead units discarded from the cauldron for a summon go back to their player's supply.
-Species Trait - Arise: Once per turn, you can spend 1 Dead from the Cauldron to summon 1 Skeleton Unit on a Miasma Tile.
+Species Trait - Arise: Twice per turn, you can spend 1 Dead from the Cauldron to summon 1 Skeleton Unit on a Miasma Tile.
 Unique Faction Tile - Miasma:
 When a unit is removed from the board on a Miasma Tile or an adjacent tile, place 1 of those removed units from each faction onto the Cauldron.
 Miasma Tiles without any of your units can be attacked. If the attacker wins, remove that tile; the attacker gains 1 Authority, then the Necromouser adds 1 Skeleton Unit from their supply to the Cauldron.
@@ -755,7 +757,7 @@ Bunker Effect: Squirrel units on a tile with a Bunker cannot take damage from or
 Species Trait - Unquenchable Spirit: Once during your main phase, a Squirrel unit on a Fire Tile can use a main phase action to loot the Fire Tile for 1 Charcoal resource card; add that card to your resource pile instead of gaining a card from the resource deck. Fire Tiles can only be looted by the Squirrels, and only for Charcoal; other factions cannot loot Fire Tiles.
 Species Trait - Flames of War: At the end of each of your Fire Tile end phase resolutions, gain 1 Authority for every 2HP damage your Fire Tiles dealt to enemy units (rounded down), and 1 Authority for every 2 enemy units a Fire Tile moved this end phase. You can only gain a maximum of 4 Authority from Flames of War per end phase.
 Species Trait - Forest Fire: During your end phase, gain 1 Authority for every Fire Tile adjacent to another faction's pieces (cap 2).
-Species Trait - Ignite: During your end phase, you may burn 1 card from your hand to remove 1 Fire Tile from the board, then place a Fire Tile on a forest tile that is adjacent to an enemy unit or special unit. It does not need to be near a Squirrel unit.
+Species Trait - Ignite: During your end phase, after all of your Fire Tiles have resolved, you may burn 1 card from your hand to remove 1 Fire Tile from the board, then place a Fire Tile on a forest tile that is adjacent to an enemy unit or special unit. It does not need to be near a Squirrel unit. Ignite can also place the Fire Tile on a stream or ruin tile adjacent to an enemy unit if that tile has a Tar Pit Token.
 Species Trait - Disruption: Once during your main phase, you can burn 2 cards of your choice in your resource pile to burn 1 card from the excavation area and 1 card from each player's resource pile. If you burn a Gold resource card or a relic deck card that gives Gold when disassembled, gain 1 Authority.
 Unit - Squirrel:
 Unit Stats: 1/0/1
@@ -763,7 +765,7 @@ Squirrel Ability - Tar Pit Token: During your excavation phase you can discard 2
 Tar Pit Token Effect:
 Add 1HP damage done by a Fire Tile with a Tar Pit Token; this extra damage bypasses the Fire Tile end phase damage cap.
 If an enemy wants to move their units off a tile with a Tar Pit Token during their main phase they must use two main phase actions to leave that tile.
-Squirrel Ability - Acorn Firestarter: During your excavation phase, you can use your Craft action (it is not a free craft) to discard 1 Charcoal and 1 Wood from your resource pile and craft an Acorn Firestarter. Crafted Acorn Firestarters sit faceup with your other crafted cards. Once during your main phase, you can discard 1 Crafted Acorn Firestarter card to place a Fire Tile on a tile with a Squirrel Unit.
+Squirrel Ability - Acorn Firestarter: During your excavation phase, you can use your Craft action (it is not a free craft) to discard 1 Charcoal and 1 Wood from your resource pile and craft an Acorn Firestarter. Crafted Acorn Firestarters sit faceup with your other crafted cards. Once during your main phase, you can discard 1 Crafted Acorn Firestarter card to place a Fire Tile on a tile with a Squirrel Unit or the Pyromaniac.
 (Note: discarded Acorn Firestarters can be re-crafted.)
 Unique Faction Tile - Fire Tile:
 Fire Tiles are hexagonal overlay tiles placed on top of forest tiles, or on stream and ruin tiles that hold a Tar Pit Token. Only Tar Pit Tokens may be placed on a Fire Tile; no other building, token, or tile can be placed on a Fire Tile. Tar Pit Tokens cannot be removed by Fire Tiles.
@@ -887,13 +889,13 @@ Special Unit - Blooming Briar:
 Unit Stats: 6/0/1
 Blooming Briar Trait - Thorned Body:
 The Blooming Briar carries Thorns (0 to 6). While the Blooming Briar has 1 or more Thorns you can activate the following three abilities:
-1.	Thistle Barrage: Up to twice during your main phase, if enemy units are within 3 tiles of the Blooming Briar (4 with Branching Out), you can target any number of enemy units or special units on that tile (the units with the least HP are targeted first), then spend 1 Thorn and 1 resource from your resource pile for each targeted unit or special unit on that tile to deal 1HP damage to each. Then place 1 Thorned Seed per discarded Thorn on an adjacent forest tile to the tile with the targeted unit(s) or special unit(s). Alternatively, you can spend 1 Thorn to remove all enemy buildings and tokens on a tile within 3 tiles of the Blooming Briar if that faction's units or special units are not on that tile. Gain 1 Authority for every 2HP damage dealt by Thistle Barrage.
+1.	Thistle Barrage: Up to twice during your main phase, if enemy units are within 3 tiles of the Blooming Briar (4 with Branching Out), you can target any number of enemy units or special units on that tile (the units with the least HP are targeted first), then spend 1 Thorn and 1 resource of your choice from your resource pile for each targeted unit or special unit on that tile to deal 1HP damage to each. Then place 1 Thorned Seed per discarded Thorn on an adjacent forest tile to the tile with the targeted unit(s) or special unit(s). Alternatively, you can spend 1 Thorn to remove all enemy buildings and tokens on a tile within 3 tiles of the Blooming Briar if that faction's units or special units are not on that tile. Gain 1 Authority for every 2HP damage dealt by Thistle Barrage.
 (Note: This does not initiate a battle.)
 2.	Thorn Armor: When the Blooming Briar would take HP damage, you can remove 1 Thorn per 1HP damage instead (this follows the unit damage cap).
 3.	Sun Eater: Once per turn during your main phase, you can remove 2 Thorned Seeds on the tile with the Blooming Briar or its adjacent tiles and 3 resources from your resource pile to gain 2 Thorns.
 Blooming Briar Ability - Frenzied Bloom: When the Blooming Briar is at 0 Thorns, gain the following three abilities:
 1.	Ability - Withered Blossom: Gain +3 attack. The Blooming Briar can deal 2HP damage to a single unit, bypassing the unit damage cap limit.
-2.	Ability - Furious Lashing: Once during your main phase, deal 1HP damage to all enemy units within 3 tiles. Gain 1 Authority for every 2HP damage dealt by this ability.
+2.	Ability - Furious Lashing: Once during your main phase, deal 1HP damage to 1 enemy unit or special unit within 2 tiles of the Blooming Briar. If that unit is removed, gain 1 Authority.
 3.	Ability - Propagation: When the Blooming Briar is removed from the board, one of the enemy units on that tile takes 1HP damage, then you place 1 Thorned Seed on an adjacent forest tile, and the removing player gains 2 Authority.
 Ways Enemies Can Score Authority:
 Removing a Prickly Thicket gives 1 Authority.
