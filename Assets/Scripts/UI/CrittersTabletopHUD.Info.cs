@@ -111,6 +111,8 @@ namespace CrittersOfCalamity.UI
             _infoBodyText = bodyGo.AddComponent<Text>();
             _infoBodyText.font = _uiFont;
             SetFontSize(_infoBodyText, 16);
+            _infoBodyText.resizeTextForBestFit = false;   // long text scrolls instead of shrinking
+            _infoBodyText.lineSpacing = 1.15f;
             _infoBodyText.color = new Color(0.92f, 0.90f, 0.85f);
             _infoBodyText.supportRichText = true;
             _infoBodyText.alignment = TextAnchor.UpperLeft;
@@ -257,14 +259,14 @@ namespace CrittersOfCalamity.UI
                 }
                 sb.AppendLine();
                 sb.AppendLine("<b><color=#F2B83B>SPECIES TRAITS</color></b>");
-                foreach (var t in f.SpeciesTraits) sb.AppendLine($" • {t}");
+                foreach (var t in f.SpeciesTraits) sb.AppendLine($"   •  {t}");
                 sb.AppendLine();
                 sb.AppendLine($"<b><color=#F2B83B>BUILDING</color></b>\n{f.BuildingRules}");
                 if (f.Equipment.Count > 0)
                 {
                     sb.AppendLine();
                     sb.AppendLine("<b><color=#F2B83B>EQUIPMENT</color></b>");
-                    foreach (var e in f.Equipment) sb.AppendLine($" • <b>{e.Name}</b> (cost {e.Cost}): {e.EffectText}");
+                    foreach (var e in f.Equipment) sb.AppendLine($"   •  <b>{e.Name}</b> (cost {e.Cost}): {e.EffectText}");
                 }
                 sb.AppendLine();
                 sb.AppendLine("<b><color=#F2B83B>PIECES</color></b>");
@@ -279,17 +281,35 @@ namespace CrittersOfCalamity.UI
                 sb.AppendLine();
             }
             sb.AppendLine("<b><color=#F2B83B>HOW OPPONENTS SCORE AUTHORITY FROM THEM</color></b>");
-            foreach (var w in f.EnemyAuthorityScoring) sb.AppendLine($" • {w}");
+            foreach (var w in f.EnemyAuthorityScoring) sb.AppendLine($"   •  {w}");
             sb.AppendLine();
             sb.AppendLine("<b><color=#F2B83B>THEIR SUPPLY RIGHT NOW</color></b>");
             sb.AppendLine(SupplySummary(p));
 
             // The full faction rules from the rulebook (every trait, meter, Crusade, ability and card), so the tab is complete.
+            string top = AddBreathingRoom(sb.ToString());
             if (section != null)
+                top += "\n<b><color=#F2B83B>FULL FACTION RULES</color></b>\n" + FormatRulebookSection(section);
+            return top;
+        }
+
+        /// <summary>
+        /// Puts a small gap after every line that wraps into a paragraph, so long rules text doesn't read as one block.
+        /// Short lines (list items, stats) stay together.
+        /// </summary>
+        private static string AddBreathingRoom(string text)
+        {
+            var lines = text.Replace("\r", "").Split('\n');
+            var sb = new StringBuilder();
+            for (int i = 0; i < lines.Length; i++)
             {
-                sb.AppendLine();
-                sb.AppendLine("<b><color=#F2B83B>FULL FACTION RULES</color></b>");
-                sb.Append(FormatRulebookSection(section));
+                string line = lines[i].Replace("\t", "    ");
+                sb.Append(line);
+                if (i == lines.Length - 1) break;
+                sb.Append('\n');
+                bool nextHasText = lines[i + 1].Trim().Length > 0 && !lines[i + 1].StartsWith("<size=6>");
+                if (nextHasText && Regex.Replace(line, "<[^>]+>", "").Trim().Length > 70)
+                    sb.Append("<size=6> </size>\n");
             }
             return sb.ToString();
         }
@@ -352,9 +372,14 @@ namespace CrittersOfCalamity.UI
                 if (line.Length == 0) { sb.AppendLine(); continue; }
                 // Short lines without a full stop are sub-headings in the rulebook.
                 bool heading = line.Length < 48 && !line.EndsWith(".") && !line.StartsWith("•") && !char.IsDigit(line[0]);
-                sb.AppendLine(heading ? $"\n<b><color=#F2B83B>{line}</color></b>" : line);
+                if (heading) { sb.AppendLine($"\n<b><color=#F2B83B>{line}</color></b>"); continue; }
+                // Unity's text can't draw tabs, so "•\tText" and "1.\tText" ran together: indent them with spaces instead.
+                var bullet = Regex.Match(line, @"^(•|\d+\.|[a-z]\.)\t(.*)$");
+                if (bullet.Success)
+                    line = bullet.Groups[1].Value == "•" ? $"   •  {bullet.Groups[2].Value}" : $"   <b>{bullet.Groups[1].Value}</b>  {bullet.Groups[2].Value}";
+                sb.AppendLine(line.Replace("\t", "    "));
             }
-            return sb.ToString();
+            return AddBreathingRoom(sb.ToString());
         }
 
         // ------------------------------------------------------------------

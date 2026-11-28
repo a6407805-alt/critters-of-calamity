@@ -325,10 +325,11 @@ namespace CrittersOfCalamity.UI
                 new Vector2(0.005f, 0.36f), new Vector2(0.215f, 0.89f), new Vector2(0f, 0.5f),
                 Vector2.zero, Vector2.zero, Palette.UIPanelDark);
 
-            _factionBoardText = CreateText(_rightPanelRt, "FactionBoardText", "Faction Board", 12, TextAnchor.UpperLeft,
-                new Vector2(0.04f, 0.42f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero, Palette.ParchmentMap);
-            _gameLogText = CreateText(_rightPanelRt, "GameLogText", "", 10, TextAnchor.LowerLeft,
-                new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.40f), Vector2.zero, Vector2.zero, Palette.UITextMuted);
+            // The faction board scrolls at a readable size instead of shrinking its font to fit
+            _factionBoardText = CreateScrollingText(_rightPanelRt, "FactionBoard", new Vector2(0.03f, 0.40f), new Vector2(0.97f, 0.985f), 15, Palette.ParchmentMap);
+            _gameLogText = CreateText(_rightPanelRt, "GameLogText", "", 12, TextAnchor.LowerLeft,
+                new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.38f), Vector2.zero, Vector2.zero, Palette.UITextMuted);
+            _gameLogText.lineSpacing = 1.1f;
 
             _leftPanelRt.gameObject.SetActive(false);
             _rightPanelRt.gameObject.SetActive(false);
@@ -770,12 +771,20 @@ namespace CrittersOfCalamity.UI
 
             // 3. Right Panel: YOUR faction board (meters, traits, Table relics, supply) + Activity + Log
             var sbFac = new StringBuilder();
-            sbFac.AppendLine($"<b>{(_mpManager.IsOnline ? "YOUR FACTION" : viewer.DisplayName.ToUpperInvariant())}: {viewer.Faction.Name.ToUpperInvariant()}</b>");
-            sbFac.AppendLine(GetFactionMeterSummary(viewer));
+            sbFac.AppendLine($"<size=18><b><color=#F2B83B>{(_mpManager.IsOnline ? "YOUR FACTION" : viewer.DisplayName.ToUpperInvariant())}: {viewer.Faction.Name.ToUpperInvariant()}</color></b></size>");
+            sbFac.AppendLine();
+            // one meter per line instead of a run of " | " separated values
+            sbFac.AppendLine(GetFactionMeterSummary(viewer).Replace(" | ", "\n"));
             if (viewer.TableRelics.Count > 0)
-                sbFac.AppendLine($"<b>Table relics (facedown):</b> {string.Join(", ", viewer.TableRelics.Select(r => r.Name))}");
+            {
+                sbFac.AppendLine();
+                sbFac.AppendLine("<b>Table relics (facedown):</b>");
+                foreach (var r in viewer.TableRelics) sbFac.AppendLine($"   •  {r.Name}");
+            }
+            sbFac.AppendLine();
             sbFac.AppendLine("<b>Supply:</b>");
-            sbFac.Append(SupplySummary(viewer));
+            foreach (var line in SupplySummary(viewer).Replace("\r", "").Split('\n'))
+                if (line.Trim().Length > 0) sbFac.AppendLine($"   •  {line}");
             _factionBoardText.text = sbFac.ToString();
 
             var recentLogs = _engine.GameLog.Skip(Mathf.Max(0, _engine.GameLog.Count - 10));
@@ -911,7 +920,7 @@ namespace CrittersOfCalamity.UI
                 case FactionId.CurlyTail:
                     return $"<b>Meters:</b> Thirst for Glory Lv.{p.CurlyTailThirstForGlory}/4 | Hunger Lv.{p.CurlyTailHunger}/4 | Momentum Lv.{p.CurlyTailMomentum}/4";
                 case FactionId.HordeOfTheMillions:
-                    return $"<b>Forage Deck:</b> 8 Cards (3 Plague, 5 Rummage — reshuffled each draw)";
+                    return $"<b>Forage Deck:</b> {_engine.ForageDeck.Count} cards left, {_engine.ForageDiscard.Count} in the discard pile";
                 case FactionId.PlatypusPapacy:
                     return $"<b>Faith Meter:</b> {p.PlatypusFaith}/5 | <b>Platy-Pope Level:</b> {p.PlatyPopeLevel}/5 | Crusade Turns: {p.CrusadeTurnsRemaining}";
                 case FactionId.TroubleMakingTanukis:
@@ -947,6 +956,44 @@ namespace CrittersOfCalamity.UI
         // =====================================================================
         // uGUI FACTORY HELPERS
         // =====================================================================
+
+        /// <summary>A text block inside its own scroll area: it keeps its font size and scrolls when there's more text.</summary>
+        private Text CreateScrollingText(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, int size, Color color)
+        {
+            var viewGo = new GameObject(name + "View");
+            viewGo.transform.SetParent(parent, false);
+            var viewRt = viewGo.AddComponent<RectTransform>();
+            viewRt.anchorMin = anchorMin; viewRt.anchorMax = anchorMax;
+            viewRt.offsetMin = Vector2.zero; viewRt.offsetMax = Vector2.zero;
+            viewGo.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.12f);
+            viewGo.AddComponent<RectMask2D>();
+            var scroll = viewGo.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 25f;
+
+            var bodyGo = new GameObject(name + "Text");
+            bodyGo.transform.SetParent(viewGo.transform, false);
+            var bodyRt = bodyGo.AddComponent<RectTransform>();
+            bodyRt.anchorMin = new Vector2(0f, 1f); bodyRt.anchorMax = new Vector2(1f, 1f);
+            bodyRt.pivot = new Vector2(0.5f, 1f);
+            bodyRt.offsetMin = new Vector2(8f, 0f); bodyRt.offsetMax = new Vector2(-8f, 0f);
+            var t = bodyGo.AddComponent<Text>();
+            t.font = _uiFont;
+            t.fontSize = size + FontBump;
+            t.resizeTextForBestFit = false;
+            t.lineSpacing = 1.15f;
+            t.color = color;
+            t.supportRichText = true;
+            t.alignment = TextAnchor.UpperLeft;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.raycastTarget = false;
+            bodyGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.content = bodyRt;
+            scroll.viewport = viewRt;
+            return t;
+        }
 
         private RectTransform CreatePanel(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPos, Vector2 sizeDelta, Color color)
         {
