@@ -22,8 +22,8 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Critters of Calamity Launcher")]
 [assembly: AssemblyProduct("Critters of Calamity")]
-[assembly: AssemblyVersion("1.1.1.0")]
-[assembly: AssemblyFileVersion("1.1.1.0")]
+[assembly: AssemblyVersion("1.1.2.0")]
+[assembly: AssemblyFileVersion("1.1.2.0")]
 
 namespace CrittersOfCalamity.Launcher
 {
@@ -33,7 +33,7 @@ namespace CrittersOfCalamity.Launcher
         public const string RawBase = "https://raw.githubusercontent.com/ebenlyon/critters-of-calamity-releases/main/";
         public const string Manifest = RawBase + "latest.json";
         public const string GameExe = "Critters of Calamity.exe";
-        public static readonly Version LauncherVersion = new Version(1, 1, 1);
+        public static readonly Version LauncherVersion = new Version(1, 1, 2);
 
         public static string InstallRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CrittersOfCalamity");
         public static string GameDir => Path.Combine(InstallRoot, "Game");
@@ -240,7 +240,7 @@ namespace CrittersOfCalamity.Launcher
                         _progress.Value = Math.Max(0, Math.Min(100, e.ProgressPercentage));
                         _status.Text = $"Downloading {_latest.Tag}: {e.BytesReceived / (1024 * 1024)} of {Math.Max(1, (_latest.GameSize > 0 ? _latest.GameSize : e.TotalBytesToReceive) / (1024 * 1024))} MB";
                     };
-                    await wc.DownloadFileTaskAsync(new Uri(_latest.GameUrl), tmpZip);
+                    await wc.DownloadFileTaskAsync(new Uri(_latest.GameUrl + "?t=" + DateTime.UtcNow.Ticks), tmpZip);
                 }
                 _status.Text = "Checking the download...";
                 if (!string.IsNullOrEmpty(_latest.GameSha256))
@@ -295,7 +295,17 @@ namespace CrittersOfCalamity.Launcher
                 string me = Application.ExecutablePath;
                 string fresh = me + ".new";
                 _status.Text = "Updating the launcher...";
-                using (var wc = NewClient()) await wc.DownloadFileTaskAsync(new Uri(_latest.LauncherUrl), fresh);
+                using (var wc = NewClient()) await wc.DownloadFileTaskAsync(new Uri(_latest.LauncherUrl + "?t=" + DateTime.UtcNow.Ticks), fresh);
+                // Only swap in a launcher that really is newer (a stale cached copy would otherwise be installed)
+                Version got;
+                if (!Version.TryParse(FileVersionInfo.GetVersionInfo(fresh).FileVersion ?? "", out got) || got <= new Version(Config.LauncherVersion.Major, Config.LauncherVersion.Minor, Config.LauncherVersion.Build, 0))
+                {
+                    try { File.Delete(fresh); } catch { }
+                    _status.Text = "A launcher update is on its way; try again in a few minutes.";
+                    _busy = false;
+                    RefreshButtons();
+                    return;
+                }
                 string script = Path.Combine(Path.GetTempPath(), "coc-launcher-update.cmd");
                 File.WriteAllText(script,
                     "@echo off\r\n" +
