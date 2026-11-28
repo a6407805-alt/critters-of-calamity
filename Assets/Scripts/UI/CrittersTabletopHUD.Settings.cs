@@ -57,10 +57,10 @@ namespace CrittersOfCalamity.UI
 
             // Dim the screen behind the window and block clicks
             var shade = CreatePanel(canvasGo.transform, "Shade", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
-                Vector2.zero, Vector2.zero, new Color(0f, 0f, 0f, 0.55f));
+                Vector2.zero, Vector2.zero, new Color(0f, 0f, 0f, 0.75f));
 
             var win = CreatePanel(shade, "SettingsWindow", new Vector2(0.30f, 0.25f), new Vector2(0.70f, 0.75f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, Vector2.zero, new Color(0.10f, 0.13f, 0.18f, 0.98f));
+                Vector2.zero, Vector2.zero, new Color(0.10f, 0.13f, 0.18f, 1f));
 
             CreateText(win, "Title", "SETTINGS", 26, TextAnchor.MiddleLeft,
                 new Vector2(0.05f, 0.86f), new Vector2(0.70f, 0.97f), Vector2.zero, Vector2.zero, Palette.AuthorityGold);
